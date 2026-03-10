@@ -1,97 +1,219 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import TerraPage from "@/components/TerraPage";
-
-async function routeAfterLogin(uid: string, r: any) {
-  try {
-    const snap = await getDoc(doc(db, "users", uid));
-    const tenantId = (snap.exists() ? (snap.data() as any).currentTenantId : "") || "";
-    if (!tenantId) r.push("/setup");
-    else r.push("/pos");
-  } catch {
-    r.push("/setup");
-  }
-}
+import { auth, db } from "@/lib/firebase";
 
 export default function LoginPage() {
   const r = useRouter();
+
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [pass, setPass] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) routeAfterLogin(u.uid, r);
-    });
-    return () => unsub();
-  }, [r]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
 
-  async function doLogin() {
-    setErr(null); setBusy(true);
+  function mapFirebaseError(message: string) {
+    const m = (message || "").toLowerCase();
+
+    if (m.includes("auth/email-already-in-use")) return "Email sudah terdaftar.";
+    if (m.includes("auth/invalid-email")) return "Format email tidak valid.";
+    if (m.includes("auth/weak-password")) return "Password minimal 6 karakter.";
+    if (m.includes("auth/invalid-credential")) return "Email atau password salah.";
+    if (m.includes("auth/user-not-found")) return "Akun tidak ditemukan.";
+    if (m.includes("auth/wrong-password")) return "Password salah.";
+
+    return message || "Terjadi kesalahan.";
+  }
+
+  async function handleLogin() {
+    setLoading(true);
+    setErr("");
+
     try {
-      const res = await signInWithEmailAndPassword(auth, email.trim(), pass);
-      await routeAfterLogin(res.user.uid, r);
+      if (!email.trim() || !password.trim()) {
+        throw new Error("Email dan password wajib diisi.");
+      }
+
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      r.push("/setup");
     } catch (e: any) {
-      setErr(e?.code || e?.message || "Login gagal");
+      setErr(mapFirebaseError(e?.message || "Gagal login"));
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
   }
 
-  async function doRegister() {
-    setErr(null); setBusy(true);
+  async function handleRegister() {
+    setLoading(true);
+    setErr("");
+
     try {
-      const res = await createUserWithEmailAndPassword(auth, email.trim(), pass);
-      await routeAfterLogin(res.user.uid, r);
+      if (!name.trim()) {
+        throw new Error("Nama wajib diisi.");
+      }
+      if (!email.trim()) {
+        throw new Error("Email wajib diisi.");
+      }
+      if (!password.trim()) {
+        throw new Error("Password wajib diisi.");
+      }
+      if (password.trim().length < 6) {
+        throw new Error("Password minimal 6 karakter.");
+      }
+
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const user = cred.user;
+
+      // simpan display name di auth
+      await updateProfile(user, {
+        displayName: name.trim(),
+      });
+
+      // simpan user profile dasar
+      await setDoc(
+        doc(db, `users/${user.uid}`),
+        {
+          uid: user.uid,
+          name: name.trim(),
+          email: user.email || email.trim(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      r.push("/setup");
     } catch (e: any) {
-      setErr(e?.code || e?.message || "Daftar gagal");
+      setErr(mapFirebaseError(e?.message || "Gagal daftar akun"));
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
   }
 
   return (
-    <TerraPage maxWidth={520}>
-      <div className="card" style={{ marginTop: 30 }}>
-        <div className="row">
+    <TerraPage maxWidth={540}>
+      <style>{`
+        .auth-wrap{
+          min-height:80vh;
+          display:grid;
+          place-items:center;
+        }
+        .auth-card{
+          width:100%;
+          background:#fff;
+          border:1px solid var(--border);
+          border-radius:24px;
+          padding:24px;
+          box-shadow:0 12px 28px rgba(17,24,39,.06);
+        }
+        .switch{
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:10px;
+          margin-top:16px;
+          margin-bottom:18px;
+        }
+      `}</style>
+
+      <div className="auth-wrap">
+        <div className="auth-card">
           <div className="h1">TerraPOS</div>
-          <div className="spacer" />
-          <span className="badge">Orange Theme</span>
+          <div className="small" style={{ marginTop: 6 }}>
+            Login atau daftar akun baru untuk mulai memakai TerraPOS.
+          </div>
+
+          <div className="switch">
+            <button
+              className={"btn " + (mode === "login" ? "btn-primary" : "")}
+              onClick={() => {
+                setMode("login");
+                setErr("");
+              }}
+            >
+              Login
+            </button>
+
+            <button
+              className={"btn " + (mode === "register" ? "btn-primary" : "")}
+              onClick={() => {
+                setMode("register");
+                setErr("");
+              }}
+            >
+              Daftar
+            </button>
+          </div>
+
+          {mode === "register" && (
+            <div style={{ marginTop: 12 }}>
+              <div className="small">Nama</div>
+              <input
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nama kamu"
+              />
+            </div>
+          )}
+
+          <div style={{ marginTop: 12 }}>
+            <div className="small">Email</div>
+            <input
+              className="input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@contoh.com"
+            />
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <div className="small">Password</div>
+            <input
+              className="input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Minimal 6 karakter"
+            />
+          </div>
+
+          {err && (
+            <div style={{ marginTop: 12, color: "var(--danger)", fontWeight: 800 }}>
+              {err}
+            </div>
+          )}
+
+          {mode === "login" ? (
+            <button
+              className="btn btn-primary"
+              style={{ width: "100%", marginTop: 16 }}
+              onClick={handleLogin}
+              disabled={loading}
+            >
+              {loading ? "Masuk..." : "Login"}
+            </button>
+          ) : (
+            <button
+              className="btn btn-primary"
+              style={{ width: "100%", marginTop: 16 }}
+              onClick={handleRegister}
+              disabled={loading}
+            >
+              {loading ? "Mendaftar..." : "Daftar Akun"}
+            </button>
+          )}
         </div>
-        <div className="small" style={{ marginTop: 6 }}>Login / Daftar untuk lanjut.</div>
-
-        <div className="row" style={{ marginTop: 14 }}>
-          <button className={"btn " + (mode === "login" ? "btn-primary" : "btn-ghost")} onClick={() => setMode("login")}>Login</button>
-          <button className={"btn " + (mode === "register" ? "btn-primary" : "btn-ghost")} onClick={() => setMode("register")}>Daftar</button>
-        </div>
-
-        <div style={{ marginTop: 14 }}>
-          <div className="small">Email</div>
-          <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email" />
-        </div>
-
-        <div style={{ marginTop: 10 }}>
-          <div className="small">Password</div>
-          <input className="input" type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="minimal 6 karakter" />
-        </div>
-
-        {err && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{err}</div>}
-
-        <button
-          className={"btn btn-primary"}
-          style={{ width: "100%", marginTop: 14 }}
-          disabled={busy}
-          onClick={mode === "login" ? doLogin : doRegister}
-        >
-          {busy ? "Proses..." : mode === "login" ? "Login" : "Daftar"}
-        </button>
       </div>
     </TerraPage>
   );
