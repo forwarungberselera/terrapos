@@ -9,8 +9,7 @@ import {
   getDocs,
   query,
   serverTimestamp,
-  setDoc,
-  where,
+  writeBatch,
 } from "firebase/firestore";
 import TerraPage from "@/components/TerraPage";
 import { auth, db } from "@/lib/firebase";
@@ -18,7 +17,7 @@ import { auth, db } from "@/lib/firebase";
 type TenantRow = {
   id: string;
   name: string;
-  ownerUid?: string;
+  role?: string;
 };
 
 export default function SetupPage() {
@@ -56,26 +55,19 @@ export default function SetupPage() {
   }, [r]);
 
   async function loadMyTenants(userUid: string) {
-    const result: TenantRow[] = [];
+    const membershipsRef = collection(db, `users/${userUid}/tenantMemberships`);
+    const membershipsSnap = await getDocs(query(membershipsRef));
 
-    // 1. tenant yang owner
-    const qOwner = query(collection(db, "tenants"), where("ownerUid", "==", userUid));
-    const ownerSnap = await getDocs(qOwner);
-
-    ownerSnap.forEach((d) => {
+    const arr: TenantRow[] = membershipsSnap.docs.map((d) => {
       const x = d.data() as any;
-      result.push({
+      return {
         id: d.id,
         name: x.name || d.id,
-        ownerUid: x.ownerUid || "",
-      });
+        role: x.role || "",
+      };
     });
 
-    // 2. tenant yang ada staff doc untuk user ini
-    // karena Firestore tidak ada collectionGroup sederhana di struktur lama,
-    // kita scan tenant owner result dulu + fallback staff doc per tenant yang ada di list sekarang.
-    // untuk pemula, ini sudah aman.
-    setTenants(result);
+    setTenants(arr);
   }
 
   async function createTenant() {
@@ -86,11 +78,14 @@ export default function SetupPage() {
       if (!uid) throw new Error("User belum login.");
       if (!tenantName.trim()) throw new Error("Nama tenant wajib diisi.");
 
-      const tenantRef = doc(collection(db, "tenants"));
+      const tenantsCol = collection(db, "tenants");
+      const tenantRef = doc(tenantsCol);
       const tenantId = tenantRef.id;
 
-      // 1. buat tenant utama
-      await setDoc(tenantRef, {
+      const batch = writeBatch(db);
+
+      // 1. tenant utama
+      batch.set(tenantRef, {
         name: tenantName.trim(),
         ownerUid: uid,
         createdBy: uid,
@@ -99,8 +94,8 @@ export default function SetupPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // 2. staff pembuat tenant = owner
-      await setDoc(doc(db, `tenants/${tenantId}/staff/${uid}`), {
+      // 2. staff owner
+      batch.set(doc(db, `tenants/${tenantId}/staff/${uid}`), {
         uid,
         email: email || "",
         role: "owner",
@@ -108,18 +103,28 @@ export default function SetupPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // 3. simpan membership user
-      await setDoc(doc(db, `users/${uid}/tenantMemberships/${tenantId}`), {
+      // 3. membership user
+      batch.set(doc(db, `users/${uid}/tenantMemberships/${tenantId}`), {
         tenantId,
-        role: "owner",
         name: tenantName.trim(),
+        role: "owner",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      // 4. tenant aktif
-      localStorage.setItem("terrapos_tenant_id", tenantId);
+      // 4. settings default
+      batch.set(doc(db, `tenants/${tenantId}/settings/main`), {
+        storeName: tenantName.trim(),
+        address: "",
+        footer: "Terima kasih.",
+        cashierName: "Kasir TerraPOS",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
+      await batch.commit();
+
+      localStorage.setItem("terrapos_tenant_id", tenantId);
       r.push("/dashboard");
     } catch (e: any) {
       setErr(e?.message || "Gagal buat tenant");
@@ -173,7 +178,10 @@ export default function SetupPage() {
 
           <div className="spacer" />
 
-          <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>
+          <button
+            className="btn btn-danger"
+            onClick={() => signOut(auth).then(() => r.push("/login"))}
+          >
             Logout
           </button>
         </div>
@@ -222,8 +230,9 @@ export default function SetupPage() {
             {tenants.map((t) => (
               <div key={t.id} className="tenant-item">
                 <div style={{ fontWeight: 900 }}>{t.name}</div>
+                <div className="small" style={{ marginTop: 4 }}>ID: {t.id}</div>
                 <div className="small" style={{ marginTop: 4 }}>
-                  ID: {t.id}
+                  Role: <b>{t.role || "-"}</b>
                 </div>
                 <button
                   className="btn"

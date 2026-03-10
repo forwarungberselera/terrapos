@@ -29,18 +29,35 @@ export function useRole() {
           return;
         }
 
-        // 1. cek role staff
+        // 1) cek membership user
+        const membershipRef = doc(db, `users/${user.uid}/tenantMemberships/${tenantId}`);
+        const membershipSnap = await getDoc(membershipRef);
+
+        if (membershipSnap.exists()) {
+          const d = membershipSnap.data() as any;
+          const membershipRole = (d.role || "").toString().toLowerCase();
+          if (membershipRole) {
+            setRole(membershipRole);
+            setLoadingRole(false);
+            return;
+          }
+        }
+
+        // 2) cek staff doc
         const staffRef = doc(db, `tenants/${tenantId}/staff/${user.uid}`);
         const staffSnap = await getDoc(staffRef);
 
         if (staffSnap.exists()) {
           const d = staffSnap.data() as any;
-          setRole((d.role || "").toString().toLowerCase());
-          setLoadingRole(false);
-          return;
+          const staffRole = (d.role || "").toString().toLowerCase();
+          if (staffRole) {
+            setRole(staffRole);
+            setLoadingRole(false);
+            return;
+          }
         }
 
-        // 2. fallback: cek ownerUid di tenant
+        // 3) fallback ownerUid tenant
         const tenantRef = doc(db, `tenants/${tenantId}`);
         const tenantSnap = await getDoc(tenantRef);
 
@@ -53,7 +70,7 @@ export function useRole() {
           }
         }
 
-        // 3. default kalau tidak ketemu
+        // 4) terakhir baru fallback cashier
         setRole("cashier");
         setLoadingRole(false);
       } catch {
