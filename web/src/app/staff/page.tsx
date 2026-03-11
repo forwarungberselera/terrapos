@@ -1,101 +1,207 @@
 "use client";
 
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import React, { useState } from "react";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  doc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
+
+type StaffItem = {
+  id: string;
+  uid: string;
+  email: string;
+  role: "owner" | "admin";
+};
 
 export default function StaffPage() {
   const r = useRouter();
-  const { tenantId, loading, email } = useTenant();
+  const { tenantId, loading } = useTenant();
   const { role, loadingRole } = useRole();
 
-  const [uid, setUid] = useState("");
-  const [staffRole, setStaffRole] = useState<"kasir" | "owner">("kasir");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const isOwner = (role || "").toLowerCase() === "owner";
 
-  async function addStaff() {
+  const [staff, setStaff] = useState<StaffItem[]>([]);
+  const [newEmail, setNewEmail] = useState("");
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
     if (!tenantId) return;
-    const id = uid.trim();
-    if (!id) return setErr("UID wajib diisi.");
 
-    setBusy(true); setErr(null);
+    const qy = query(collection(db, `tenants/${tenantId}/staff`), orderBy("email", "asc"));
+    return onSnapshot(qy, (snap) => {
+      const arr: StaffItem[] = snap.docs.map((d) => {
+        const x = d.data() as any;
+        return {
+          id: d.id,
+          uid: x.uid || d.id,
+          email: x.email || "",
+          role: (x.role || "admin") as "owner" | "admin",
+        };
+      });
+      setStaff(arr);
+    });
+  }, [tenantId]);
+
+  async function addAdmin() {
     try {
-      await setDoc(doc(db, `tenants/${tenantId}/staff/${id}`), {
-        role: staffRole,
-        createdAt: serverTimestamp(),
-      }, { merge: true });
+      if (!tenantId) return;
+      if (!newEmail.trim()) {
+        setMsg("Email wajib diisi.");
+        return;
+      }
 
-      alert("Staff ditambahkan.");
-      setUid("");
+      const usersSnap = await getDocs(query(collection(db, "users")));
+      const found = usersSnap.docs.find((d) => {
+        const x = d.data() as any;
+        return (x.email || "").toLowerCase() === newEmail.trim().toLowerCase();
+      });
+
+      if (!found) {
+        setMsg("User dengan email itu belum terdaftar.");
+        return;
+      }
+
+      const userId = found.id;
+
+      await setDoc(
+        doc(db, `tenants/${tenantId}/staff/${userId}`),
+        {
+          uid: userId,
+          email: newEmail.trim().toLowerCase(),
+          role: "admin",
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await setDoc(
+        doc(db, `users/${userId}/tenantMemberships/${tenantId}`),
+        {
+          tenantId,
+          name: tenantId,
+          role: "admin",
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      setNewEmail("");
+      setMsg("Admin berhasil ditambahkan.");
     } catch (e: any) {
-      setErr(e?.message || "Gagal tambah staff");
-    } finally {
-      setBusy(false);
+      setMsg(e?.message || "Gagal tambah admin.");
     }
   }
 
-  if (loading || loadingRole) {
-    return <TerraPage><div className="card">Loading...</div></TerraPage>;
+  async function setAdmin(userId: string) {
+    if (!tenantId) return;
+    await updateDoc(doc(db, `tenants/${tenantId}/staff/${userId}`), {
+      role: "admin",
+      updatedAt: serverTimestamp(),
+    });
+    await setDoc(
+      doc(db, `users/${userId}/tenantMemberships/${tenantId}`),
+      {
+        tenantId,
+        name: tenantId,
+        role: "admin",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
   }
 
-  if (role !== "owner") {
+  if (loading || loadingRole) {
+    return (
+      <TerraPage>
+        <div className="card">Loading...</div>
+      </TerraPage>
+    );
+  }
+
+  if (!isOwner) {
     return (
       <TerraPage>
         <div className="card">
           <div className="h1">Akses ditolak</div>
-          <div className="small">Hanya owner yang boleh buka halaman Staff.</div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/pos")}>Kembali ke POS</button>
+          <div className="small">Halaman staff hanya untuk owner.</div>
+          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>
+            Kembali
+          </button>
         </div>
       </TerraPage>
     );
   }
 
   return (
-    <TerraPage maxWidth={720}>
+    <TerraPage maxWidth={900}>
       <div className="card">
         <div className="row">
           <div>
             <div className="h1">Staff</div>
-            <div className="small">Tenant: {tenantId}</div>
-            <div className="small">User: {email}</div>
+            <div className="small">Versi simpel: hanya owner dan admin.</div>
           </div>
           <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/pos")}>POS</button>
-          <button className="btn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
-          <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>Logout</button>
+          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
         </div>
       </div>
 
       <div className="card" style={{ marginTop: 14 }}>
-        <div className="h1">Tambah Staff (pakai UID)</div>
-        <div className="small" style={{ marginTop: 6 }}>
-          Ambil UID dari Firebase Console → Authentication → Users → UID
+        <div className="small">Tambah Admin (pakai email akun yang sudah terdaftar)</div>
+        <div className="row" style={{ marginTop: 10 }}>
+          <input
+            className="input"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            placeholder="email admin"
+          />
+          <button className="btn btn-primary" onClick={addAdmin}>Tambah Admin</button>
         </div>
+        {msg && <div style={{ marginTop: 10, fontWeight: 800 }}>{msg}</div>}
+      </div>
 
-        <div style={{ marginTop: 12 }}>
-          <div className="small">UID</div>
-          <input className="input" value={uid} onChange={(e) => setUid(e.target.value)} placeholder="contoh: p8S3k...UID..." />
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h1">Daftar Staff</div>
+
+        <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+          {staff.map((s) => (
+            <div
+              key={s.id}
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 14,
+                padding: 14,
+                background: "#fff",
+              }}
+            >
+              <div style={{ fontWeight: 900 }}>{s.email || s.uid}</div>
+              <div className="small" style={{ marginTop: 4 }}>
+                Role: <b>{s.role}</b>
+              </div>
+
+              {s.role !== "owner" && (
+                <button className="btn" style={{ marginTop: 10 }} onClick={() => setAdmin(s.uid)}>
+                  Jadikan Admin
+                </button>
+              )}
+            </div>
+          ))}
+
+          {staff.length === 0 && (
+            <div className="small">Belum ada staff.</div>
+          )}
         </div>
-
-        <div style={{ marginTop: 10 }}>
-          <div className="small">Role</div>
-          <select className="input" value={staffRole} onChange={(e) => setStaffRole(e.target.value as any)}>
-            <option value="kasir">Kasir</option>
-            <option value="owner">Owner</option>
-          </select>
-        </div>
-
-        {err && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{err}</div>}
-
-        <button className="btn btn-primary" style={{ width: "100%", marginTop: 12 }} disabled={busy} onClick={addStaff}>
-          {busy ? "Menyimpan..." : "Tambah Staff"}
-        </button>
       </div>
     </TerraPage>
   );

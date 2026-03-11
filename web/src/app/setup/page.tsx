@@ -42,7 +42,6 @@ export default function SetupPage() {
 
         setUid(user.uid);
         setEmail(user.email || "");
-
         await loadMyTenants(user.uid);
       } catch (e: any) {
         setErr(e?.message || "Gagal load setup");
@@ -55,8 +54,7 @@ export default function SetupPage() {
   }, [r]);
 
   async function loadMyTenants(userUid: string) {
-    const membershipsRef = collection(db, `users/${userUid}/tenantMemberships`);
-    const membershipsSnap = await getDocs(query(membershipsRef));
+    const membershipsSnap = await getDocs(query(collection(db, `users/${userUid}/tenantMemberships`)));
 
     const arr: TenantRow[] = membershipsSnap.docs.map((d) => {
       const x = d.data() as any;
@@ -78,13 +76,11 @@ export default function SetupPage() {
       if (!uid) throw new Error("User belum login.");
       if (!tenantName.trim()) throw new Error("Nama tenant wajib diisi.");
 
-      const tenantsCol = collection(db, "tenants");
-      const tenantRef = doc(tenantsCol);
+      const tenantRef = doc(collection(db, "tenants"));
       const tenantId = tenantRef.id;
 
       const batch = writeBatch(db);
 
-      // 1. tenant utama
       batch.set(tenantRef, {
         name: tenantName.trim(),
         ownerUid: uid,
@@ -94,7 +90,6 @@ export default function SetupPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // 2. staff owner
       batch.set(doc(db, `tenants/${tenantId}/staff/${uid}`), {
         uid,
         email: email || "",
@@ -103,7 +98,6 @@ export default function SetupPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // 3. membership user
       batch.set(doc(db, `users/${uid}/tenantMemberships/${tenantId}`), {
         tenantId,
         name: tenantName.trim(),
@@ -112,7 +106,6 @@ export default function SetupPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // 4. settings default
       batch.set(doc(db, `tenants/${tenantId}/settings/main`), {
         storeName: tenantName.trim(),
         address: "",
@@ -197,7 +190,7 @@ export default function SetupPage() {
         <div className="card">
           <div className="h1">Buat Tenant Baru</div>
           <div className="small" style={{ marginTop: 6 }}>
-            Pembuat tenant otomatis akan menjadi <b>owner</b>.
+            Pembuat tenant otomatis menjadi <b>owner</b>.
           </div>
 
           <div style={{ marginTop: 14 }}>
