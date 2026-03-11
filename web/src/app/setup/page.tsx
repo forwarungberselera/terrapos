@@ -9,7 +9,7 @@ import {
   getDocs,
   query,
   serverTimestamp,
-  writeBatch,
+  setDoc,
 } from "firebase/firestore";
 import TerraPage from "@/components/TerraPage";
 import { auth, db } from "@/lib/firebase";
@@ -54,7 +54,9 @@ export default function SetupPage() {
   }, [r]);
 
   async function loadMyTenants(userUid: string) {
-    const membershipsSnap = await getDocs(query(collection(db, `users/${userUid}/tenantMemberships`)));
+    const membershipsSnap = await getDocs(
+      query(collection(db, `users/${userUid}/tenantMemberships`))
+    );
 
     const arr: TenantRow[] = membershipsSnap.docs.map((d) => {
       const x = d.data() as any;
@@ -76,13 +78,14 @@ export default function SetupPage() {
       if (!uid) throw new Error("User belum login.");
       if (!tenantName.trim()) throw new Error("Nama tenant wajib diisi.");
 
+      const cleanName = tenantName.trim();
+
+      // 1. buat tenant dulu
       const tenantRef = doc(collection(db, "tenants"));
       const tenantId = tenantRef.id;
 
-      const batch = writeBatch(db);
-
-      batch.set(tenantRef, {
-        name: tenantName.trim(),
+      await setDoc(tenantRef, {
+        name: cleanName,
         ownerUid: uid,
         createdBy: uid,
         createdByEmail: email || "",
@@ -90,7 +93,8 @@ export default function SetupPage() {
         updatedAt: serverTimestamp(),
       });
 
-      batch.set(doc(db, `tenants/${tenantId}/staff/${uid}`), {
+      // 2. lalu buat staff owner
+      await setDoc(doc(db, `tenants/${tenantId}/staff/${uid}`), {
         uid,
         email: email || "",
         role: "owner",
@@ -98,16 +102,18 @@ export default function SetupPage() {
         updatedAt: serverTimestamp(),
       });
 
-      batch.set(doc(db, `users/${uid}/tenantMemberships/${tenantId}`), {
+      // 3. lalu buat membership user
+      await setDoc(doc(db, `users/${uid}/tenantMemberships/${tenantId}`), {
         tenantId,
-        name: tenantName.trim(),
+        name: cleanName,
         role: "owner",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      batch.set(doc(db, `tenants/${tenantId}/settings/main`), {
-        storeName: tenantName.trim(),
+      // 4. lalu buat settings default
+      await setDoc(doc(db, `tenants/${tenantId}/settings/main`), {
+        storeName: cleanName,
         address: "",
         footer: "Terima kasih.",
         cashierName: "Kasir TerraPOS",
@@ -115,9 +121,13 @@ export default function SetupPage() {
         updatedAt: serverTimestamp(),
       });
 
-      await batch.commit();
-
+      // 5. simpan tenant aktif
       localStorage.setItem("terrapos_tenant_id", tenantId);
+
+      // 6. reload tenant list
+      await loadMyTenants(uid);
+
+      // 7. masuk dashboard
       r.push("/dashboard");
     } catch (e: any) {
       setErr(e?.message || "Gagal buat tenant");
