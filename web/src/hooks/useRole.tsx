@@ -29,52 +29,43 @@ export function useRole() {
           return;
         }
 
-        // 1) cek membership user
-        const membershipRef = doc(db, `users/${user.uid}/tenantMemberships/${tenantId}`);
-        const membershipSnap = await getDoc(membershipRef);
+        // 1️⃣ cek tenant
+        const tenantRef = doc(db, `tenants/${tenantId}`);
+        const tenantSnap = await getDoc(tenantRef);
 
-        if (membershipSnap.exists()) {
-          const d = membershipSnap.data() as any;
-          const membershipRole = (d.role || "").toString().toLowerCase();
-          if (membershipRole) {
-            setRole(membershipRole);
-            setLoadingRole(false);
-            return;
-          }
+        if (!tenantSnap.exists()) {
+          setRole("cashier");
+          setLoadingRole(false);
+          return;
         }
 
-        // 2) cek staff doc
+        const tenant = tenantSnap.data() as any;
+
+        // 2️⃣ jika user adalah owner tenant
+        if (tenant.ownerUid === user.uid) {
+          setRole("owner");
+          setLoadingRole(false);
+          return;
+        }
+
+        // 3️⃣ cek staff role
         const staffRef = doc(db, `tenants/${tenantId}/staff/${user.uid}`);
         const staffSnap = await getDoc(staffRef);
 
         if (staffSnap.exists()) {
-          const d = staffSnap.data() as any;
-          const staffRole = (d.role || "").toString().toLowerCase();
-          if (staffRole) {
-            setRole(staffRole);
-            setLoadingRole(false);
-            return;
-          }
+          const staff = staffSnap.data() as any;
+          setRole((staff.role || "cashier").toLowerCase());
+          setLoadingRole(false);
+          return;
         }
 
-        // 3) fallback ownerUid tenant
-        const tenantRef = doc(db, `tenants/${tenantId}`);
-        const tenantSnap = await getDoc(tenantRef);
-
-        if (tenantSnap.exists()) {
-          const td = tenantSnap.data() as any;
-          if ((td.ownerUid || "") === user.uid) {
-            setRole("owner");
-            setLoadingRole(false);
-            return;
-          }
-        }
-
-        // 4) terakhir baru fallback cashier
+        // 4️⃣ fallback
         setRole("cashier");
         setLoadingRole(false);
-      } catch {
-        setRole("");
+
+      } catch (err) {
+        console.error(err);
+        setRole("cashier");
         setLoadingRole(false);
       }
     });
