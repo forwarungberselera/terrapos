@@ -33,6 +33,8 @@ type Order = {
   total: number;
   items: { name: string; qty: number; price: number }[];
   createdAt?: any;
+  updatedAt?: any;
+  paidAt?: any;
 };
 
 type ReceiptSettings = {
@@ -46,12 +48,62 @@ function rupiah(n: number) {
   return new Intl.NumberFormat("id-ID").format(n);
 }
 
+function toDateSafe(v: any): Date | null {
+  try {
+    if (!v) return null;
+    if (typeof v?.toDate === "function") return v.toDate();
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  } catch {
+    return null;
+  }
+}
+
+function formatDateFull(d: Date | null) {
+  if (!d) return "-";
+  return d.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatTimeOnly(d: Date | null) {
+  if (!d) return "-";
+  return d.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatDateTime(d: Date | null) {
+  if (!d) return "-";
+  return d.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function dayKey(d: Date | null) {
+  if (!d) return "tanpa-tanggal";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export default function OrdersPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
 
   const isOwner = (role || "").toString().toLowerCase() === "owner";
+  const canUse = ["owner", "admin"].includes((role || "").toString().toLowerCase());
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [tab, setTab] = useState<"OPEN" | "PAID">("OPEN");
@@ -109,6 +161,8 @@ export default function OrdersPage() {
             total: Number(x.total || 0),
             items: Array.isArray(x.items) ? x.items : [],
             createdAt: x.createdAt,
+            updatedAt: x.updatedAt,
+            paidAt: x.paidAt,
           } as Order;
         });
         setOrders(arr);
@@ -117,7 +171,47 @@ export default function OrdersPage() {
     );
   }, [tenantId]);
 
-  const list = useMemo(() => orders.filter((o) => o.status === tab), [orders, tab]);
+  const list = useMemo(() => {
+    return orders.filter((o) => o.status === tab);
+  }, [orders, tab]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        label: string;
+        items: (Order & { displayDate: Date | null })[];
+      }
+    >();
+
+    for (const o of list) {
+      const displayDate =
+        tab === "PAID"
+          ? toDateSafe(o.paidAt) || toDateSafe(o.updatedAt) || toDateSafe(o.createdAt)
+          : toDateSafe(o.createdAt) || toDateSafe(o.updatedAt);
+
+      const key = dayKey(displayDate);
+      const label = formatDateFull(displayDate);
+
+      if (!map.has(key)) {
+        map.set(key, { label, items: [] });
+      }
+
+      map.get(key)!.items.push({ ...o, displayDate });
+    }
+
+    return Array.from(map.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([key, value]) => ({
+        key,
+        label: value.label,
+        items: value.items.sort((a, b) => {
+          const da = a.displayDate ? a.displayDate.getTime() : 0;
+          const db = b.displayDate ? b.displayDate.getTime() : 0;
+          return db - da;
+        }),
+      }));
+  }, [list, tab]);
 
   function openPay(o: Order) {
     setPayOrder(o);
@@ -234,13 +328,60 @@ export default function OrdersPage() {
     );
   }
 
+  if (!canUse) {
+    return (
+      <TerraPage>
+        <div className="card">
+          <div className="h1">Akses ditolak</div>
+          <div className="small">Halaman orders hanya untuk owner/admin.</div>
+          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>
+            Kembali
+          </button>
+        </div>
+      </TerraPage>
+    );
+  }
+
   return (
-    <TerraPage>
+    <TerraPage maxWidth={1100}>
       <style>{`
         .topnav{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-        .list{ margin-top:14px; display:grid; gap:12px; }
         .row2{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-        .pill{ border:1px solid var(--border); padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; }
+        .pill{ border:1px solid var(--border); padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; background:#fff; }
+        .day-group{ margin-top:14px; display:grid; gap:12px; }
+        .day-header{
+          position:sticky;
+          top:8px;
+          z-index:2;
+          border:1px solid var(--border);
+          background:#fff7f0;
+          color:#111827;
+          border-radius:14px;
+          padding:12px 14px;
+          font-weight:900;
+        }
+        .order-card{
+          border:1px solid var(--border);
+          border-radius:18px;
+          padding:16px;
+          background:#fff;
+        }
+        .meta{
+          display:grid;
+          gap:4px;
+          margin-top:6px;
+        }
+        .items-mini{
+          margin-top:12px;
+          display:grid;
+          gap:6px;
+        }
+        .item-row{
+          display:flex;
+          justify-content:space-between;
+          gap:10px;
+          font-size:13px;
+        }
       `}</style>
 
       <div className="card">
@@ -248,19 +389,29 @@ export default function OrdersPage() {
           <div>
             <div className="h1">Orders</div>
             <div className="small">Tenant: {tenantId}</div>
-            <div className="small">User: {email || "-"} | Role: <b>{role}</b></div>
+            <div className="small">
+              User: {email || "-"} | Role: <b>{role || "-"}</b>
+            </div>
           </div>
+
           <div className="spacer" />
+
           <div className="topnav">
             <button className="btn" onClick={() => r.push("/pos")}>POS</button>
             <button className="btn" onClick={() => r.push("/printer")}>Printer</button>
-            {isOwner && <button className="btn btn-primary" onClick={() => r.push("/dashboard")}>Dashboard</button>}
+            {isOwner && (
+              <button className="btn btn-primary" onClick={() => r.push("/dashboard")}>
+                Dashboard
+              </button>
+            )}
             <button className="btn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
-            <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>Logout</button>
+            <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>
+              Logout
+            </button>
           </div>
         </div>
 
-        <div className="row2" style={{ marginTop: 10 }}>
+        <div className="row2" style={{ marginTop: 12 }}>
           <button className={"btn " + (tab === "OPEN" ? "btn-primary" : "")} onClick={() => setTab("OPEN")}>
             OPEN (Bayar Nanti)
           </button>
@@ -271,43 +422,101 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      <div className="list">
-        {list.map((o) => (
-          <div key={o.id} className="card">
-            <div className="row">
-              <div>
-                <div style={{ fontWeight: 900, fontSize: 16 }}>{o.orderNo}</div>
-                <div className="small">
-                  Status: <b>{o.status}</b> • Mode: <b>{o.mode || "-"}</b> • Meja: <b>{o.tableNo || "-"}</b>
-                </div>
-                <div className="small">Item: {o.items?.length || 0}</div>
-              </div>
-              <div className="spacer" />
-              <div style={{ textAlign: "right" }}>
-                <div className="pill">Rp {rupiah(o.total)}</div>
-                {o.status === "OPEN" ? (
-                  <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={() => openPay(o)}>
-                    Bayar & Print
-                  </button>
-                ) : (
-                  <button className="btn" style={{ marginTop: 10 }} onClick={() => reprintOrder(o)}>
-                    Cetak Ulang
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+      {grouped.length === 0 ? (
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="small">Tidak ada data.</div>
+        </div>
+      ) : (
+        grouped.map((group) => (
+          <div key={group.key} className="day-group">
+            <div className="day-header">{group.label}</div>
 
-        {list.length === 0 && (
-          <div className="card">
-            <div className="small">Tidak ada data.</div>
+            {group.items.map((o) => {
+              const shownDate =
+                tab === "PAID"
+                  ? toDateSafe(o.paidAt) || toDateSafe(o.updatedAt) || toDateSafe(o.createdAt)
+                  : toDateSafe(o.createdAt) || toDateSafe(o.updatedAt);
+
+              return (
+                <div key={o.id} className="order-card">
+                  <div className="row">
+                    <div>
+                      <div style={{ fontWeight: 900, fontSize: 17 }}>{o.orderNo}</div>
+
+                      <div className="meta">
+                        <div className="small">
+                          Status: <b>{o.status}</b> • Mode: <b>{o.mode || "-"}</b> • Meja: <b>{o.tableNo || "-"}</b>
+                        </div>
+
+                        <div className="small">
+                          Tanggal: <b>{formatDateTime(shownDate)}</b>
+                        </div>
+
+                        {tab === "PAID" && (
+                          <div className="small">
+                            Metode: <b>{o.paymentMethod || "-"}</b>
+                          </div>
+                        )}
+
+                        <div className="small">
+                          Jam: <b>{formatTimeOnly(shownDate)}</b>
+                        </div>
+                      </div>
+
+                      <div className="items-mini">
+                        {(o.items || []).slice(0, 3).map((it, idx) => (
+                          <div className="item-row" key={idx}>
+                            <span>{it.name} x{it.qty}</span>
+                            <b>Rp {rupiah((it.price || 0) * (it.qty || 0))}</b>
+                          </div>
+                        ))}
+                        {(o.items || []).length > 3 && (
+                          <div className="small">+ {(o.items || []).length - 3} item lainnya</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: "right", minWidth: 150 }}>
+                      <div className="pill">Rp {rupiah(o.total)}</div>
+
+                      {o.status === "OPEN" ? (
+                        <button
+                          className="btn btn-primary"
+                          style={{ marginTop: 10, width: "100%" }}
+                          onClick={() => openPay(o)}
+                        >
+                          Bayar & Print
+                        </button>
+                      ) : (
+                        <button
+                          className="btn"
+                          style={{ marginTop: 10, width: "100%" }}
+                          onClick={() => reprintOrder(o)}
+                        >
+                          Cetak Ulang
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-      </div>
+        ))
+      )}
 
       {payOpen && payOrder && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "grid", placeItems: "center", padding: 16, zIndex: 50 }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            zIndex: 50,
+          }}
+        >
           <div className="card" style={{ width: 520, maxWidth: "100%" }}>
             <div className="row">
               <div className="h1">Bayar Order</div>
@@ -320,8 +529,12 @@ export default function OrdersPage() {
             </div>
 
             <div className="row" style={{ marginTop: 12 }}>
-              <button className={"btn " + (paymentMethod === "CASH" ? "btn-primary" : "")} onClick={() => setPaymentMethod("CASH")}>CASH</button>
-              <button className={"btn " + (paymentMethod === "QRIS" ? "btn-primary" : "")} onClick={() => setPaymentMethod("QRIS")}>QRIS</button>
+              <button className={"btn " + (paymentMethod === "CASH" ? "btn-primary" : "")} onClick={() => setPaymentMethod("CASH")}>
+                CASH
+              </button>
+              <button className={"btn " + (paymentMethod === "QRIS" ? "btn-primary" : "")} onClick={() => setPaymentMethod("QRIS")}>
+                QRIS
+              </button>
             </div>
 
             <div className="row" style={{ justifyContent: "space-between", marginTop: 12 }}>
@@ -333,7 +546,12 @@ export default function OrdersPage() {
               <>
                 <div style={{ marginTop: 10 }}>
                   <div className="small">Uang dibayar</div>
-                  <input className="input" type="number" value={paidAmount} onChange={(e) => setPaidAmount(Number(e.target.value || 0))} />
+                  <input
+                    className="input"
+                    type="number"
+                    value={paidAmount}
+                    onChange={(e) => setPaidAmount(Number(e.target.value || 0))}
+                  />
                 </div>
                 <div className="row" style={{ justifyContent: "space-between", marginTop: 10 }}>
                   <span className="small">Kembalian</span>
