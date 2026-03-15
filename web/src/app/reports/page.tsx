@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import * as XLSX from "xlsx";
 
-type OrderItem = { name: string; price: number; qty: number };
+type OrderItem = { name: string; price: number; qty: number; notes?: string };
 type Order = {
   id: string;
   orderNo?: string;
@@ -23,6 +23,18 @@ type Order = {
   items?: OrderItem[];
   createdAt?: any;
   paidAt?: any;
+};
+
+type RefundLog = {
+  id: string;
+  orderNo?: string;
+  tableNo?: string | null;
+  total: number;
+  paymentMethod?: string | null;
+  refundedByEmail?: string;
+  refundedAt?: any;
+  reason?: string;
+  items?: OrderItem[];
 };
 
 function rupiah(n: number) {
@@ -93,6 +105,7 @@ export default function ReportsPage() {
   const canView = roleLower === "owner" || roleLower === "admin";
 
   const [orders, setOrders] = useState<Order[]>([]);
+  const [refundLogs, setRefundLogs] = useState<RefundLog[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(formatDateInput(new Date()));
 
@@ -126,9 +139,34 @@ export default function ReportsPage() {
     );
   }, [tenantId]);
 
-  const paidOrders = useMemo(() => {
-    return orders.filter((o) => o.status === "PAID");
-  }, [orders]);
+  useEffect(() => {
+    if (!tenantId) return;
+    const ref = collection(db, `tenants/${tenantId}/refunds`);
+    const qy = query(ref, orderBy("refundedAt", "desc"));
+    return onSnapshot(
+      qy,
+      (snap) => {
+        const arr: RefundLog[] = snap.docs.map((d) => {
+          const x = d.data() as any;
+          return {
+            id: d.id,
+            orderNo: x.orderNo || d.id,
+            tableNo: x.tableNo ?? null,
+            total: Number(x.total || 0),
+            paymentMethod: x.paymentMethod ?? null,
+            refundedByEmail: x.refundedByEmail || "",
+            refundedAt: x.refundedAt,
+            reason: x.reason || "",
+            items: Array.isArray(x.items) ? x.items : [],
+          };
+        });
+        setRefundLogs(arr);
+      },
+      (e) => setErr(e.message)
+    );
+  }, [tenantId]);
+
+  const paidOrders = useMemo(() => orders.filter((o) => o.status === "PAID"), [orders]);
 
   const selectedDateStats = useMemo(() => {
     const picked = parseDateInput(selectedDate);
@@ -141,10 +179,17 @@ export default function ReportsPage() {
       return dt >= sod && dt <= eod;
     });
 
+    const dayRefunds = refundLogs.filter((o) => {
+      const dt = toDateSafe(o.refundedAt);
+      if (!dt) return false;
+      return dt >= sod && dt <= eod;
+    });
+
     let revenue = 0;
     let count = 0;
     let cashRevenue = 0;
     let qrisRevenue = 0;
+    let refundTotal = 0;
 
     const productMap = new Map<
       string,
@@ -183,6 +228,10 @@ export default function ReportsPage() {
       }
     }
 
+    for (const rf of dayRefunds) {
+      refundTotal += Number(rf.total || 0);
+    }
+
     const soldProducts = Array.from(productMap.values()).sort((a, b) => {
       if (b.revenue !== a.revenue) return b.revenue - a.revenue;
       return b.qty - a.qty;
@@ -190,13 +239,16 @@ export default function ReportsPage() {
 
     return {
       dayOrders,
+      dayRefunds,
       revenue,
       count,
       cashRevenue,
       qrisRevenue,
+      refundTotal,
       soldProducts,
+      netRevenue: revenue - refundTotal,
     };
-  }, [paidOrders, selectedDate]);
+  }, [paidOrders, refundLogs, selectedDate]);
 
   const monthStats = useMemo(() => {
     const now = new Date();
@@ -204,6 +256,7 @@ export default function ReportsPage() {
 
     let revenue = 0;
     let count = 0;
+    let refundTotal = 0;
 
     for (const o of paidOrders) {
       const dt = toDateSafe(o.paidAt) || toDateSafe(o.createdAt);
@@ -214,33 +267,56 @@ export default function ReportsPage() {
       }
     }
 
-    return { revenue, count };
-  }, [paidOrders]);
+    for (const rf of refundLogs) {
+      const dt = toDateSafe(rf.refundedAt);
+      if (!dt) continue;
+      if (dt >= som) {
+        refundTotal += Number(rf.total || 0);
+      }
+    }
+
+    return { revenue, count, refundTotal, netRevenue: revenue - refundTotal };
+  }, [paidOrders, refundLogs]);
 
   function exportExcel() {
     if (!tenantId) return;
-    if (selectedDateStats.dayOrders.length === 0) {
-      alert("Belum ada order PAID pada tanggal ini.");
-      return;
-    }
 
-    const rows = selectedDateStats.dayOrders.map((o) => {
+    const orderRows = selectedDateStats.dayOrders.map((o) => {
       const dt = toDateSafe(o.paidAt) || toDateSafe(o.createdAt);
       return {
+        Type: "ORDER",
         Tanggal: dt ? dt.toLocaleString("id-ID") : "-",
         OrderNo: o.orderNo || o.id,
-        Status: o.status || "-",
-        Mode: o.mode || "-",
         Meja: o.tableNo || "-",
         Metode: o.paymentMethod || "-",
         Subtotal: o.subtotal || 0,
         Diskon: o.discount || 0,
         Total: o.total || 0,
-        Items: (o.items || [])
-          .map((it) => `${it.name} x${it.qty} @${it.price}`)
-          .join(" | "),
+        Keterangan: (o.items || []).map((it) => `${it.name} x${it.qty}`).join(" | "),
       };
     });
+
+    const refundRows = selectedDateStats.dayRefunds.map((o) => {
+      const dt = toDateSafe(o.refundedAt);
+      return {
+        Type: "REFUND",
+        Tanggal: dt ? dt.toLocaleString("id-ID") : "-",
+        OrderNo: o.orderNo || o.id,
+        Meja: o.tableNo || "-",
+        Metode: o.paymentMethod || "-",
+        Subtotal: 0,
+        Diskon: 0,
+        Total: o.total || 0,
+        Keterangan: `Refund oleh ${o.refundedByEmail || "-"}${o.reason ? " | " + o.reason : ""}`,
+      };
+    });
+
+    const rows = [...orderRows, ...refundRows];
+
+    if (rows.length === 0) {
+      alert("Belum ada order/refund pada tanggal ini.");
+      return;
+    }
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -363,7 +439,7 @@ export default function ReportsPage() {
 
       <div className="grid">
         <div className="stat-card">
-          <div className="stat-label">Omzet Tanggal Dipilih</div>
+          <div className="stat-label">Omzet Kotor Tanggal Dipilih</div>
           <div className="stat-value" style={{ color: "var(--brand)" }}>
             Rp {rupiah(selectedDateStats.revenue)}
           </div>
@@ -375,6 +451,20 @@ export default function ReportsPage() {
         </div>
 
         <div className="stat-card">
+          <div className="stat-label">Total Refund</div>
+          <div className="stat-value">Rp {rupiah(selectedDateStats.refundTotal)}</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-label">Omzet Bersih</div>
+          <div className="stat-value" style={{ color: "var(--brand)" }}>
+            Rp {rupiah(selectedDateStats.netRevenue)}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+        <div className="stat-card">
           <div className="stat-label">Pembayaran Cash</div>
           <div className="stat-value">Rp {rupiah(selectedDateStats.cashRevenue)}</div>
         </div>
@@ -385,17 +475,22 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+      <div className="grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
         <div className="stat-card">
-          <div className="stat-label">Omzet Bulan Ini</div>
-          <div className="stat-value" style={{ color: "var(--brand)" }}>
-            Rp {rupiah(monthStats.revenue)}
-          </div>
+          <div className="stat-label">Omzet Kotor Bulan Ini</div>
+          <div className="stat-value">Rp {rupiah(monthStats.revenue)}</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Transaksi Bulan Ini</div>
-          <div className="stat-value">{monthStats.count}</div>
+          <div className="stat-label">Refund Bulan Ini</div>
+          <div className="stat-value">Rp {rupiah(monthStats.refundTotal)}</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-label">Omzet Bersih Bulan Ini</div>
+          <div className="stat-value" style={{ color: "var(--brand)" }}>
+            Rp {rupiah(monthStats.netRevenue)}
+          </div>
         </div>
       </div>
 
@@ -467,7 +562,7 @@ export default function ReportsPage() {
                     <td>
                       {(o.items || []).map((it, idx) => (
                         <div key={idx}>
-                          {it.name} x{it.qty}
+                          {it.name} x{it.qty}{(it.notes || "").trim() ? ` — ${it.notes}` : ""}
                         </div>
                       ))}
                     </td>
@@ -484,6 +579,46 @@ export default function ReportsPage() {
         {selectedDateStats.dayOrders.length === 0 && (
           <div className="small" style={{ marginTop: 12 }}>
             Tidak ada transaksi pada tanggal ini.
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h1">Log Refund pada {selectedDate}</div>
+        <div className="small" style={{ marginTop: 6 }}>
+          Menampilkan semua refund yang terjadi pada tanggal yang dipilih.
+        </div>
+
+        <div style={{ marginTop: 12, overflowX: "auto" }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Waktu Refund</th>
+                <th>Order No</th>
+                <th>Meja</th>
+                <th>Refund Oleh</th>
+                <th>Alasan</th>
+                <th>Total Refund</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedDateStats.dayRefunds.map((o) => (
+                <tr key={o.id}>
+                  <td>{formatDateTime(toDateSafe(o.refundedAt))}</td>
+                  <td style={{ fontWeight: 900 }}>{o.orderNo || o.id}</td>
+                  <td>{o.tableNo || "-"}</td>
+                  <td>{o.refundedByEmail || "-"}</td>
+                  <td>{o.reason || "-"}</td>
+                  <td style={{ fontWeight: 900 }}>{rupiah(o.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {selectedDateStats.dayRefunds.length === 0 && (
+          <div className="small" style={{ marginTop: 12 }}>
+            Tidak ada refund pada tanggal ini.
           </div>
         )}
       </div>

@@ -8,6 +8,7 @@ import { useRole } from "@/hooks/useRole";
 import { auth, db } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -36,6 +37,17 @@ type Order = {
   createdAt?: any;
   updatedAt?: any;
   paidAt?: any;
+};
+
+type RefundLog = {
+  id: string;
+  orderNo: string;
+  tableNo?: string | null;
+  total: number;
+  paymentMethod?: string | null;
+  refundedByEmail?: string;
+  refundedAt?: any;
+  items: { name: string; qty: number; price: number; notes?: string }[];
 };
 
 type ReceiptSettings = {
@@ -108,7 +120,8 @@ export default function OrdersPage() {
   const canUse = ["owner", "admin"].includes((role || "").toString().toLowerCase());
 
   const [orders, setOrders] = useState<Order[]>([]);
-  const [tab, setTab] = useState<"OPEN" | "PAID">("OPEN");
+  const [refundLogs, setRefundLogs] = useState<RefundLog[]>([]);
+  const [tab, setTab] = useState<"OPEN" | "PAID" | "REFUND">("OPEN");
   const [err, setErr] = useState<string | null>(null);
 
   const [payOpen, setPayOpen] = useState(false);
@@ -119,6 +132,7 @@ export default function OrdersPage() {
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundOrder, setRefundOrder] = useState<Order | null>(null);
   const [refundPinInput, setRefundPinInput] = useState("");
+  const [refundReason, setRefundReason] = useState("");
   const [refundLoading, setRefundLoading] = useState(false);
 
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>({
@@ -180,7 +194,34 @@ export default function OrdersPage() {
     );
   }, [tenantId]);
 
+  useEffect(() => {
+    if (!tenantId) return;
+    const ref = collection(db, `tenants/${tenantId}/refunds`);
+    const qy = query(ref, orderBy("refundedAt", "desc"));
+    return onSnapshot(
+      qy,
+      (snap) => {
+        const arr = snap.docs.map((d) => {
+          const x = d.data() as any;
+          return {
+            id: d.id,
+            orderNo: x.orderNo || d.id,
+            tableNo: x.tableNo ?? null,
+            total: Number(x.total || 0),
+            paymentMethod: x.paymentMethod ?? null,
+            refundedByEmail: x.refundedByEmail || "",
+            refundedAt: x.refundedAt,
+            items: Array.isArray(x.items) ? x.items : [],
+          } as RefundLog;
+        });
+        setRefundLogs(arr);
+      },
+      (e) => setErr(e.message)
+    );
+  }, [tenantId]);
+
   const list = useMemo(() => {
+    if (tab === "REFUND") return [];
     return orders.filter((o) => o.status === tab);
   }, [orders, tab]);
 
@@ -222,6 +263,40 @@ export default function OrdersPage() {
       }));
   }, [list, tab]);
 
+  const refundGrouped = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        label: string;
+        items: (RefundLog & { displayDate: Date | null })[];
+      }
+    >();
+
+    for (const o of refundLogs) {
+      const displayDate = toDateSafe(o.refundedAt);
+      const key = dayKey(displayDate);
+      const label = formatDateFull(displayDate);
+
+      if (!map.has(key)) {
+        map.set(key, { label, items: [] });
+      }
+
+      map.get(key)!.items.push({ ...o, displayDate });
+    }
+
+    return Array.from(map.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([key, value]) => ({
+        key,
+        label: value.label,
+        items: value.items.sort((a, b) => {
+          const da = a.displayDate ? a.displayDate.getTime() : 0;
+          const db = b.displayDate ? b.displayDate.getTime() : 0;
+          return db - da;
+        }),
+      }));
+  }, [refundLogs]);
+
   function openPay(o: Order) {
     setPayOrder(o);
     setPaymentMethod("CASH");
@@ -233,6 +308,7 @@ export default function OrdersPage() {
   function openRefund(o: Order) {
     setRefundOrder(o);
     setRefundPinInput("");
+    setRefundReason("");
     setRefundOpen(true);
     setErr(null);
   }
@@ -347,11 +423,33 @@ export default function OrdersPage() {
       }
 
       setRefundLoading(true);
+
+      await addDoc(collection(db, `tenants/${tenantId}/refunds`), {
+        orderId: refundOrder.id,
+        orderNo: refundOrder.orderNo,
+        statusBeforeRefund: refundOrder.status,
+        mode: refundOrder.mode || null,
+        tableNo: refundOrder.tableNo || null,
+        paymentMethod: refundOrder.paymentMethod || null,
+        paidAmount: refundOrder.paidAmount ?? null,
+        subtotal: refundOrder.subtotal,
+        discount: refundOrder.discount,
+        total: refundOrder.total,
+        items: refundOrder.items || [],
+        originalCreatedAt: refundOrder.createdAt || null,
+        originalPaidAt: refundOrder.paidAt || null,
+        refundedAt: serverTimestamp(),
+        refundedByEmail: email || "",
+        refundedByRole: role || "",
+        reason: (refundReason || "").trim(),
+      });
+
       await deleteDoc(doc(db, `tenants/${tenantId}/orders/${refundOrder.id}`));
 
       setRefundOpen(false);
       setRefundOrder(null);
       setRefundPinInput("");
+      setRefundReason("");
       setErr(null);
     } catch (e: any) {
       setErr(e?.message ?? "Gagal refund");
@@ -464,107 +562,163 @@ export default function OrdersPage() {
 
         <div className="row2" style={{ marginTop: 12 }}>
           <button className={"btn " + (tab === "OPEN" ? "btn-primary" : "")} onClick={() => setTab("OPEN")}>
-            OPEN (Bayar Nanti)
+            OPEN
           </button>
           <button className={"btn " + (tab === "PAID" ? "btn-primary" : "")} onClick={() => setTab("PAID")}>
             PAID
+          </button>
+          <button className={"btn " + (tab === "REFUND" ? "btn-primary" : "")} onClick={() => setTab("REFUND")}>
+            REFUND LOG
           </button>
           {err && <span style={{ color: "var(--danger)", fontWeight: 900 }}>{err}</span>}
         </div>
       </div>
 
-      {grouped.length === 0 ? (
+      {tab !== "REFUND" ? (
+        grouped.length === 0 ? (
+          <div className="card" style={{ marginTop: 14 }}>
+            <div className="small">Tidak ada data.</div>
+          </div>
+        ) : (
+          grouped.map((group) => (
+            <div key={group.key} className="day-group">
+              <div className="day-header">{group.label}</div>
+
+              {group.items.map((o) => {
+                const shownDate =
+                  tab === "PAID"
+                    ? toDateSafe(o.paidAt) || toDateSafe(o.updatedAt) || toDateSafe(o.createdAt)
+                    : toDateSafe(o.createdAt) || toDateSafe(o.updatedAt);
+
+                return (
+                  <div key={o.id} className="order-card">
+                    <div className="row">
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: 17 }}>{o.orderNo}</div>
+
+                        <div className="meta">
+                          <div className="small">
+                            Status: <b>{o.status}</b> • Mode: <b>{o.mode || "-"}</b> • Meja: <b>{o.tableNo || "-"}</b>
+                          </div>
+
+                          <div className="small">
+                            Tanggal: <b>{formatDateTime(shownDate)}</b>
+                          </div>
+
+                          {tab === "PAID" && (
+                            <div className="small">
+                              Metode: <b>{o.paymentMethod || "-"}</b>
+                            </div>
+                          )}
+
+                          <div className="small">
+                            Jam: <b>{formatTimeOnly(shownDate)}</b>
+                          </div>
+                        </div>
+
+                        <div className="items-mini">
+                          {(o.items || []).slice(0, 3).map((it, idx) => (
+                            <div className="item-row" key={idx}>
+                              <span>
+                                {it.name} x{it.qty}
+                                {(it.notes || "").trim() ? ` — ${it.notes}` : ""}
+                              </span>
+                              <b>Rp {rupiah((it.price || 0) * (it.qty || 0))}</b>
+                            </div>
+                          ))}
+                          {(o.items || []).length > 3 && (
+                            <div className="small">+ {(o.items || []).length - 3} item lainnya</div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: "right", minWidth: 160 }}>
+                        <div className="pill">Rp {rupiah(o.total)}</div>
+
+                        {o.status === "OPEN" ? (
+                          <button
+                            className="btn btn-primary"
+                            style={{ marginTop: 10, width: "100%" }}
+                            onClick={() => openPay(o)}
+                          >
+                            Bayar & Print
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className="btn"
+                              style={{ marginTop: 10, width: "100%" }}
+                              onClick={() => reprintOrder(o)}
+                            >
+                              Cetak Ulang
+                            </button>
+
+                            <button
+                              className="btn btn-danger"
+                              style={{ marginTop: 10, width: "100%" }}
+                              onClick={() => openRefund(o)}
+                            >
+                              Refund
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))
+        )
+      ) : refundGrouped.length === 0 ? (
         <div className="card" style={{ marginTop: 14 }}>
-          <div className="small">Tidak ada data.</div>
+          <div className="small">Belum ada log refund.</div>
         </div>
       ) : (
-        grouped.map((group) => (
+        refundGrouped.map((group) => (
           <div key={group.key} className="day-group">
             <div className="day-header">{group.label}</div>
 
-            {group.items.map((o) => {
-              const shownDate =
-                tab === "PAID"
-                  ? toDateSafe(o.paidAt) || toDateSafe(o.updatedAt) || toDateSafe(o.createdAt)
-                  : toDateSafe(o.createdAt) || toDateSafe(o.updatedAt);
+            {group.items.map((o) => (
+              <div key={o.id} className="order-card">
+                <div className="row">
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: 17 }}>{o.orderNo}</div>
 
-              return (
-                <div key={o.id} className="order-card">
-                  <div className="row">
-                    <div>
-                      <div style={{ fontWeight: 900, fontSize: 17 }}>{o.orderNo}</div>
-
-                      <div className="meta">
-                        <div className="small">
-                          Status: <b>{o.status}</b> • Mode: <b>{o.mode || "-"}</b> • Meja: <b>{o.tableNo || "-"}</b>
-                        </div>
-
-                        <div className="small">
-                          Tanggal: <b>{formatDateTime(shownDate)}</b>
-                        </div>
-
-                        {tab === "PAID" && (
-                          <div className="small">
-                            Metode: <b>{o.paymentMethod || "-"}</b>
-                          </div>
-                        )}
-
-                        <div className="small">
-                          Jam: <b>{formatTimeOnly(shownDate)}</b>
-                        </div>
+                    <div className="meta">
+                      <div className="small">
+                        Waktu Refund: <b>{formatDateTime(toDateSafe(o.refundedAt))}</b>
                       </div>
-
-                      <div className="items-mini">
-                        {(o.items || []).slice(0, 3).map((it, idx) => (
-                          <div className="item-row" key={idx}>
-                            <span>
-                              {it.name} x{it.qty}
-                              {(it.notes || "").trim() ? ` — ${it.notes}` : ""}
-                            </span>
-                            <b>Rp {rupiah((it.price || 0) * (it.qty || 0))}</b>
-                          </div>
-                        ))}
-                        {(o.items || []).length > 3 && (
-                          <div className="small">+ {(o.items || []).length - 3} item lainnya</div>
-                        )}
+                      <div className="small">
+                        Meja: <b>{o.tableNo || "-"}</b> • Metode: <b>{o.paymentMethod || "-"}</b>
+                      </div>
+                      <div className="small">
+                        Direfund oleh: <b>{o.refundedByEmail || "-"}</b>
                       </div>
                     </div>
 
-                    <div style={{ textAlign: "right", minWidth: 160 }}>
-                      <div className="pill">Rp {rupiah(o.total)}</div>
-
-                      {o.status === "OPEN" ? (
-                        <button
-                          className="btn btn-primary"
-                          style={{ marginTop: 10, width: "100%" }}
-                          onClick={() => openPay(o)}
-                        >
-                          Bayar & Print
-                        </button>
-                      ) : (
-                        <>
-                          <button
-                            className="btn"
-                            style={{ marginTop: 10, width: "100%" }}
-                            onClick={() => reprintOrder(o)}
-                          >
-                            Cetak Ulang
-                          </button>
-
-                          <button
-                            className="btn btn-danger"
-                            style={{ marginTop: 10, width: "100%" }}
-                            onClick={() => openRefund(o)}
-                          >
-                            Refund
-                          </button>
-                        </>
+                    <div className="items-mini">
+                      {(o.items || []).slice(0, 3).map((it, idx) => (
+                        <div className="item-row" key={idx}>
+                          <span>
+                            {it.name} x{it.qty}
+                            {(it.notes || "").trim() ? ` — ${it.notes}` : ""}
+                          </span>
+                          <b>Rp {rupiah((it.price || 0) * (it.qty || 0))}</b>
+                        </div>
+                      ))}
+                      {(o.items || []).length > 3 && (
+                        <div className="small">+ {(o.items || []).length - 3} item lainnya</div>
                       )}
                     </div>
                   </div>
+
+                  <div style={{ textAlign: "right", minWidth: 160 }}>
+                    <div className="pill">Rp {rupiah(o.total)}</div>
+                  </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         ))
       )}
@@ -655,6 +809,7 @@ export default function OrdersPage() {
                   setRefundOpen(false);
                   setRefundOrder(null);
                   setRefundPinInput("");
+                  setRefundReason("");
                 }}
               >
                 Tutup
@@ -676,8 +831,19 @@ export default function OrdersPage() {
               />
             </div>
 
+            <div style={{ marginTop: 12 }}>
+              <div className="small">Alasan Refund (opsional)</div>
+              <textarea
+                className="input"
+                style={{ minHeight: 80 }}
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder="Contoh: salah input, dibatalkan customer"
+              />
+            </div>
+
             <div className="small" style={{ marginTop: 10 }}>
-              Jika refund berhasil, data order ini akan <b>dihapus</b> dari database.
+              Jika refund berhasil, order dihapus dari penjualan utama tetapi tetap masuk ke <b>refund log</b>.
             </div>
 
             {err && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{err}</div>}
