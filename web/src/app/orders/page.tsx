@@ -9,6 +9,7 @@ import { auth, db } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -31,7 +32,7 @@ type Order = {
   subtotal: number;
   discount: number;
   total: number;
-  items: { name: string; qty: number; price: number }[];
+  items: { name: string; qty: number; price: number; notes?: string }[];
   createdAt?: any;
   updatedAt?: any;
   paidAt?: any;
@@ -42,6 +43,7 @@ type ReceiptSettings = {
   address: string;
   footer: string;
   cashierName: string;
+  refundPin: string;
 };
 
 function rupiah(n: number) {
@@ -114,11 +116,17 @@ export default function OrdersPage() {
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS">("CASH");
   const [paidAmount, setPaidAmount] = useState<number>(0);
 
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundOrder, setRefundOrder] = useState<Order | null>(null);
+  const [refundPinInput, setRefundPinInput] = useState("");
+  const [refundLoading, setRefundLoading] = useState(false);
+
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>({
     storeName: "TerraPOS",
     address: "",
     footer: "Terima kasih.",
     cashierName: "Kasir TerraPOS",
+    refundPin: "123456",
   });
 
   useEffect(() => {
@@ -133,6 +141,7 @@ export default function OrdersPage() {
             address: (d.address || "").toString(),
             footer: (d.footer || "Terima kasih.").toString(),
             cashierName: (d.cashierName || "Kasir TerraPOS").toString(),
+            refundPin: (d.refundPin || "123456").toString(),
           });
         }
       } catch {}
@@ -221,6 +230,13 @@ export default function OrdersPage() {
     setErr(null);
   }
 
+  function openRefund(o: Order) {
+    setRefundOrder(o);
+    setRefundPinInput("");
+    setRefundOpen(true);
+    setErr(null);
+  }
+
   function buildReceiptHtml(o: Order, payMethod: "CASH" | "QRIS", paid: number) {
     const dateText = new Date().toLocaleString("id-ID");
     return receiptHTML({
@@ -237,7 +253,7 @@ export default function OrdersPage() {
       discount: o.discount,
       total: o.total,
       paidAmount: payMethod === "CASH" ? paid : o.total,
-      items: o.items.map((it) => ({ name: it.name, qty: it.qty, price: it.price })),
+      items: o.items.map((it) => ({ name: it.name, qty: it.qty, price: it.price, notes: it.notes || "" })),
     });
   }
 
@@ -256,7 +272,11 @@ export default function OrdersPage() {
       discount: o.discount,
       total: o.total,
       paidAmount: payMethod === "CASH" ? paid : o.total,
-      items: (o.items || []).map((it) => ({ name: it.name, qty: it.qty, price: it.price })),
+      items: (o.items || []).map((it) => ({
+        name: it.notes?.trim() ? `${it.name} (${it.notes})` : it.name,
+        qty: it.qty,
+        price: it.price,
+      })),
     });
   }
 
@@ -306,6 +326,37 @@ export default function OrdersPage() {
       setErr(null);
     } catch (e: any) {
       setErr(e?.message ?? "Gagal bayar");
+    }
+  }
+
+  async function confirmRefund() {
+    try {
+      if (!tenantId || !refundOrder) return;
+
+      const savedPin = (receiptSettings.refundPin || "123456").trim();
+      const inputPin = (refundPinInput || "").trim();
+
+      if (!inputPin) {
+        setErr("PIN refund wajib diisi.");
+        return;
+      }
+
+      if (savedPin !== inputPin) {
+        setErr("PIN refund salah.");
+        return;
+      }
+
+      setRefundLoading(true);
+      await deleteDoc(doc(db, `tenants/${tenantId}/orders/${refundOrder.id}`));
+
+      setRefundOpen(false);
+      setRefundOrder(null);
+      setRefundPinInput("");
+      setErr(null);
+    } catch (e: any) {
+      setErr(e?.message ?? "Gagal refund");
+    } finally {
+      setRefundLoading(false);
     }
   }
 
@@ -466,7 +517,10 @@ export default function OrdersPage() {
                       <div className="items-mini">
                         {(o.items || []).slice(0, 3).map((it, idx) => (
                           <div className="item-row" key={idx}>
-                            <span>{it.name} x{it.qty}</span>
+                            <span>
+                              {it.name} x{it.qty}
+                              {(it.notes || "").trim() ? ` — ${it.notes}` : ""}
+                            </span>
                             <b>Rp {rupiah((it.price || 0) * (it.qty || 0))}</b>
                           </div>
                         ))}
@@ -476,7 +530,7 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                    <div style={{ textAlign: "right", minWidth: 150 }}>
+                    <div style={{ textAlign: "right", minWidth: 160 }}>
                       <div className="pill">Rp {rupiah(o.total)}</div>
 
                       {o.status === "OPEN" ? (
@@ -488,13 +542,23 @@ export default function OrdersPage() {
                           Bayar & Print
                         </button>
                       ) : (
-                        <button
-                          className="btn"
-                          style={{ marginTop: 10, width: "100%" }}
-                          onClick={() => reprintOrder(o)}
-                        >
-                          Cetak Ulang
-                        </button>
+                        <>
+                          <button
+                            className="btn"
+                            style={{ marginTop: 10, width: "100%" }}
+                            onClick={() => reprintOrder(o)}
+                          >
+                            Cetak Ulang
+                          </button>
+
+                          <button
+                            className="btn btn-danger"
+                            style={{ marginTop: 10, width: "100%" }}
+                            onClick={() => openRefund(o)}
+                          >
+                            Refund
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -564,6 +628,67 @@ export default function OrdersPage() {
 
             <button className="btn btn-primary" style={{ width: "100%", marginTop: 12 }} onClick={payAndPrint}>
               Bayar & Print Struk
+            </button>
+          </div>
+        </div>
+      )}
+
+      {refundOpen && refundOrder && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            zIndex: 60,
+          }}
+        >
+          <div className="card" style={{ width: 520, maxWidth: "100%" }}>
+            <div className="row">
+              <div className="h1">Refund Order</div>
+              <div className="spacer" />
+              <button
+                className="btn"
+                onClick={() => {
+                  setRefundOpen(false);
+                  setRefundOrder(null);
+                  setRefundPinInput("");
+                }}
+              >
+                Tutup
+              </button>
+            </div>
+
+            <div className="small" style={{ marginTop: 8 }}>
+              Order: <b>{refundOrder.orderNo}</b> • Total: <b>Rp {rupiah(refundOrder.total)}</b>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div className="small">Masukkan PIN Refund</div>
+              <input
+                className="input"
+                type="password"
+                value={refundPinInput}
+                onChange={(e) => setRefundPinInput(e.target.value)}
+                placeholder="PIN refund"
+              />
+            </div>
+
+            <div className="small" style={{ marginTop: 10 }}>
+              Jika refund berhasil, data order ini akan <b>dihapus</b> dari database.
+            </div>
+
+            {err && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{err}</div>}
+
+            <button
+              className="btn btn-danger"
+              style={{ width: "100%", marginTop: 12 }}
+              onClick={confirmRefund}
+              disabled={refundLoading}
+            >
+              {refundLoading ? "Memproses Refund..." : "Konfirmasi Refund"}
             </button>
           </div>
         </div>

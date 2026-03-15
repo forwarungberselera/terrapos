@@ -88,6 +88,7 @@ export default function DashboardPage() {
   const [address, setAddress] = useState("");
   const [footer, setFooter] = useState("Terima kasih.");
   const [cashierName, setCashierName] = useState("Kasir TerraPOS");
+  const [refundPin, setRefundPin] = useState("123456");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
 
@@ -144,10 +145,9 @@ export default function DashboardPage() {
           setAddress((d.address || "").toString());
           setFooter((d.footer || "Terima kasih.").toString());
           setCashierName((d.cashierName || "Kasir TerraPOS").toString());
+          setRefundPin((d.refundPin || "123456").toString());
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
   }, [tenantId]);
 
@@ -275,11 +275,12 @@ export default function DashboardPage() {
           address: address.trim(),
           footer: footer.trim() || "Terima kasih.",
           cashierName: cashierName.trim() || "Kasir TerraPOS",
+          refundPin: refundPin.trim() || "123456",
           updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
-      setSaveMsg("Tersimpan. Perubahan dipakai untuk struk berikutnya.");
+      setSaveMsg("Tersimpan. Perubahan dipakai untuk struk dan refund berikutnya.");
       setTimeout(() => setSaveMsg(""), 2500);
     } catch (e: any) {
       setSaveMsg("Gagal simpan: " + (e?.message || "unknown"));
@@ -313,61 +314,328 @@ export default function DashboardPage() {
   return (
     <TerraPage maxWidth={1440}>
       <style>{`
-        .premium-shell{display:grid;grid-template-columns:260px 1fr;gap:16px;margin-top:14px;}
-        @media (max-width: 1100px){.premium-shell{grid-template-columns:1fr;}}
-        .sidebar{border:1px solid var(--border);border-radius:20px;background:#ffffff;padding:18px;height:fit-content;position:sticky;top:16px;}
-        .brandbox{padding:14px;border-radius:18px;background:linear-gradient(180deg,#fff7f0 0%,#ffffff 100%);border:1px solid #ffe0c2;}
-        .brandtitle{font-size:20px;font-weight:900;color:#111827;}
-        .brandsub{margin-top:6px;font-size:12px;color:var(--muted);}
-        .sidegroup{margin-top:16px;display:grid;gap:10px;}
-        .sidebtn{width:100%;text-align:left;border:1px solid var(--border);background:#fff;padding:12px 14px;border-radius:14px;cursor:pointer;font-weight:800;}
-        .sidebtn:hover{background:var(--brandSoft);border-color:#ffd7b5;}
-        .maincol{display:grid;gap:16px;}
-        .hero{border:1px solid var(--border);border-radius:22px;background:linear-gradient(180deg,#ffffff 0%,#fff9f4 100%);padding:22px;}
-        .hero-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;}
-        .hero-title{font-size:28px;font-weight:900;line-height:1.1;}
-        .hero-sub{margin-top:8px;color:var(--muted);font-size:13px;}
-        .hero-badges{display:flex;gap:10px;flex-wrap:wrap;}
-        .badge{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:800;}
-        .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;}
-        @media (max-width: 1080px){.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-        @media (max-width: 640px){.stats-grid{grid-template-columns:1fr;}}
-        .stat-card{border:1px solid var(--border);border-radius:18px;padding:18px;background:#fff;box-shadow:0 4px 14px rgba(17,24,39,0.04);}
-        .stat-label{font-size:12px;color:var(--muted);font-weight:700;}
-        .stat-value{margin-top:10px;font-size:28px;font-weight:900;line-height:1.1;color:#111827;}
-        .stat-note{margin-top:8px;font-size:12px;color:var(--muted);}
-        .content-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;}
-        @media (max-width: 1180px){.content-grid{grid-template-columns:1fr;}}
-        .panel{border:1px solid var(--border);border-radius:20px;background:#fff;padding:18px;box-shadow:0 4px 14px rgba(17,24,39,0.04);}
-        .panel-title{font-size:18px;font-weight:900;}
-        .panel-sub{margin-top:6px;font-size:12px;color:var(--muted);}
-        .quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px;}
-        @media (max-width: 980px){.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-        @media (max-width: 640px){.quick-grid{grid-template-columns:1fr;}}
-        .quickbtn{text-align:left;padding:14px;border-radius:16px;border:1px solid var(--border);background:#fff;cursor:pointer;}
-        .quickbtn:hover{background:var(--brandSoft);border-color:#ffd7b5;}
-        .quicktitle{font-weight:900;font-size:15px;}
-        .quickdesc{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.45;}
-        .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-        @media (max-width: 780px){.two-col{grid-template-columns:1fr;}}
-        table{width:100%;border-collapse:collapse;}
-        th,td{padding:11px 8px;border-bottom:1px solid var(--border);text-align:left;}
-        th{font-size:12px;color:var(--muted);font-weight:800;}
-        .receipt-preview{margin-top:14px;border:1px dashed var(--border);border-radius:16px;padding:14px;background:#fffdfa;font-family:ui-monospace, Menlo, Consolas, monospace;white-space:pre-wrap;line-height:1.5;font-size:13px;}
-        .mini-stack{display:grid;gap:12px;}
-        .mini-box{border:1px solid var(--border);border-radius:16px;padding:14px;background:#fff;}
-        .mini-label{font-size:12px;color:var(--muted);font-weight:700;}
-        .mini-value{margin-top:8px;font-size:20px;font-weight:900;}
-        .chart-wrap{margin-top:14px;display:grid;gap:12px;}
-        .bars{display:flex;align-items:end;gap:10px;min-height:220px;padding:12px;border:1px solid var(--border);border-radius:16px;background:#fffdfa;}
-        .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:end;gap:8px;min-width:0;}
-        .bar{width:100%;max-width:54px;border-radius:14px 14px 8px 8px;background:linear-gradient(180deg,#ff9a3d 0%,#ff7a00 100%);box-shadow:inset 0 -10px 18px rgba(255,255,255,0.15);}
-        .bar-value{font-size:11px;color:var(--muted);text-align:center;line-height:1.2;}
-        .bar-label{font-size:11px;font-weight:800;color:#111827;}
-        .payment-box{margin-top:14px;display:grid;gap:12px;}
-        .progress{width:100%;height:16px;border-radius:999px;background:#f3f4f6;overflow:hidden;border:1px solid var(--border);}
-        .progress-inner{height:100%;background:linear-gradient(90deg,#ff9a3d 0%,#ff7a00 100%);}
-        .legend{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);}
+        .premium-shell{
+          display:grid;
+          grid-template-columns: 260px 1fr;
+          gap:16px;
+          margin-top:14px;
+        }
+        @media (max-width: 1100px){
+          .premium-shell{
+            grid-template-columns: 1fr;
+          }
+        }
+        .sidebar{
+          border:1px solid var(--border);
+          border-radius:20px;
+          background:#ffffff;
+          padding:18px;
+          height: fit-content;
+          position: sticky;
+          top: 16px;
+        }
+        .brandbox{
+          padding:14px;
+          border-radius:18px;
+          background: linear-gradient(180deg, #fff7f0 0%, #ffffff 100%);
+          border:1px solid #ffe0c2;
+        }
+        .brandtitle{
+          font-size:20px;
+          font-weight:900;
+          color:#111827;
+        }
+        .brandsub{
+          margin-top:6px;
+          font-size:12px;
+          color:var(--muted);
+        }
+        .sidegroup{
+          margin-top:16px;
+          display:grid;
+          gap:10px;
+        }
+        .sidebtn{
+          width:100%;
+          text-align:left;
+          border:1px solid var(--border);
+          background:#fff;
+          padding:12px 14px;
+          border-radius:14px;
+          cursor:pointer;
+          font-weight:800;
+        }
+        .sidebtn:hover{
+          background:var(--brandSoft);
+          border-color:#ffd7b5;
+        }
+        .maincol{
+          display:grid;
+          gap:16px;
+        }
+        .hero{
+          border:1px solid var(--border);
+          border-radius:22px;
+          background: linear-gradient(180deg, #ffffff 0%, #fff9f4 100%);
+          padding:22px;
+        }
+        .hero-top{
+          display:flex;
+          justify-content:space-between;
+          gap:16px;
+          align-items:flex-start;
+          flex-wrap:wrap;
+        }
+        .hero-title{
+          font-size:28px;
+          font-weight:900;
+          line-height:1.1;
+        }
+        .hero-sub{
+          margin-top:8px;
+          color:var(--muted);
+          font-size:13px;
+        }
+        .hero-badges{
+          display:flex;
+          gap:10px;
+          flex-wrap:wrap;
+        }
+        .badge{
+          display:inline-flex;
+          align-items:center;
+          gap:6px;
+          padding:9px 12px;
+          border-radius:999px;
+          border:1px solid var(--border);
+          background:#fff;
+          font-size:12px;
+          font-weight:800;
+        }
+        .stats-grid{
+          display:grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap:14px;
+        }
+        @media (max-width: 1080px){
+          .stats-grid{
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 640px){
+          .stats-grid{
+            grid-template-columns: 1fr;
+          }
+        }
+        .stat-card{
+          border:1px solid var(--border);
+          border-radius:18px;
+          padding:18px;
+          background:#fff;
+          box-shadow: 0 4px 14px rgba(17,24,39,0.04);
+        }
+        .stat-label{
+          font-size:12px;
+          color:var(--muted);
+          font-weight:700;
+        }
+        .stat-value{
+          margin-top:10px;
+          font-size:28px;
+          font-weight:900;
+          line-height:1.1;
+          color:#111827;
+        }
+        .stat-note{
+          margin-top:8px;
+          font-size:12px;
+          color:var(--muted);
+        }
+        .content-grid{
+          display:grid;
+          grid-template-columns: 1.15fr .85fr;
+          gap:16px;
+        }
+        @media (max-width: 1180px){
+          .content-grid{
+            grid-template-columns: 1fr;
+          }
+        }
+        .panel{
+          border:1px solid var(--border);
+          border-radius:20px;
+          background:#fff;
+          padding:18px;
+          box-shadow: 0 4px 14px rgba(17,24,39,0.04);
+        }
+        .panel-title{
+          font-size:18px;
+          font-weight:900;
+        }
+        .panel-sub{
+          margin-top:6px;
+          font-size:12px;
+          color:var(--muted);
+        }
+        .quick-grid{
+          display:grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap:12px;
+          margin-top:14px;
+        }
+        @media (max-width: 980px){
+          .quick-grid{
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 640px){
+          .quick-grid{
+            grid-template-columns: 1fr;
+          }
+        }
+        .quickbtn{
+          text-align:left;
+          padding:14px;
+          border-radius:16px;
+          border:1px solid var(--border);
+          background:#fff;
+          cursor:pointer;
+        }
+        .quickbtn:hover{
+          background:var(--brandSoft);
+          border-color:#ffd7b5;
+        }
+        .quicktitle{
+          font-weight:900;
+          font-size:15px;
+        }
+        .quickdesc{
+          margin-top:6px;
+          font-size:12px;
+          color:var(--muted);
+          line-height:1.45;
+        }
+        .two-col{
+          display:grid;
+          grid-template-columns: 1fr 1fr;
+          gap:16px;
+        }
+        @media (max-width: 780px){
+          .two-col{
+            grid-template-columns: 1fr;
+          }
+        }
+        table{
+          width:100%;
+          border-collapse:collapse;
+        }
+        th, td{
+          padding:11px 8px;
+          border-bottom:1px solid var(--border);
+          text-align:left;
+        }
+        th{
+          font-size:12px;
+          color:var(--muted);
+          font-weight:800;
+        }
+        .receipt-preview{
+          margin-top:14px;
+          border:1px dashed var(--border);
+          border-radius:16px;
+          padding:14px;
+          background:#fffdfa;
+          font-family: ui-monospace, Menlo, Consolas, monospace;
+          white-space: pre-wrap;
+          line-height:1.5;
+          font-size:13px;
+        }
+        .mini-stack{
+          display:grid;
+          gap:12px;
+        }
+        .mini-box{
+          border:1px solid var(--border);
+          border-radius:16px;
+          padding:14px;
+          background:#fff;
+        }
+        .mini-label{
+          font-size:12px;
+          color:var(--muted);
+          font-weight:700;
+        }
+        .mini-value{
+          margin-top:8px;
+          font-size:20px;
+          font-weight:900;
+        }
+        .chart-wrap{
+          margin-top:14px;
+          display:grid;
+          gap:12px;
+        }
+        .bars{
+          display:flex;
+          align-items:end;
+          gap:10px;
+          min-height:220px;
+          padding:12px;
+          border:1px solid var(--border);
+          border-radius:16px;
+          background:#fffdfa;
+        }
+        .bar-col{
+          flex:1;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          justify-content:end;
+          gap:8px;
+          min-width:0;
+        }
+        .bar{
+          width:100%;
+          max-width:54px;
+          border-radius:14px 14px 8px 8px;
+          background: linear-gradient(180deg, #ff9a3d 0%, #ff7a00 100%);
+          box-shadow: inset 0 -10px 18px rgba(255,255,255,0.15);
+        }
+        .bar-value{
+          font-size:11px;
+          color:var(--muted);
+          text-align:center;
+          line-height:1.2;
+        }
+        .bar-label{
+          font-size:11px;
+          font-weight:800;
+          color:#111827;
+        }
+        .payment-box{
+          margin-top:14px;
+          display:grid;
+          gap:12px;
+        }
+        .progress{
+          width:100%;
+          height:16px;
+          border-radius:999px;
+          background:#f3f4f6;
+          overflow:hidden;
+          border:1px solid var(--border);
+        }
+        .progress-inner{
+          height:100%;
+          background: linear-gradient(90deg, #ff9a3d 0%, #ff7a00 100%);
+        }
+        .legend{
+          display:flex;
+          justify-content:space-between;
+          gap:12px;
+          font-size:12px;
+          color:var(--muted);
+        }
       `}</style>
 
       <div className="premium-shell">
@@ -580,8 +848,8 @@ export default function DashboardPage() {
 
             <div style={{ display: "grid", gap: 16 }}>
               <div className="panel">
-                <div className="panel-title">Kustomisasi Struk</div>
-                <div className="panel-sub">Ubah informasi toko dan nama kasir default di struk.</div>
+                <div className="panel-title">Kustomisasi Struk & Refund</div>
+                <div className="panel-sub">Ubah informasi toko, kasir default, dan PIN refund.</div>
 
                 <div style={{ marginTop: 14 }}>
                   <div className="small">Nama Toko</div>
@@ -623,6 +891,18 @@ export default function DashboardPage() {
                   />
                 </div>
 
+                <div style={{ marginTop: 12 }}>
+                  <div className="small">PIN Refund</div>
+                  <input
+                    className="input"
+                    type="password"
+                    value={refundPin}
+                    onChange={(e) => setRefundPin(e.target.value)}
+                    disabled={!isOwner}
+                    placeholder="Contoh: 123456"
+                  />
+                </div>
+
                 {saveMsg && <div style={{ marginTop: 12, fontWeight: 900 }}>{saveMsg}</div>}
 
                 <button
@@ -636,7 +916,7 @@ export default function DashboardPage() {
 
                 {!isOwner && (
                   <div className="small" style={{ marginTop: 8 }}>
-                    Hanya owner yang bisa mengubah pengaturan struk.
+                    Hanya owner yang bisa mengubah pengaturan ini.
                   </div>
                 )}
               </div>
@@ -688,8 +968,8 @@ ${footer || "Terima kasih."}`}
                   </div>
 
                   <div className="mini-box">
-                    <div className="mini-label">Order OPEN</div>
-                    <div className="mini-value">{openOrders.length}</div>
+                    <div className="mini-label">PIN Refund</div>
+                    <div className="mini-value">{refundPin ? "Aktif" : "Belum diatur"}</div>
                   </div>
                 </div>
               </div>

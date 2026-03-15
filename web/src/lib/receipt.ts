@@ -1,4 +1,9 @@
-export type ReceiptItem = { name: string; qty: number; price: number };
+export type ReceiptItem = {
+  name: string;
+  qty: number;
+  price: number;
+  notes?: string;
+};
 
 export type ReceiptData = {
   storeName: string;
@@ -14,7 +19,7 @@ export type ReceiptData = {
   paidAmount?: number;
   items: ReceiptItem[];
   footer?: string;
-  title?: string; // misal "STRUK" atau "BILL"
+  title?: string;
 };
 
 function rupiah(n: number) {
@@ -25,11 +30,17 @@ export function receiptHTML(d: ReceiptData) {
   const itemsHtml = d.items
     .map((it) => {
       const lineTotal = (it.price || 0) * (it.qty || 0);
+      const notesHtml =
+        (it.notes || "").trim()
+          ? `<div style="opacity:.8;font-size:12px;">Catatan: ${escapeHtml(it.notes || "")}</div>`
+          : "";
+
       return `
         <tr>
           <td style="padding:4px 0;">
             <div style="font-weight:700;">${escapeHtml(it.name)}</div>
             <div style="opacity:.8;font-size:12px;">${it.qty} x ${rupiah(it.price)}</div>
+            ${notesHtml}
           </td>
           <td style="text-align:right;padding:4px 0;font-weight:700;">${rupiah(lineTotal)}</td>
         </tr>

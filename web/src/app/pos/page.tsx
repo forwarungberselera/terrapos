@@ -25,7 +25,14 @@ import { receiptHTML } from "@/lib/receipt";
 import { buildPlainReceipt, getPrintMode, sendToRawBT } from "@/lib/rawbt";
 
 type Product = { id: string; name: string; category: string; price: number; isActive?: boolean };
-type CartItem = { id: string; name: string; category: string; price: number; qty: number };
+type CartItem = {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  qty: number;
+  notes?: string;
+};
 type ReceiptSettings = { storeName: string; address: string; footer: string; cashierName: string };
 type OrderStatus = "OPEN" | "PAID" | "CANCELLED";
 type OrderMode = "PAY_NOW" | "PAY_LATER";
@@ -42,6 +49,7 @@ export default function POSPage() {
   const { role, loadingRole } = useRole();
 
   const isOwner = (role || "").toString().toLowerCase() === "owner";
+  const canUse = ["owner", "admin"].includes((role || "").toString().toLowerCase());
 
   const [mode, setMode] = useState<OrderMode>("PAY_NOW");
   const [products, setProducts] = useState<Product[]>([]);
@@ -54,6 +62,9 @@ export default function POSPage() {
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS">("CASH");
   const [paidAmount, setPaidAmount] = useState<number>(0);
   const [err, setErr] = useState<string | null>(null);
+
+  const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
 
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>({
     storeName: "TerraPOS",
@@ -135,20 +146,47 @@ export default function POSPage() {
 
   function addToCart(p: Product) {
     setCart((prev) => {
-      const found = prev.find((i) => i.id === p.id);
-      if (found) return prev.map((i) => (i.id === p.id ? { ...i, qty: i.qty + 1 } : i));
-      return [...prev, { id: p.id, name: p.name, category: p.category, price: p.price, qty: 1 }];
+      const found = prev.find((i) => i.id === p.id && !(i.notes || "").trim());
+      if (found) {
+        return prev.map((i) => (i.id === p.id && !(i.notes || "").trim() ? { ...i, qty: i.qty + 1 } : i));
+      }
+      return [...prev, { id: p.id, name: p.name, category: p.category, price: p.price, qty: 1, notes: "" }];
     });
   }
 
-  function inc(id: string) {
-    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, qty: i.qty + 1 } : i)));
+  function inc(index: number) {
+    setCart((prev) => prev.map((i, idx) => (idx === index ? { ...i, qty: i.qty + 1 } : i)));
   }
 
-  function dec(id: string) {
+  function dec(index: number) {
     setCart((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, qty: i.qty - 1 } : i)).filter((i) => i.qty > 0)
+      prev.map((i, idx) => (idx === index ? { ...i, qty: i.qty - 1 } : i)).filter((i) => i.qty > 0)
     );
+  }
+
+  function openNoteEditor(index: number) {
+    setNoteOpenId(String(index));
+    setNoteDraft(cart[index]?.notes || "");
+  }
+
+  function saveNote(index: number) {
+    setCart((prev) =>
+      prev.map((item, idx) =>
+        idx === index ? { ...item, notes: noteDraft.trim() } : item
+      )
+    );
+    setNoteOpenId(null);
+    setNoteDraft("");
+  }
+
+  function clearNote(index: number) {
+    setCart((prev) =>
+      prev.map((item, idx) =>
+        idx === index ? { ...item, notes: "" } : item
+      )
+    );
+    setNoteOpenId(null);
+    setNoteDraft("");
   }
 
   function resetCart() {
@@ -158,6 +196,8 @@ export default function POSPage() {
     setPaidAmount(0);
     setPaymentMethod("CASH");
     setErr(null);
+    setNoteOpenId(null);
+    setNoteDraft("");
   }
 
   function buildReceiptHtml(orderNo: string, title: "STRUK" | "BILL") {
@@ -176,7 +216,7 @@ export default function POSPage() {
       discount: Number(discount || 0),
       total,
       paidAmount: paymentMethod === "CASH" ? paidAmount : total,
-      items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price })),
+      items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price, notes: c.notes || "" })),
     });
   }
 
@@ -195,7 +235,11 @@ export default function POSPage() {
       discount: Number(discount || 0),
       total,
       paidAmount: paymentMethod === "CASH" ? paidAmount : total,
-      items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price })),
+      items: cart.map((c) => ({
+        name: c.notes?.trim() ? `${c.name} (${c.notes})` : c.name,
+        qty: c.qty,
+        price: c.price,
+      })),
     });
   }
 
@@ -268,15 +312,7 @@ export default function POSPage() {
         const old = snap.exists() ? (snap.data() as any) : {};
         const oldItems: CartItem[] = Array.isArray(old.items) ? old.items : [];
 
-        const map = new Map<string, CartItem>();
-        for (const it of oldItems) map.set(it.id, { ...it });
-        for (const it of cart) {
-          const prev = map.get(it.id);
-          if (!prev) map.set(it.id, { ...it });
-          else map.set(it.id, { ...prev, qty: Number(prev.qty || 0) + Number(it.qty || 0) });
-        }
-
-        const merged = Array.from(map.values());
+        const merged = [...oldItems, ...cart];
         const newSubtotal = merged.reduce((a, i) => a + i.price * i.qty, 0);
         const newDiscount = Number(old.discount || 0) + Number(discount || 0);
         const newTotal = Math.max(0, newSubtotal - newDiscount);
@@ -353,10 +389,24 @@ export default function POSPage() {
     );
   }
 
+  if (!canUse) {
+    return (
+      <TerraPage>
+        <div className="card">
+          <div className="h1">Akses ditolak</div>
+          <div className="small">POS hanya untuk owner/admin.</div>
+          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>
+            Kembali
+          </button>
+        </div>
+      </TerraPage>
+    );
+  }
+
   return (
     <TerraPage>
       <style>{`
-        .pos-grid{ margin-top:14px; display:grid; grid-template-columns: 1fr 320px; gap:14px; align-items:start; }
+        .pos-grid{ margin-top:14px; display:grid; grid-template-columns: 1fr 340px; gap:14px; align-items:start; }
         @media (max-width: 980px){ .pos-grid{ grid-template-columns: 1fr !important; } }
         .product-grid{ margin-top:12px; display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
         .product-btn{ text-align:left; padding:14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; }
@@ -364,9 +414,16 @@ export default function POSPage() {
         .product-name{ font-weight:900; font-size:16px; line-height:1.2; }
         .product-meta{ font-size:12px; color: var(--muted); margin-top:4px; }
         .product-price{ margin-top:10px; font-weight:900; color: var(--brand); font-size:16px; }
-        .cart-item{ display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+        .cart-item{ padding:10px 0; border-bottom:1px solid var(--border); }
         .topnav{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
         .modebar{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+        .note-box{
+          margin-top:8px;
+          padding:10px;
+          border:1px dashed var(--border);
+          border-radius:12px;
+          background:#fffaf5;
+        }
       `}</style>
 
       <div className="card">
@@ -478,17 +535,61 @@ export default function POSPage() {
             {cart.length === 0 ? (
               <div className="small">Keranjang kosong.</div>
             ) : (
-              cart.map((i) => (
-                <div key={i.id} className="cart-item">
-                  <div>
-                    <div style={{ fontWeight: 900 }}>{i.name}</div>
-                    <div className="small">{i.category} • Rp {rupiah(i.price)}</div>
+              cart.map((i, index) => (
+                <div key={`${i.id}-${index}`} className="cart-item">
+                  <div className="row" style={{ alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 900 }}>{i.name}</div>
+                      <div className="small">{i.category} • Rp {rupiah(i.price)}</div>
+                      {(i.notes || "").trim() ? (
+                        <div className="small" style={{ marginTop: 6 }}>
+                          Catatan: <b>{i.notes}</b>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="row">
+                      <button className="btn" onClick={() => dec(index)}>-</button>
+                      <b style={{ minWidth: 24, textAlign: "center" }}>{i.qty}</b>
+                      <button className="btn" onClick={() => inc(index)}>+</button>
+                    </div>
                   </div>
-                  <div className="row">
-                    <button className="btn" onClick={() => dec(i.id)}>-</button>
-                    <b style={{ minWidth: 24, textAlign: "center" }}>{i.qty}</b>
-                    <button className="btn" onClick={() => inc(i.id)}>+</button>
+
+                  <div className="row" style={{ marginTop: 10 }}>
+                    <button className="btn" onClick={() => openNoteEditor(index)}>
+                      {(i.notes || "").trim() ? "Edit Catatan" : "Tambah Catatan"}
+                    </button>
                   </div>
+
+                  {noteOpenId === String(index) && (
+                    <div className="note-box">
+                      <div className="small">Catatan untuk {i.name}</div>
+                      <textarea
+                        className="input"
+                        style={{ marginTop: 8, minHeight: 80 }}
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value)}
+                        placeholder="Contoh: tanpa gula, pedas sedang, es sedikit"
+                      />
+                      <div className="row" style={{ marginTop: 8 }}>
+                        <button className="btn btn-primary" onClick={() => saveNote(index)}>
+                          Simpan Catatan
+                        </button>
+                        <button className="btn" onClick={() => clearNote(index)}>
+                          Hapus Catatan
+                        </button>
+                        <button
+                          className="btn"
+                          onClick={() => {
+                            setNoteOpenId(null);
+                            setNoteDraft("");
+                          }}
+                        >
+                          Tutup
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             )}
