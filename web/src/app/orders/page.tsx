@@ -520,16 +520,24 @@ export default function OrdersPage() {
           gap:4px;
           margin-top:6px;
         }
-        .items-mini{
+        .items-full{
           margin-top:12px;
           display:grid;
-          gap:6px;
+          gap:8px;
         }
         .item-row{
           display:flex;
           justify-content:space-between;
-          gap:10px;
+          gap:12px;
           font-size:13px;
+          padding:8px 10px;
+          border:1px solid var(--border);
+          border-radius:12px;
+          background:#fffaf5;
+        }
+        .item-left{
+          display:grid;
+          gap:3px;
         }
       `}</style>
 
@@ -593,7 +601,7 @@ export default function OrdersPage() {
                 return (
                   <div key={o.id} className="order-card">
                     <div className="row">
-                      <div>
+                      <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 900, fontSize: 17 }}>{o.orderNo}</div>
 
                         <div className="meta">
@@ -616,19 +624,23 @@ export default function OrdersPage() {
                           </div>
                         </div>
 
-                        <div className="items-mini">
-                          {(o.items || []).slice(0, 3).map((it, idx) => (
+                        <div className="items-full">
+                          {(o.items || []).map((it, idx) => (
                             <div className="item-row" key={idx}>
-                              <span>
-                                {it.name} x{it.qty}
-                                {(it.notes || "").trim() ? ` — ${it.notes}` : ""}
-                              </span>
-                              <b>Rp {rupiah((it.price || 0) * (it.qty || 0))}</b>
+                              <div className="item-left">
+                                <div style={{ fontWeight: 800 }}>
+                                  {it.name} x{it.qty}
+                                </div>
+                                {(it.notes || "").trim() ? (
+                                  <div className="small">Catatan: {it.notes}</div>
+                                ) : null}
+                              </div>
+
+                              <div style={{ fontWeight: 900, whiteSpace: "nowrap" }}>
+                                Rp {rupiah((it.price || 0) * (it.qty || 0))}
+                              </div>
                             </div>
                           ))}
-                          {(o.items || []).length > 3 && (
-                            <div className="small">+ {(o.items || []).length - 3} item lainnya</div>
-                          )}
                         </div>
                       </div>
 
@@ -682,7 +694,7 @@ export default function OrdersPage() {
             {group.items.map((o) => (
               <div key={o.id} className="order-card">
                 <div className="row">
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 900, fontSize: 17 }}>{o.orderNo}</div>
 
                     <div className="meta">
@@ -697,19 +709,23 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                    <div className="items-mini">
-                      {(o.items || []).slice(0, 3).map((it, idx) => (
+                    <div className="items-full">
+                      {(o.items || []).map((it, idx) => (
                         <div className="item-row" key={idx}>
-                          <span>
-                            {it.name} x{it.qty}
-                            {(it.notes || "").trim() ? ` — ${it.notes}` : ""}
-                          </span>
-                          <b>Rp {rupiah((it.price || 0) * (it.qty || 0))}</b>
+                          <div className="item-left">
+                            <div style={{ fontWeight: 800 }}>
+                              {it.name} x{it.qty}
+                            </div>
+                            {(it.notes || "").trim() ? (
+                              <div className="small">Catatan: {it.notes}</div>
+                            ) : null}
+                          </div>
+
+                          <div style={{ fontWeight: 900, whiteSpace: "nowrap" }}>
+                            Rp {rupiah((it.price || 0) * (it.qty || 0))}
+                          </div>
                         </div>
                       ))}
-                      {(o.items || []).length > 3 && (
-                        <div className="small">+ {(o.items || []).length - 3} item lainnya</div>
-                      )}
                     </div>
                   </div>
 
