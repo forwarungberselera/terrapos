@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.terrapos.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.terrapos.app"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+
+        // TWA Configuration
+        manifestPlaceholders = [
+            hostName: "npos.gtomodachi.fun",
+            defaultUrl: "https://npos.gtomodachi.fun/pos",
+            launcherName: "TerraPOS",
+            assetStatements: '[{ "relation": ["delegate_permission/common.handle_all_urls"], "target": { "namespace": "web", "site": "https://npos.gtomodachi.fun" } }]'
+        ]
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.browser:browser:1.8.0'
+}
