@@ -1,4 +1,4 @@
-const CACHE_NAME = "terrapos-v1";
+const CACHE_NAME = "terrapos-v2";
 const ASSETS = ["/", "/pos", "/orders", "/dashboard", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -17,7 +17,46 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
+
+  // Untuk navigasi (halaman HTML) - Network First
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          return response;
+        })
+        .catch(() => caches.match(req).then((cached) => cached || caches.match("/")))
+    );
+    return;
+  }
+
+  // Untuk assets (_next/static, gambar, dll) - Stale While Revalidate
+  if (req.url.includes("/_next/") || req.url.includes("/static/")) {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        const fetchPromise = fetch(req).then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          return response;
+        });
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Default - Network First
   event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req).catch(() => cached))
+    fetch(req)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(req))
   );
 });
