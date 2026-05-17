@@ -1,32 +1,216 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
-
+import {getApps, initializeApp} from "firebase-admin/app";
+import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {setGlobalOptions} from "firebase-functions";
-import {onRequest} from "firebase-functions/https";
-import * as logger from "firebase-functions/logger";
+import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+setGlobalOptions({maxInstances: 10});
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+const adminApp = getApps().length ? getApps()[0] : initializeApp();
+const db = getFirestore(adminApp);
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+type RefundOrderRequest = {
+  tenantId?: string;
+  orderId?: string;
+  refundPin?: string;
+  reason?: string;
+};
+
+type UpdateRefundPinRequest = {
+  tenantId?: string;
+  refundPin?: string;
+};
+
+function mustNonEmptyString(value: unknown, fieldName: string): string {
+  const parsed = typeof value === "string" ? value.trim() : "";
+  if (!parsed) {
+    throw new HttpsError("invalid-argument", `${fieldName} wajib diisi.`);
+  }
+  return parsed;
+}
+
+async function getTenantAccessContext(tenantId: string, uid: string) {
+  const tenantRef = db.doc(`tenants/${tenantId}`);
+  const staffRef = db.doc(`tenants/${tenantId}/staff/${uid}`);
+  const [tenantSnap, staffSnap] = await Promise.all([tenantRef.get(), staffRef.get()]);
+
+  if (!tenantSnap.exists) {
+    throw new HttpsError("not-found", "Tenant tidak ditemukan.");
+  }
+
+  const tenantData = tenantSnap.data() as {ownerUid?: string} | undefined;
+  const isOwner = (tenantData?.ownerUid || "") === uid;
+
+  let allowedRole = "";
+  if (staffSnap.exists) {
+    const staffData = staffSnap.data() as {role?: string};
+    allowedRole = (staffData.role || "").toString().toLowerCase();
+  }
+
+  return {
+    isOwner,
+    allowedRole,
+    canRefund: isOwner || allowedRole === "admin" || allowedRole === "owner",
+  };
+}
+
+async function getSavedRefundPin(tenantId: string): Promise<string> {
+  const privateSecurityRef = db.doc(`tenants/${tenantId}/private/security`);
+  const settingsRef = db.doc(`tenants/${tenantId}/settings/main`);
+  const [privateSecuritySnap, settingsSnap] = await Promise.all([
+    privateSecurityRef.get(),
+    settingsRef.get(),
+  ]);
+
+  const privateSecurityData =
+    privateSecuritySnap.data() as {refundPin?: string} | undefined;
+  const settingsData = settingsSnap.data() as {refundPin?: string} | undefined;
+
+  return (
+    (privateSecurityData?.refundPin || "").trim() ||
+    (settingsData?.refundPin || "").trim() ||
+    "123456"
+  );
+}
+
+export const refundOrder = onCall<RefundOrderRequest>(async (request) => {
+  const auth = request.auth;
+  if (!auth?.uid) {
+    throw new HttpsError("unauthenticated", "User harus login.");
+  }
+
+  const tenantId = mustNonEmptyString(request.data?.tenantId, "tenantId");
+  const orderId = mustNonEmptyString(request.data?.orderId, "orderId");
+  const refundPin = mustNonEmptyString(request.data?.refundPin, "refundPin");
+  const reason =
+    typeof request.data?.reason === "string" ? request.data.reason.trim() : "";
+
+  const orderRef = db.doc(`tenants/${tenantId}/orders/${orderId}`);
+  const refundsRef = db.collection(`tenants/${tenantId}/refunds`);
+
+  const access = await getTenantAccessContext(tenantId, auth.uid);
+  if (!access.canRefund) {
+    throw new HttpsError(
+      "permission-denied",
+      "Hanya owner/admin yang bisa refund."
+    );
+  }
+
+  const savedPin = await getSavedRefundPin(tenantId);
+  if (savedPin !== refundPin) {
+    throw new HttpsError("permission-denied", "PIN refund salah.");
+  }
+
+  const orderSnap = await orderRef.get();
+  if (!orderSnap.exists) {
+    throw new HttpsError("not-found", "Order tidak ditemukan.");
+  }
+
+  const orderData = orderSnap.data() as {
+    orderNo?: string;
+    status?: string;
+    mode?: string | null;
+    tableNo?: string | null;
+    paymentMethod?: string | null;
+    paidAmount?: number | null;
+    subtotal?: number;
+    discount?: number;
+    total?: number;
+    items?: unknown[];
+    createdAt?: unknown;
+    paidAt?: unknown;
+  };
+
+  if ((orderData.status || "").toUpperCase() !== "PAID") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Hanya order PAID yang bisa direfund."
+    );
+  }
+
+  const refundRef = refundsRef.doc();
+  const refundedByEmail =
+    typeof auth.token.email === "string" ? auth.token.email : "";
+  const refundedByRole = access.isOwner ? "owner" : access.allowedRole || "admin";
+
+  const batch = db.batch();
+  batch.set(refundRef, {
+    orderId,
+    orderNo: orderData.orderNo || orderId,
+    statusBeforeRefund: orderData.status || "PAID",
+    mode: orderData.mode || null,
+    tableNo: orderData.tableNo ?? null,
+    paymentMethod: orderData.paymentMethod ?? null,
+    paidAmount: orderData.paidAmount ?? null,
+    subtotal: Number(orderData.subtotal || 0),
+    discount: Number(orderData.discount || 0),
+    total: Number(orderData.total || 0),
+    items: Array.isArray(orderData.items) ? orderData.items : [],
+    originalCreatedAt: orderData.createdAt ?? null,
+    originalPaidAt: orderData.paidAt ?? null,
+    refundedAt: FieldValue.serverTimestamp(),
+    refundedByUid: auth.uid,
+    refundedByEmail,
+    refundedByRole,
+    reason,
+  });
+  batch.delete(orderRef);
+
+  await batch.commit();
+
+  return {
+    ok: true,
+    refundId: refundRef.id,
+  };
+});
+
+export const updateRefundPin = onCall<UpdateRefundPinRequest>(async (request) => {
+  const auth = request.auth;
+  if (!auth?.uid) {
+    throw new HttpsError("unauthenticated", "User harus login.");
+  }
+
+  const tenantId = mustNonEmptyString(request.data?.tenantId, "tenantId");
+  const refundPin = mustNonEmptyString(request.data?.refundPin, "refundPin");
+
+  if (refundPin.length < 6) {
+    throw new HttpsError("invalid-argument", "PIN refund minimal 6 digit.");
+  }
+
+  const access = await getTenantAccessContext(tenantId, auth.uid);
+  if (!access.isOwner) {
+    throw new HttpsError(
+      "permission-denied",
+      "Hanya owner yang bisa mengubah PIN refund."
+    );
+  }
+
+  const privateSecurityRef = db.doc(`tenants/${tenantId}/private/security`);
+  const settingsRef = db.doc(`tenants/${tenantId}/settings/main`);
+
+  const batch = db.batch();
+  batch.set(
+    privateSecurityRef,
+    {
+      refundPin,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedByUid: auth.uid,
+      updatedByEmail:
+        typeof auth.token.email === "string" ? auth.token.email : "",
+    },
+    {merge: true}
+  );
+  batch.set(
+    settingsRef,
+    {
+      refundPin: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    {merge: true}
+  );
+
+  await batch.commit();
+
+  return {
+    ok: true,
+  };
+});

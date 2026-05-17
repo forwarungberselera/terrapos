@@ -12,11 +12,11 @@ export type ReceiptData = {
   dateText: string;
   tableNo?: string | null;
   cashierEmail?: string;
-  paymentMethod: "CASH" | "QRIS";
+  paymentMethod?: "CASH" | "QRIS" | null;
   subtotal: number;
   discount: number;
   total: number;
-  paidAmount?: number;
+  paidAmount?: number | null;
   items: ReceiptItem[];
   footer?: string;
   title?: string;
@@ -88,7 +88,7 @@ export function receiptHTML(d: ReceiptData) {
       <div class="muted">Order: ${escapeHtml(d.orderNo)}</div>
       ${d.tableNo ? `<div class="muted">Meja: ${escapeHtml(String(d.tableNo))}</div>` : ``}
       ${d.cashierEmail ? `<div class="muted">Kasir: ${escapeHtml(String(d.cashierEmail))}</div>` : ``}
-      <div class="muted">Metode: ${escapeHtml(d.paymentMethod)}</div>
+      ${d.paymentMethod ? `<div class="muted">Metode: ${escapeHtml(d.paymentMethod)}</div>` : ``}
     </div>
 
     <div class="line"></div>

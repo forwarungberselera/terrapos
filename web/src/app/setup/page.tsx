@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import TerraPage from "@/components/TerraPage";
 import { auth, db } from "@/lib/firebase";
+import { setActiveTenantId } from "@/lib/tenant";
 
 type TenantRow = {
   id: string;
@@ -113,12 +114,11 @@ export default function SetupPage() {
         address: "",
         footer: "Terima kasih.",
         cashierName: "Kasir TerraPOS",
-        refundPin: "123456",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      localStorage.setItem("terrapos_tenant_id", tenantId);
+      await setActiveTenantId(uid, tenantId);
       await loadMyTenants(uid);
       r.push("/dashboard");
     } catch (e: any) {
@@ -128,8 +128,8 @@ export default function SetupPage() {
     }
   }
 
-  function openTenant(t: TenantRow) {
-    localStorage.setItem("terrapos_tenant_id", t.id);
+  async function openTenant(t: TenantRow) {
+    await setActiveTenantId(uid, t.id);
     r.push("/dashboard");
   }
 

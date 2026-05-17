@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { getStoredTenantId } from "@/lib/tenant";
 
 export function useRole() {
   const [role, setRole] = useState<string>("");
@@ -18,10 +19,7 @@ export function useRole() {
           return;
         }
 
-        const tenantId =
-          typeof window !== "undefined"
-            ? localStorage.getItem("terrapos_tenant_id") || ""
-            : "";
+        const tenantId = getStoredTenantId();
 
         if (!tenantId) {
           setRole("");

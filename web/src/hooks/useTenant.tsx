@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
+import {
+  getActiveTenantId,
+  getStoredTenantId,
+  setActiveTenantId,
+} from "@/lib/tenant";
 
 export function useTenant() {
   const r = useRouter();
@@ -24,8 +28,15 @@ export function useTenant() {
       setEmail(u.email ?? "");
 
       try {
-        const snap = await getDoc(doc(db, "users", u.uid));
-        const current = (snap.exists() ? (snap.data() as any).currentTenantId : "") || "";
+        let current = (await getActiveTenantId(u.uid)) || "";
+
+        if (!current) {
+          const storedTenantId = getStoredTenantId();
+          if (storedTenantId) {
+            await setActiveTenantId(u.uid, storedTenantId);
+            current = storedTenantId;
+          }
+        }
 
         if (!current) {
           setLoading(false);

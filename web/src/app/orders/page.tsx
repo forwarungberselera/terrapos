@@ -5,12 +5,10 @@ import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, functions } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import {
-  addDoc,
   collection,
-  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -19,8 +17,10 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { receiptHTML } from "@/lib/receipt";
 import { buildPlainReceipt, getPrintMode, sendToRawBT } from "@/lib/rawbt";
+import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shifts";
 
 type Order = {
   id: string;
@@ -55,8 +55,15 @@ type ReceiptSettings = {
   address: string;
   footer: string;
   cashierName: string;
-  refundPin: string;
 };
+
+type RefundOrderResult = {
+  ok: boolean;
+  refundId: string;
+};
+
+type ReceiptTitle = "STRUK" | "BILL";
+type ReceiptPaymentMethod = "CASH" | "QRIS" | null;
 
 function rupiah(n: number) {
   return new Intl.NumberFormat("id-ID").format(n);
@@ -128,6 +135,8 @@ export default function OrdersPage() {
   const [payOrder, setPayOrder] = useState<Order | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS">("CASH");
   const [paidAmount, setPaidAmount] = useState<number>(0);
+  const [shiftPromptOpen, setShiftPromptOpen] = useState(false);
+  const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
 
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundOrder, setRefundOrder] = useState<Order | null>(null);
@@ -140,8 +149,8 @@ export default function OrdersPage() {
     address: "",
     footer: "Terima kasih.",
     cashierName: "Kasir TerraPOS",
-    refundPin: "123456",
   });
+  const [activeShift, setActiveShift] = useState<ShiftRecord | null>(null);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -155,7 +164,6 @@ export default function OrdersPage() {
             address: (d.address || "").toString(),
             footer: (d.footer || "Terima kasih.").toString(),
             cashierName: (d.cashierName || "Kasir TerraPOS").toString(),
-            refundPin: (d.refundPin || "123456").toString(),
           });
         }
       } catch {}
@@ -217,6 +225,27 @@ export default function OrdersPage() {
         setRefundLogs(arr);
       },
       (e) => setErr(e.message)
+    );
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"));
+    return onSnapshot(
+      qy,
+      (snap) => {
+        setShiftAccessBlocked(false);
+        const items = snap.docs.map((item) => normalizeShift(item.id, item.data()));
+        setActiveShift(items.find((item) => item.status === "OPEN") || null);
+      },
+      (e) => {
+        if (isShiftPermissionError(e)) {
+          setShiftAccessBlocked(true);
+          setActiveShift(null);
+          return;
+        }
+        setErr(e.message);
+      }
     );
   }, [tenantId]);
 
@@ -298,6 +327,11 @@ export default function OrdersPage() {
   }, [refundLogs]);
 
   function openPay(o: Order) {
+    if (!activeShift && !shiftAccessBlocked) {
+      setShiftPromptOpen(true);
+      setErr("Buka shift dulu sebelum membayar open bill.");
+      return;
+    }
     setPayOrder(o);
     setPaymentMethod("CASH");
     setPaidAmount(o.total);
@@ -313,10 +347,15 @@ export default function OrdersPage() {
     setErr(null);
   }
 
-  function buildReceiptHtml(o: Order, payMethod: "CASH" | "QRIS", paid: number) {
+  function buildReceiptHtml(
+    o: Order,
+    title: ReceiptTitle,
+    payMethod: ReceiptPaymentMethod,
+    paidAmount?: number | null
+  ) {
     const dateText = new Date().toLocaleString("id-ID");
     return receiptHTML({
-      title: "STRUK",
+      title,
       storeName: receiptSettings.storeName || "TerraPOS",
       address: receiptSettings.address || "",
       footer: receiptSettings.footer || "Terima kasih.",
@@ -328,14 +367,19 @@ export default function OrdersPage() {
       subtotal: o.subtotal,
       discount: o.discount,
       total: o.total,
-      paidAmount: payMethod === "CASH" ? paid : o.total,
+      paidAmount: payMethod === "CASH" ? Number(paidAmount || 0) : null,
       items: o.items.map((it) => ({ name: it.name, qty: it.qty, price: it.price, notes: it.notes || "" })),
     });
   }
 
-  function buildReceiptText(o: Order, payMethod: "CASH" | "QRIS", paid: number) {
+  function buildReceiptText(
+    o: Order,
+    title: ReceiptTitle,
+    payMethod: ReceiptPaymentMethod,
+    paidAmount?: number | null
+  ) {
     return buildPlainReceipt({
-      title: "STRUK",
+      title,
       storeName: receiptSettings.storeName || "TerraPOS",
       address: receiptSettings.address || "",
       footer: receiptSettings.footer || "Terima kasih.",
@@ -347,7 +391,7 @@ export default function OrdersPage() {
       subtotal: o.subtotal,
       discount: o.discount,
       total: o.total,
-      paidAmount: payMethod === "CASH" ? paid : o.total,
+      paidAmount: payMethod === "CASH" ? Number(paidAmount || 0) : null,
       items: (o.items || []).map((it) => ({
         name: it.notes?.trim() ? `${it.name} (${it.notes})` : it.name,
         qty: it.qty,
@@ -374,6 +418,19 @@ export default function OrdersPage() {
     w.document.close();
   }
 
+  function mapRefundError(error: any) {
+    const code = (error?.code || "").toString().toLowerCase();
+    const message = (error?.message || "").toString();
+
+    if (code.includes("unauthenticated")) return "User harus login.";
+    if (code.includes("permission-denied")) return message || "Kamu tidak punya akses refund.";
+    if (code.includes("failed-precondition")) return message || "Order tidak bisa direfund.";
+    if (code.includes("not-found")) return message || "Order atau tenant tidak ditemukan.";
+    if (code.includes("invalid-argument")) return message || "Data refund belum lengkap.";
+
+    return message || "Gagal refund";
+  }
+
   async function payAndPrint() {
     try {
       if (!tenantId || !payOrder) return;
@@ -383,16 +440,23 @@ export default function OrdersPage() {
         return;
       }
 
+      if (!activeShift && !shiftAccessBlocked) {
+        setErr("Buka shift dulu sebelum membayar open bill.");
+        return;
+      }
+
       await updateDoc(doc(db, `tenants/${tenantId}/orders/${payOrder.id}`), {
         status: "PAID",
         paymentMethod,
         paidAmount: paymentMethod === "CASH" ? paidAmount : payOrder.total,
+        shiftId: activeShift?.id || null,
+        shiftOpenedByEmail: activeShift?.openedByEmail || email || "",
         updatedAt: serverTimestamp(),
         paidAt: serverTimestamp(),
       });
 
-      const html = buildReceiptHtml(payOrder, paymentMethod, paidAmount);
-      const text = buildReceiptText(payOrder, paymentMethod, paidAmount);
+      const html = buildReceiptHtml(payOrder, "STRUK", paymentMethod, paidAmount);
+      const text = buildReceiptText(payOrder, "STRUK", paymentMethod, paidAmount);
 
       localStorage.setItem("terrapos_last_receipt_html", html);
       printBySelectedMode(html, text);
@@ -408,8 +472,6 @@ export default function OrdersPage() {
   async function confirmRefund() {
     try {
       if (!tenantId || !refundOrder) return;
-
-      const savedPin = (receiptSettings.refundPin || "123456").trim();
       const inputPin = (refundPinInput || "").trim();
 
       if (!inputPin) {
@@ -417,34 +479,18 @@ export default function OrdersPage() {
         return;
       }
 
-      if (savedPin !== inputPin) {
-        setErr("PIN refund salah.");
-        return;
-      }
-
       setRefundLoading(true);
+      const refundOrderFn = httpsCallable<
+        { tenantId: string; orderId: string; refundPin: string; reason: string },
+        RefundOrderResult
+      >(functions, "refundOrder");
 
-      await addDoc(collection(db, `tenants/${tenantId}/refunds`), {
+      await refundOrderFn({
+        tenantId,
         orderId: refundOrder.id,
-        orderNo: refundOrder.orderNo,
-        statusBeforeRefund: refundOrder.status,
-        mode: refundOrder.mode || null,
-        tableNo: refundOrder.tableNo || null,
-        paymentMethod: refundOrder.paymentMethod || null,
-        paidAmount: refundOrder.paidAmount ?? null,
-        subtotal: refundOrder.subtotal,
-        discount: refundOrder.discount,
-        total: refundOrder.total,
-        items: refundOrder.items || [],
-        originalCreatedAt: refundOrder.createdAt || null,
-        originalPaidAt: refundOrder.paidAt || null,
-        refundedAt: serverTimestamp(),
-        refundedByEmail: email || "",
-        refundedByRole: role || "",
+        refundPin: inputPin,
         reason: (refundReason || "").trim(),
       });
-
-      await deleteDoc(doc(db, `tenants/${tenantId}/orders/${refundOrder.id}`));
 
       setRefundOpen(false);
       setRefundOrder(null);
@@ -452,7 +498,7 @@ export default function OrdersPage() {
       setRefundReason("");
       setErr(null);
     } catch (e: any) {
-      setErr(e?.message ?? "Gagal refund");
+      setErr(mapRefundError(e));
     } finally {
       setRefundLoading(false);
     }
@@ -462,11 +508,23 @@ export default function OrdersPage() {
     const payMethod = (o.paymentMethod || "CASH") as "CASH" | "QRIS";
     const paid = Number(o.paidAmount || o.total);
 
-    const html = buildReceiptHtml(o, payMethod, paid);
-    const text = buildReceiptText(o, payMethod, paid);
+    const html = buildReceiptHtml(o, "STRUK", payMethod, paid);
+    const text = buildReceiptText(o, "STRUK", payMethod, paid);
 
     localStorage.setItem("terrapos_last_receipt_html", html);
     printBySelectedMode(html, text);
+  }
+
+  function printOpenBill(o: Order) {
+    const html = buildReceiptHtml(o, "BILL", null);
+    const text = buildReceiptText(o, "BILL", null);
+
+    localStorage.setItem("terrapos_last_receipt_html", html);
+    printBySelectedMode(html, text);
+  }
+
+  function addItemToOpenBill(o: Order) {
+    r.push(`/pos?editOrderId=${encodeURIComponent(o.id)}`);
   }
 
   if (loading || loadingRole) {
@@ -555,6 +613,7 @@ export default function OrdersPage() {
 
           <div className="topnav">
             <button className="btn" onClick={() => r.push("/pos")}>POS</button>
+            <button className="btn" onClick={() => r.push("/shifts")}>Shift</button>
             <button className="btn" onClick={() => r.push("/printer")}>Printer</button>
             {isOwner && (
               <button className="btn btn-primary" onClick={() => r.push("/dashboard")}>
@@ -648,13 +707,29 @@ export default function OrdersPage() {
                         <div className="pill">Rp {rupiah(o.total)}</div>
 
                         {o.status === "OPEN" ? (
-                          <button
-                            className="btn btn-primary"
-                            style={{ marginTop: 10, width: "100%" }}
-                            onClick={() => openPay(o)}
-                          >
-                            Bayar & Print
-                          </button>
+                          <>
+                            <button
+                              className="btn btn-primary"
+                              style={{ marginTop: 10, width: "100%" }}
+                              onClick={() => openPay(o)}
+                            >
+                              Bayar & Print
+                            </button>
+                            <button
+                              className="btn"
+                              style={{ marginTop: 10, width: "100%" }}
+                              onClick={() => addItemToOpenBill(o)}
+                            >
+                              Tambah Item
+                            </button>
+                            <button
+                              className="btn"
+                              style={{ marginTop: 10, width: "100%" }}
+                              onClick={() => printOpenBill(o)}
+                            >
+                              Print Struk
+                            </button>
+                          </>
                         ) : (
                           <>
                             <button
@@ -872,6 +947,50 @@ export default function OrdersPage() {
             >
               {refundLoading ? "Memproses Refund..." : "Konfirmasi Refund"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {shiftPromptOpen && !activeShift && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            zIndex: 70,
+          }}
+        >
+          <div className="card" style={{ width: 520, maxWidth: "100%" }}>
+            <div className="h1">Shift Belum Dibuka</div>
+            <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+              Open bill belum bisa dibayar karena belum ada shift aktif. Shift perlu dibuka dulu supaya pembayaran masuk ke sesi kasir yang benar.
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: 12,
+                borderRadius: 14,
+                border: "1px solid var(--border)",
+                background: "#fffaf5",
+                fontSize: 13,
+                lineHeight: 1.6,
+              }}
+            >
+              Buka shift di halaman <b>Shift</b>, lalu kembali ke Orders untuk melanjutkan pembayaran.
+            </div>
+
+            <div className="row" style={{ marginTop: 16 }}>
+              <button className="btn btn-primary" onClick={() => r.push("/shifts")}>
+                Buka Halaman Shift
+              </button>
+              <button className="btn" onClick={() => setShiftPromptOpen(false)}>
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

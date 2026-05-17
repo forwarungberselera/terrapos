@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import "./globals.css";
 import PWARegister from "@/components/PWARegister";
 import OfflineBanner from "@/components/OfflineBanner";
@@ -6,6 +7,9 @@ export const metadata = {
   title: "TerraPOS",
   description: "POS warkop multi-tenant",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#ff7a00",
 };
 

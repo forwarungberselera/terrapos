@@ -23,6 +23,7 @@ import {
 } from "firebase/firestore";
 import { receiptHTML } from "@/lib/receipt";
 import { buildPlainReceipt, getPrintMode, sendToRawBT } from "@/lib/rawbt";
+import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shifts";
 
 type Product = { id: string; name: string; category: string; price: number; isActive?: boolean };
 type CartItem = {
@@ -37,6 +38,15 @@ type ReceiptSettings = { storeName: string; address: string; footer: string; cas
 type OrderStatus = "OPEN" | "PAID" | "CANCELLED";
 type OrderMode = "PAY_NOW" | "PAY_LATER";
 
+const paymentMethodButtonStyle: React.CSSProperties = {
+  flex: 1,
+  minHeight: 68,
+  justifyContent: "center",
+  fontSize: 20,
+  fontWeight: 800,
+  letterSpacing: 0.4,
+};
+
 function rupiah(n: number) {
   return new Intl.NumberFormat("id-ID").format(n);
 }
@@ -44,6 +54,7 @@ function rupiah(n: number) {
 export default function POSPage() {
   const r = useRouter();
   const sp = useSearchParams();
+  const editOrderId = (sp.get("editOrderId") || "").trim();
 
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
@@ -62,9 +73,13 @@ export default function POSPage() {
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS">("CASH");
   const [paidAmount, setPaidAmount] = useState<number>(0);
   const [err, setErr] = useState<string | null>(null);
+  const [shiftPromptOpen, setShiftPromptOpen] = useState(false);
+  const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
 
   const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [editingOrderNo, setEditingOrderNo] = useState<string | null>(null);
 
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>({
     storeName: "TerraPOS",
@@ -72,6 +87,7 @@ export default function POSPage() {
     footer: "Terima kasih.",
     cashierName: "Kasir TerraPOS",
   });
+  const [activeShift, setActiveShift] = useState<ShiftRecord | null>(null);
 
   const searchRef = useRef<HTMLInputElement | null>(null);
 
@@ -79,6 +95,66 @@ export default function POSPage() {
     const t = sp.get("table");
     if (t) setTableNo(t);
   }, [sp]);
+
+  useEffect(() => {
+    if (!tenantId || !editOrderId) {
+      if (!editOrderId) {
+        setEditingOrderId(null);
+        setEditingOrderNo(null);
+      }
+      return;
+    }
+    if (editingOrderId === editOrderId) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, `tenants/${tenantId}/orders/${editOrderId}`));
+        if (!snap.exists()) {
+          if (!cancelled) setErr("Open bill tidak ditemukan.");
+          return;
+        }
+
+        const data = snap.data() as any;
+        if ((data.status || "OPEN") !== "OPEN") {
+          if (!cancelled) setErr("Order ini sudah tidak OPEN.");
+          return;
+        }
+
+        if (cancelled) return;
+
+        setMode("PAY_LATER");
+        setTableNo((data.tableNo || "").toString());
+        setDiscount(Number(data.discount || 0));
+        setCart(
+          Array.isArray(data.items)
+            ? data.items.map((item: any) => ({
+                id: (item.id || item.name || "").toString(),
+                name: (item.name || "").toString(),
+                category: (item.category || "Lainnya").toString(),
+                price: Number(item.price || 0),
+                qty: Number(item.qty || 0),
+                notes: (item.notes || "").toString(),
+              }))
+            : []
+        );
+        setPaymentMethod("CASH");
+        setPaidAmount(0);
+        setNoteOpenId(null);
+        setNoteDraft("");
+        setEditingOrderId(editOrderId);
+        setEditingOrderNo((data.orderNo || editOrderId).toString());
+        setErr(null);
+      } catch (e: any) {
+        if (!cancelled) setErr(e?.message ?? "Gagal memuat open bill.");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, editOrderId, editingOrderId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -120,6 +196,33 @@ export default function POSPage() {
       (e) => setErr(e.message)
     );
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"));
+    return onSnapshot(
+      qy,
+      (snap) => {
+        setShiftAccessBlocked(false);
+        const items = snap.docs.map((item) => normalizeShift(item.id, item.data()));
+        setActiveShift(items.find((item) => item.status === "OPEN") || null);
+      },
+      (e) => {
+        if (isShiftPermissionError(e)) {
+          setShiftAccessBlocked(true);
+          setActiveShift(null);
+          return;
+        }
+        setErr(e.message);
+      }
+    );
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!loading && !loadingRole && canUse) {
+      setShiftPromptOpen(!activeShift && !shiftAccessBlocked);
+    }
+  }, [activeShift, canUse, loading, loadingRole, shiftAccessBlocked]);
 
   const categories = useMemo(() => {
     const set = new Set(products.map((p) => p.category || "Lainnya"));
@@ -198,10 +301,13 @@ export default function POSPage() {
     setErr(null);
     setNoteOpenId(null);
     setNoteDraft("");
+    setEditingOrderId(null);
+    setEditingOrderNo(null);
   }
 
   function buildReceiptHtml(orderNo: string, title: "STRUK" | "BILL") {
     const dateText = new Date().toLocaleString("id-ID");
+    const receiptPaymentMethod = title === "STRUK" ? paymentMethod : null;
     return receiptHTML({
       title,
       storeName: receiptSettings.storeName || "TerraPOS",
@@ -211,16 +317,17 @@ export default function POSPage() {
       dateText,
       tableNo: tableNo.trim() || null,
       cashierEmail: receiptSettings.cashierName || email || "",
-      paymentMethod,
+      paymentMethod: receiptPaymentMethod,
       subtotal,
       discount: Number(discount || 0),
       total,
-      paidAmount: paymentMethod === "CASH" ? paidAmount : total,
+      paidAmount: receiptPaymentMethod === "CASH" ? paidAmount : null,
       items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price, notes: c.notes || "" })),
     });
   }
 
   function buildReceiptText(orderNo: string, title: "STRUK" | "BILL") {
+    const receiptPaymentMethod = title === "STRUK" ? paymentMethod : null;
     return buildPlainReceipt({
       title,
       storeName: receiptSettings.storeName || "TerraPOS",
@@ -230,11 +337,11 @@ export default function POSPage() {
       dateText: new Date().toLocaleString("id-ID"),
       tableNo: tableNo.trim() || null,
       cashierEmail: receiptSettings.cashierName || email || "",
-      paymentMethod,
+      paymentMethod: receiptPaymentMethod,
       subtotal,
       discount: Number(discount || 0),
       total,
-      paidAmount: paymentMethod === "CASH" ? paidAmount : total,
+      paidAmount: receiptPaymentMethod === "CASH" ? paidAmount : null,
       items: cart.map((c) => ({
         name: c.notes?.trim() ? `${c.name} (${c.notes})` : c.name,
         qty: c.qty,
@@ -288,45 +395,61 @@ export default function POSPage() {
         return;
       }
 
-      const openId = await findOpenOrderIdForTable(tNo);
+      let receiptOrderNo = editingOrderNo || "";
 
-      if (!openId) {
-        const orderNo = `OPEN-${Date.now()}`;
-        await addDoc(collection(db, `tenants/${tenantId}/orders`), {
-          orderNo,
-          status: "OPEN" as OrderStatus,
-          mode: "PAY_LATER" as OrderMode,
+      if (editingOrderId) {
+        await updateDoc(doc(db, `tenants/${tenantId}/orders/${editingOrderId}`), {
           tableNo: tNo,
-          discount: Number(discount || 0),
-          subtotal,
-          total,
           items: cart,
-          paymentMethod: null,
-          paidAmount: null,
-          createdAt: serverTimestamp(),
+          subtotal,
+          discount: Number(discount || 0),
+          total,
           updatedAt: serverTimestamp(),
         });
       } else {
-        const refDoc = doc(db, `tenants/${tenantId}/orders/${openId}`);
-        const snap = await getDoc(refDoc);
-        const old = snap.exists() ? (snap.data() as any) : {};
-        const oldItems: CartItem[] = Array.isArray(old.items) ? old.items : [];
+        const openId = await findOpenOrderIdForTable(tNo);
 
-        const merged = [...oldItems, ...cart];
-        const newSubtotal = merged.reduce((a, i) => a + i.price * i.qty, 0);
-        const newDiscount = Number(old.discount || 0) + Number(discount || 0);
-        const newTotal = Math.max(0, newSubtotal - newDiscount);
+        if (!openId) {
+          const orderNo = `OPEN-${Date.now()}`;
+          receiptOrderNo = orderNo;
+          await addDoc(collection(db, `tenants/${tenantId}/orders`), {
+            orderNo,
+            status: "OPEN" as OrderStatus,
+            mode: "PAY_LATER" as OrderMode,
+            tableNo: tNo,
+            discount: Number(discount || 0),
+            subtotal,
+            total,
+            items: cart,
+            paymentMethod: null,
+            paidAmount: null,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          const refDoc = doc(db, `tenants/${tenantId}/orders/${openId}`);
+          const snap = await getDoc(refDoc);
+          const old = snap.exists() ? (snap.data() as any) : {};
+          const oldItems: CartItem[] = Array.isArray(old.items) ? old.items : [];
 
-        await updateDoc(refDoc, {
-          items: merged,
-          subtotal: newSubtotal,
-          discount: newDiscount,
-          total: newTotal,
-          updatedAt: serverTimestamp(),
-        });
+          receiptOrderNo = (old.orderNo || openId).toString();
+
+          const merged = [...oldItems, ...cart];
+          const newSubtotal = merged.reduce((a, i) => a + i.price * i.qty, 0);
+          const newDiscount = Number(old.discount || 0) + Number(discount || 0);
+          const newTotal = Math.max(0, newSubtotal - newDiscount);
+
+          await updateDoc(refDoc, {
+            items: merged,
+            subtotal: newSubtotal,
+            discount: newDiscount,
+            total: newTotal,
+            updatedAt: serverTimestamp(),
+          });
+        }
       }
 
-      const billNo = `BILL-${Date.now()}`;
+      const billNo = receiptOrderNo || `BILL-${Date.now()}`;
       const html = buildReceiptHtml(billNo, "BILL");
       localStorage.setItem("terrapos_last_receipt_html", html);
 
@@ -334,6 +457,10 @@ export default function POSPage() {
       printBySelectedMode(html, text);
 
       resetCart();
+
+      if (editingOrderId) {
+        r.push("/orders");
+      }
     } catch (e: any) {
       setErr(e?.message ?? "Gagal simpan order bayar nanti");
     }
@@ -351,6 +478,11 @@ export default function POSPage() {
         return;
       }
 
+      if (!activeShift && !shiftAccessBlocked) {
+        setErr("Buka shift dulu sebelum transaksi bayar sekarang.");
+        return;
+      }
+
       const orderNo = `TRX-${Date.now()}`;
 
       await addDoc(collection(db, `tenants/${tenantId}/orders`), {
@@ -364,6 +496,8 @@ export default function POSPage() {
         subtotal,
         total,
         items: cart,
+        shiftId: activeShift?.id || null,
+        shiftOpenedByEmail: activeShift?.openedByEmail || email || "",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         paidAt: serverTimestamp(),
@@ -435,6 +569,9 @@ export default function POSPage() {
               User: {email || "-"} | Role: <b>{role || "-"}</b>
               {tableNo ? <> | Meja: <b>{tableNo}</b></> : null}
             </div>
+            <div className="small" style={{ marginTop: 6 }}>
+              Shift: <b>{shiftAccessBlocked ? "Belum aktif di rules" : activeShift ? `OPEN - ${activeShift.openedByEmail || "-"}` : "Belum dibuka"}</b>
+            </div>
 
             <div className="modebar">
               <button
@@ -457,12 +594,19 @@ export default function POSPage() {
                 Bayar Nanti (Meja)
               </button>
             </div>
+
+            {editingOrderId && (
+              <div className="small" style={{ marginTop: 10, fontWeight: 800, color: "var(--brand)" }}>
+                Sedang edit open bill: <b>{editingOrderNo || editingOrderId}</b>
+              </div>
+            )}
           </div>
 
           <div className="spacer" />
 
           <div className="topnav">
             <button className="btn" onClick={() => r.push("/orders")}>Orders</button>
+            <button className="btn" onClick={() => r.push("/shifts")}>Shift</button>
             <button className="btn" onClick={() => r.push("/printer")}>Printer</button>
             {isOwner && (
               <button className="btn btn-primary" onClick={() => r.push("/dashboard")}>
@@ -653,9 +797,21 @@ export default function POSPage() {
               <button className="btn" onClick={() => setPayOpen(false)}>Tutup</button>
             </div>
 
-            <div className="row" style={{ marginTop: 12 }}>
-              <button className={"btn " + (paymentMethod === "CASH" ? "btn-primary" : "")} onClick={() => setPaymentMethod("CASH")}>CASH</button>
-              <button className={"btn " + (paymentMethod === "QRIS" ? "btn-primary" : "")} onClick={() => setPaymentMethod("QRIS")}>QRIS</button>
+            <div className="row" style={{ marginTop: 12, gap: 12 }}>
+              <button
+                className={"btn " + (paymentMethod === "CASH" ? "btn-primary" : "")}
+                style={paymentMethodButtonStyle}
+                onClick={() => setPaymentMethod("CASH")}
+              >
+                CASH
+              </button>
+              <button
+                className={"btn " + (paymentMethod === "QRIS" ? "btn-primary" : "")}
+                style={paymentMethodButtonStyle}
+                onClick={() => setPaymentMethod("QRIS")}
+              >
+                QRIS
+              </button>
             </div>
 
             <div className="row" style={{ justifyContent: "space-between", marginTop: 12 }}>
@@ -681,6 +837,50 @@ export default function POSPage() {
             <button className="btn btn-primary" style={{ width: "100%", marginTop: 12 }} onClick={checkoutPayNow}>
               Selesaikan & Print Struk
             </button>
+          </div>
+        </div>
+      )}
+
+      {shiftPromptOpen && !activeShift && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            zIndex: 70,
+          }}
+        >
+          <div className="card" style={{ width: 520, maxWidth: "100%" }}>
+            <div className="h1">Shift Belum Dibuka</div>
+            <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+              Sebelum kasir mulai transaksi, shift harus dibuka dulu agar semua pembayaran tercatat ke sesi kasir yang aktif.
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: 12,
+                borderRadius: 14,
+                border: "1px solid var(--border)",
+                background: "#fffaf5",
+                fontSize: 13,
+                lineHeight: 1.6,
+              }}
+            >
+              Buka shift dulu di halaman <b>Shift</b>, lalu kembali ke POS untuk lanjut transaksi.
+            </div>
+
+            <div className="row" style={{ marginTop: 16 }}>
+              <button className="btn btn-primary" onClick={() => r.push("/shifts")}>
+                Buka Halaman Shift
+              </button>
+              <button className="btn" onClick={() => r.push("/dashboard")}>
+                Ke Dashboard
+              </button>
+            </div>
           </div>
         </div>
       )}

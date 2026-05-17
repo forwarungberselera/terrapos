@@ -1,0 +1,28 @@
+[36m[1mi  emulators:[22m[39m Starting emulators: functions
+[33m[1m!  functions:[22m[39m The following emulators are not running, calls to these services from the Functions emulator will affect production: [1mapphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect[22m
+[36m[1mi  functions:[22m[39m Watching "C:\Users\62813\Desktop\Terra POS\functions" for Cloud Functions...
+[32m[1m+  functions:[22m[39m Using node@24 from host.
+Serving at port 8536
+
+(node:11012) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+[32m[1m+  functions:[22m[39m Loaded functions definitions from source: refundOrder, updateRefundPin.
+[32m[1m+  functions[us-central1-refundOrder]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:5001/terraposid/us-central1/refundOrder).
+[32m[1m+  functions[us-central1-updateRefundPin]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:5001/terraposid/us-central1/updateRefundPin).
+
+[90m┌─────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32m✔[39m  [1mAll emulators ready! It is now safe to connect your app.[22m [90m│[39m
+[90m│[39m [36mi[39m  View Emulator UI at [4m[1mhttp://127.0.0.1:4000/[22m[24m               [90m│[39m
+[90m└─────────────────────────────────────────────────────────────┘[39m
+
+[90m┌───────────[39m[90m┬────────────────[39m[90m┬─────────────────────────────────┐[39m
+[90m│[39m[33m Emulator  [39m[90m│[39m[33m Host:Port      [39m[90m│[39m[33m View in Emulator UI             [39m[90m│[39m
+[90m├───────────[39m[90m┼────────────────[39m[90m┼─────────────────────────────────┤[39m
+[90m│[39m Functions [90m│[39m 127.0.0.1:5001 [90m│[39m [4m[1mhttp://127.0.0.1:4000/functions[22m[24m [90m│[39m
+[90m└───────────[39m[90m┴────────────────[39m[90m┴─────────────────────────────────┘[39m
+[90m  Emulator Hub host: 127.0.0.1 port: 4400[39m
+[90m  Other reserved ports:[39m 4500
+
+Issues? Report them at [4m[1mhttps://github.com/firebase/firebase-tools/issues[22m[24m and attach the *-debug.log files.
+ 

@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import {
   enableIndexedDbPersistence,
   getFirestore,
@@ -41,9 +42,10 @@ const safeConfig = {
   appId: must(firebaseConfig.appId, "NEXT_PUBLIC_FIREBASE_APP_ID"),
 };
 
-const app = getApps().length ? getApps()[0] : initializeApp(safeConfig);
+export const app = getApps().length ? getApps()[0] : initializeApp(safeConfig);
 
 export const auth = getAuth(app);
+export const functions = getFunctions(app);
 
 // Firestore init (client/server aman)
 export const db =
@@ -56,4 +58,13 @@ if (typeof window !== "undefined") {
   enableIndexedDbPersistence(db).catch(() => {
     // kalau multiple tab, bisa gagal. itu normal.
   });
+
+  const isLocalhost =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
+
+  if (isLocalhost && !(window as any).__terraposFunctionsEmulatorConnected) {
+    connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+    (window as any).__terraposFunctionsEmulatorConnected = true;
+  }
 }

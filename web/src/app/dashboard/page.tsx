@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, functions } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import {
   collection,
@@ -17,11 +17,14 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shifts";
 
 type OrderItem = {
   name: string;
   price: number;
   qty: number;
+  category?: string;
 };
 
 type Order = {
@@ -72,6 +75,8 @@ function last7Days() {
   return arr;
 }
 
+type TopPeriodFilter = "today" | "7d" | "month";
+
 export default function DashboardPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
@@ -83,14 +88,20 @@ export default function DashboardPage() {
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [activeShift, setActiveShift] = useState<ShiftRecord | null>(null);
+  const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
 
   const [storeName, setStoreName] = useState("TerraPOS");
   const [address, setAddress] = useState("");
   const [footer, setFooter] = useState("Terima kasih.");
   const [cashierName, setCashierName] = useState("Kasir TerraPOS");
-  const [refundPin, setRefundPin] = useState("123456");
   const [saving, setSaving] = useState(false);
+  const [savingPin, setSavingPin] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [refundPinInput, setRefundPinInput] = useState("");
+  const [confirmRefundPinInput, setConfirmRefundPinInput] = useState("");
+  const [topPeriodFilter, setTopPeriodFilter] = useState<TopPeriodFilter>("month");
+  const [topCategoryFilter, setTopCategoryFilter] = useState("Semua");
 
   const [printMode, setPrintMode] = useState<"browser" | "rawbt">("browser");
 
@@ -135,6 +146,27 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!tenantId) return;
+    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"));
+    return onSnapshot(
+      qy,
+      (snap) => {
+        setShiftAccessBlocked(false);
+        const items = snap.docs.map((item) => normalizeShift(item.id, item.data()));
+        setActiveShift(items.find((item) => item.status === "OPEN") || null);
+      },
+      (e) => {
+        if (isShiftPermissionError(e)) {
+          setShiftAccessBlocked(true);
+          setActiveShift(null);
+          return;
+        }
+        setErr(e.message);
+      }
+    );
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) return;
 
     (async () => {
       try {
@@ -145,7 +177,6 @@ export default function DashboardPage() {
           setAddress((d.address || "").toString());
           setFooter((d.footer || "Terima kasih.").toString());
           setCashierName((d.cashierName || "Kasir TerraPOS").toString());
-          setRefundPin((d.refundPin || "123456").toString());
         }
       } catch {}
     })();
@@ -173,8 +204,6 @@ export default function DashboardPage() {
     let cashRevenue = 0;
     let qrisRevenue = 0;
 
-    const topMap = new Map<string, { name: string; qty: number; revenue: number }>();
-
     for (const o of paidOrders) {
       const d: Date | null = o.paidAt?.toDate?.() ?? o.createdAt?.toDate?.() ?? null;
       if (!d) continue;
@@ -191,23 +220,8 @@ export default function DashboardPage() {
         if (o.paymentMethod === "CASH") cashRevenue += o.total;
         if (o.paymentMethod === "QRIS") qrisRevenue += o.total;
 
-        for (const it of o.items || []) {
-          const key = (it.name || "Unknown").toString();
-          const qty = Number(it.qty || 0);
-          const revenue = Number(it.price || 0) * qty;
-          const prev = topMap.get(key) || { name: key, qty: 0, revenue: 0 };
-          topMap.set(key, {
-            name: key,
-            qty: prev.qty + qty,
-            revenue: prev.revenue + revenue,
-          });
-        }
       }
     }
-
-    const topProducts = Array.from(topMap.values())
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 8);
 
     const avgOrder = monthCount ? Math.round(monthRevenue / monthCount) : 0;
 
@@ -219,9 +233,55 @@ export default function DashboardPage() {
       avgOrder,
       cashRevenue,
       qrisRevenue,
-      topProducts,
     };
   }, [paidOrders]);
+
+  const topSellingStats = useMemo(() => {
+    const now = new Date();
+    const rangeStart =
+      topPeriodFilter === "today"
+        ? startOfDay(now)
+        : topPeriodFilter === "7d"
+          ? startOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6))
+          : startOfMonth(now);
+
+    const topMap = new Map<string, { name: string; category: string; qty: number; revenue: number }>();
+
+    for (const o of paidOrders) {
+      const d: Date | null = o.paidAt?.toDate?.() ?? o.createdAt?.toDate?.() ?? null;
+      if (!d || d < rangeStart) continue;
+
+      for (const it of o.items || []) {
+        const key = (it.name || "Unknown").toString();
+        const category = (it.category || "Lainnya").toString();
+        const qty = Number(it.qty || 0);
+        const revenue = Number(it.price || 0) * qty;
+        const prev = topMap.get(key) || { name: key, category, qty: 0, revenue: 0 };
+
+        topMap.set(key, {
+          name: key,
+          category: prev.category || category,
+          qty: prev.qty + qty,
+          revenue: prev.revenue + revenue,
+        });
+      }
+    }
+
+    const topProducts = Array.from(topMap.values()).sort((a, b) => {
+      if (b.qty !== a.qty) return b.qty - a.qty;
+      return b.revenue - a.revenue;
+    });
+
+    return {
+      label:
+        topPeriodFilter === "today"
+          ? "hari ini"
+          : topPeriodFilter === "7d"
+            ? "7 hari terakhir"
+            : "bulan ini",
+      topProducts,
+    };
+  }, [paidOrders, topPeriodFilter]);
 
   const dailyChart = useMemo(() => {
     const days = last7Days();
@@ -261,6 +321,37 @@ export default function DashboardPage() {
     return { total, cashPct, qrisPct };
   }, [stats.cashRevenue, stats.qrisRevenue]);
 
+  const topProductCategories = useMemo(() => {
+    return [
+      "Semua",
+      ...Array.from(
+        new Set(topSellingStats.topProducts.map((product) => (product.category || "Lainnya").toString()))
+      ).sort((a, b) => a.localeCompare(b, "id-ID")),
+    ];
+  }, [topSellingStats.topProducts]);
+
+  const filteredTopProducts = useMemo(() => {
+    const filtered =
+      topCategoryFilter === "Semua"
+        ? topSellingStats.topProducts
+        : topSellingStats.topProducts.filter((product) => product.category === topCategoryFilter);
+
+    return filtered.slice(0, 12);
+  }, [topSellingStats.topProducts, topCategoryFilter]);
+
+  const topProductsByCategory = useMemo(() => {
+    return topProductCategories
+      .filter((category) => category !== "Semua")
+      .map((category) => {
+        const leader = topSellingStats.topProducts.find((product) => product.category === category);
+        return {
+          category,
+          leader,
+        };
+      })
+      .filter((entry) => entry.leader);
+  }, [topSellingStats.topProducts, topProductCategories]);
+
   async function saveReceiptSettings() {
     if (!tenantId) return;
 
@@ -275,17 +366,62 @@ export default function DashboardPage() {
           address: address.trim(),
           footer: footer.trim() || "Terima kasih.",
           cashierName: cashierName.trim() || "Kasir TerraPOS",
-          refundPin: refundPin.trim() || "123456",
           updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
-      setSaveMsg("Tersimpan. Perubahan dipakai untuk struk dan refund berikutnya.");
+      setSaveMsg("Tersimpan. Perubahan dipakai untuk struk berikutnya.");
       setTimeout(() => setSaveMsg(""), 2500);
     } catch (e: any) {
       setSaveMsg("Gagal simpan: " + (e?.message || "unknown"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveRefundPin() {
+    if (!tenantId) return;
+
+    const nextPin = refundPinInput.trim();
+    const confirmPin = confirmRefundPinInput.trim();
+
+    if (!nextPin) {
+      setSaveMsg("PIN refund baru wajib diisi.");
+      return;
+    }
+
+    if (nextPin.length < 6) {
+      setSaveMsg("PIN refund minimal 6 digit.");
+      return;
+    }
+
+    if (nextPin !== confirmPin) {
+      setSaveMsg("Konfirmasi PIN refund tidak cocok.");
+      return;
+    }
+
+    setSavingPin(true);
+    setSaveMsg("");
+
+    try {
+      const updateRefundPinFn = httpsCallable<
+        { tenantId: string; refundPin: string },
+        { ok: boolean }
+      >(functions, "updateRefundPin");
+
+      await updateRefundPinFn({
+        tenantId,
+        refundPin: nextPin,
+      });
+
+      setRefundPinInput("");
+      setConfirmRefundPinInput("");
+      setSaveMsg("PIN refund berhasil diperbarui secara aman di server.");
+      setTimeout(() => setSaveMsg(""), 2500);
+    } catch (e: any) {
+      setSaveMsg("Gagal simpan PIN refund: " + (e?.message || "unknown"));
+    } finally {
+      setSavingPin(false);
     }
   }
 
@@ -636,6 +772,63 @@ export default function DashboardPage() {
           font-size:12px;
           color:var(--muted);
         }
+        .filter-row{
+          margin-top:14px;
+          display:flex;
+          gap:10px;
+          flex-wrap:wrap;
+        }
+        .filter-stack{
+          margin-top:14px;
+          display:grid;
+          gap:10px;
+        }
+        .category-chip{
+          border:1px solid var(--border);
+          background:#fff;
+          border-radius:999px;
+          padding:8px 12px;
+          font-size:12px;
+          font-weight:800;
+          cursor:pointer;
+        }
+        .category-chip.active{
+          background:var(--brand);
+          color:#fff;
+          border-color:var(--brand);
+        }
+        .category-leaders{
+          margin-top:14px;
+          display:grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap:12px;
+        }
+        @media (max-width: 780px){
+          .category-leaders{
+            grid-template-columns: 1fr;
+          }
+        }
+        .leader-card{
+          border:1px solid var(--border);
+          border-radius:16px;
+          padding:14px;
+          background:#fffaf5;
+        }
+        .leader-category{
+          font-size:12px;
+          color:var(--muted);
+          font-weight:800;
+        }
+        .leader-name{
+          margin-top:8px;
+          font-size:16px;
+          font-weight:900;
+        }
+        .leader-meta{
+          margin-top:6px;
+          font-size:12px;
+          color:var(--muted);
+        }
       `}</style>
 
       <div className="premium-shell">
@@ -650,6 +843,7 @@ export default function DashboardPage() {
           <div className="sidegroup">
             <button className="sidebtn" onClick={() => r.push("/pos")}>POS</button>
             <button className="sidebtn" onClick={() => r.push("/orders")}>Orders</button>
+            <button className="sidebtn" onClick={() => r.push("/shifts")}>Shift</button>
             <button className="sidebtn" onClick={() => r.push("/reports")}>Reports</button>
             <button className="sidebtn" onClick={() => r.push("/products")}>Products</button>
             <button className="sidebtn" onClick={() => r.push("/members")}>Members</button>
@@ -677,6 +871,7 @@ export default function DashboardPage() {
                 <span className="badge">Print: {printMode === "rawbt" ? "RawBT" : "Browser"}</span>
                 <span className="badge">OPEN: {openOrders.length}</span>
                 <span className="badge">PAID: {paidOrders.length}</span>
+                <span className="badge">Shift: {shiftAccessBlocked ? "Belum Aktif" : activeShift ? "OPEN" : "Belum Buka"}</span>
               </div>
             </div>
           </section>
@@ -727,6 +922,10 @@ export default function DashboardPage() {
                   <button className="quickbtn" onClick={() => r.push("/orders")}>
                     <div className="quicktitle">Orders</div>
                     <div className="quickdesc">Pantau order OPEN dan PAID.</div>
+                  </button>
+                  <button className="quickbtn" onClick={() => r.push("/shifts")}>
+                    <div className="quicktitle">Shift</div>
+                    <div className="quickdesc">Buka shift, tutup shift, dan cek kas sesi aktif.</div>
                   </button>
                   <button className="quickbtn" onClick={() => r.push("/products")}>
                     <div className="quicktitle">Products</div>
@@ -812,22 +1011,79 @@ export default function DashboardPage() {
               </div>
 
               <div className="panel">
-                <div className="panel-title">Top Produk Bulan Ini</div>
-                <div className="panel-sub">Produk terlaris berdasarkan omzet bulan berjalan.</div>
+                <div className="panel-title">Produk Paling Laris Bulan Ini</div>
+                <div className="panel-sub">Lihat produk terlaris berdasarkan qty terjual, lalu saring sesuai periode dan kategori.</div>
+
+                <div className="filter-stack">
+                  <div className="filter-row">
+                    <button
+                      className={`category-chip${topPeriodFilter === "today" ? " active" : ""}`}
+                      onClick={() => setTopPeriodFilter("today")}
+                    >
+                      Hari Ini
+                    </button>
+                    <button
+                      className={`category-chip${topPeriodFilter === "7d" ? " active" : ""}`}
+                      onClick={() => setTopPeriodFilter("7d")}
+                    >
+                      7 Hari
+                    </button>
+                    <button
+                      className={`category-chip${topPeriodFilter === "month" ? " active" : ""}`}
+                      onClick={() => setTopPeriodFilter("month")}
+                    >
+                      Bulan Ini
+                    </button>
+                  </div>
+
+                  <div className="small">
+                    Menampilkan data produk paling laris untuk <b>{topSellingStats.label}</b>.
+                  </div>
+
+                  <div className="filter-row">
+                    {topProductCategories.map((category) => (
+                      <button
+                        key={category}
+                        className={`category-chip${topCategoryFilter === category ? " active" : ""}`}
+                        onClick={() => setTopCategoryFilter(category)}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {topProductsByCategory.length > 0 && (
+                  <div className="category-leaders">
+                    {topProductsByCategory.map(({ category, leader }) => (
+                      <div key={category} className="leader-card">
+                        <div className="leader-category">Kategori {category}</div>
+                        <div className="leader-name">{leader?.name}</div>
+                        <div className="leader-meta">
+                          Terjual {leader?.qty} item • Omzet Rp {rupiah(leader?.revenue || 0)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div style={{ marginTop: 10, overflowX: "auto" }}>
                   <table>
                     <thead>
                       <tr>
+                        <th>#</th>
                         <th>Produk</th>
+                        <th>Kategori</th>
                         <th>Qty</th>
                         <th>Omzet</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {stats.topProducts.map((t) => (
+                      {filteredTopProducts.map((t, index) => (
                         <tr key={t.name}>
+                          <td style={{ fontWeight: 900 }}>{index + 1}</td>
                           <td style={{ fontWeight: 900 }}>{t.name}</td>
+                          <td>{t.category}</td>
                           <td>{t.qty}</td>
                           <td style={{ fontWeight: 900, color: "var(--brand)" }}>
                             Rp {rupiah(t.revenue)}
@@ -838,9 +1094,9 @@ export default function DashboardPage() {
                   </table>
                 </div>
 
-                {stats.topProducts.length === 0 && (
+                {filteredTopProducts.length === 0 && (
                   <div className="small" style={{ marginTop: 12 }}>
-                    Belum ada data penjualan bulan ini.
+                    Belum ada data penjualan untuk kategori ini di bulan berjalan.
                   </div>
                 )}
               </div>
@@ -849,7 +1105,7 @@ export default function DashboardPage() {
             <div style={{ display: "grid", gap: 16 }}>
               <div className="panel">
                 <div className="panel-title">Kustomisasi Struk & Refund</div>
-                <div className="panel-sub">Ubah informasi toko, kasir default, dan PIN refund.</div>
+                <div className="panel-sub">Ubah informasi toko, kasir default, dan kelola PIN refund secara server-side.</div>
 
                 <div style={{ marginTop: 14 }}>
                   <div className="small">Nama Toko</div>
@@ -892,15 +1148,31 @@ export default function DashboardPage() {
                 </div>
 
                 <div style={{ marginTop: 12 }}>
-                  <div className="small">PIN Refund</div>
+                  <div className="small">PIN Refund Baru</div>
                   <input
                     className="input"
                     type="password"
-                    value={refundPin}
-                    onChange={(e) => setRefundPin(e.target.value)}
+                    value={refundPinInput}
+                    onChange={(e) => setRefundPinInput(e.target.value)}
                     disabled={!isOwner}
                     placeholder="Contoh: 123456"
                   />
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <div className="small">Konfirmasi PIN Refund Baru</div>
+                  <input
+                    className="input"
+                    type="password"
+                    value={confirmRefundPinInput}
+                    onChange={(e) => setConfirmRefundPinInput(e.target.value)}
+                    disabled={!isOwner}
+                    placeholder="Ulangi PIN refund"
+                  />
+                </div>
+
+                <div className="small" style={{ marginTop: 8 }}>
+                  PIN refund tidak ditampilkan lagi di client setelah disimpan.
                 </div>
 
                 {saveMsg && <div style={{ marginTop: 12, fontWeight: 900 }}>{saveMsg}</div>}
@@ -912,6 +1184,15 @@ export default function DashboardPage() {
                   disabled={!isOwner || saving}
                 >
                   {saving ? "Menyimpan..." : "Simpan Kustomisasi"}
+                </button>
+
+                <button
+                  className="btn"
+                  style={{ width: "100%", marginTop: 10 }}
+                  onClick={saveRefundPin}
+                  disabled={!isOwner || savingPin}
+                >
+                  {savingPin ? "Menyimpan PIN Refund..." : "Simpan PIN Refund Baru"}
                 </button>
 
                 {!isOwner && (
@@ -969,7 +1250,7 @@ ${footer || "Terima kasih."}`}
 
                   <div className="mini-box">
                     <div className="mini-label">PIN Refund</div>
-                    <div className="mini-value">{refundPin ? "Aktif" : "Belum diatur"}</div>
+                    <div className="mini-value">Dikelola Server</div>
                   </div>
                 </div>
               </div>

@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "deploy:pages": "wrangler pages deploy out --project-name terrapos-web --branch main"
   },
   "dependencies": {
     "firebase": "^12.9.0",
