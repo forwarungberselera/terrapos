@@ -128,7 +128,7 @@ export default function OrdersPage() {
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [refundLogs, setRefundLogs] = useState<RefundLog[]>([]);
-  const [tab, setTab] = useState<"OPEN" | "PAID" | "REFUND">("OPEN");
+  const [tab, setTab] = useState<"OPEN" | "PAID" | "CANCELLED" | "REFUND">("OPEN");
   const [err, setErr] = useState<string | null>(null);
 
   const [payOpen, setPayOpen] = useState(false);
@@ -143,6 +143,12 @@ export default function OrdersPage() {
   const [refundPinInput, setRefundPinInput] = useState("");
   const [refundReason, setRefundReason] = useState("");
   const [refundLoading, setRefundLoading] = useState(false);
+
+  // Void/Cancel state
+  const [voidOpen, setVoidOpen] = useState(false);
+  const [voidOrder, setVoidOrder] = useState<Order | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+  const [voidLoading, setVoidLoading] = useState(false);
 
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>({
     storeName: "TerraPOS",
@@ -345,6 +351,37 @@ export default function OrdersPage() {
     setRefundReason("");
     setRefundOpen(true);
     setErr(null);
+  }
+
+  function openVoid(o: Order) {
+    setVoidOrder(o);
+    setVoidReason("");
+    setVoidOpen(true);
+    setErr(null);
+  }
+
+  async function confirmVoid() {
+    try {
+      if (!tenantId || !voidOrder) return;
+      setVoidLoading(true);
+      setErr(null);
+
+      await updateDoc(doc(db, `tenants/${tenantId}/orders/${voidOrder.id}`), {
+        status: "CANCELLED",
+        cancelledAt: serverTimestamp(),
+        cancelledByEmail: email || "",
+        cancelReason: (voidReason || "").trim(),
+        updatedAt: serverTimestamp(),
+      });
+
+      setVoidOpen(false);
+      setVoidOrder(null);
+      setVoidReason("");
+    } catch (e: any) {
+      setErr(e?.message ?? "Gagal batalkan order");
+    } finally {
+      setVoidLoading(false);
+    }
   }
 
   function buildReceiptHtml(
@@ -634,6 +671,9 @@ export default function OrdersPage() {
           <button className={"btn " + (tab === "PAID" ? "btn-primary" : "")} onClick={() => setTab("PAID")}>
             PAID
           </button>
+          <button className={"btn " + (tab === "CANCELLED" ? "btn-primary" : "")} onClick={() => setTab("CANCELLED")}>
+            BATAL
+          </button>
           <button className={"btn " + (tab === "REFUND" ? "btn-primary" : "")} onClick={() => setTab("REFUND")}>
             REFUND LOG
           </button>
@@ -729,7 +769,18 @@ export default function OrdersPage() {
                             >
                               Print Struk
                             </button>
+                            <button
+                              className="btn btn-danger"
+                              style={{ marginTop: 10, width: "100%" }}
+                              onClick={() => openVoid(o)}
+                            >
+                              Batalkan
+                            </button>
                           </>
+                        ) : o.status === "CANCELLED" ? (
+                          <div className="small" style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>
+                            Dibatalkan
+                          </div>
                         ) : (
                           <>
                             <button
@@ -946,6 +997,67 @@ export default function OrdersPage() {
               disabled={refundLoading}
             >
               {refundLoading ? "Memproses Refund..." : "Konfirmasi Refund"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {voidOpen && voidOrder && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            zIndex: 55,
+          }}
+        >
+          <div className="card" style={{ width: 520, maxWidth: "100%" }}>
+            <div className="row">
+              <div className="h1">Batalkan Order</div>
+              <div className="spacer" />
+              <button
+                className="btn"
+                onClick={() => {
+                  setVoidOpen(false);
+                  setVoidOrder(null);
+                  setVoidReason("");
+                }}
+              >
+                Tutup
+              </button>
+            </div>
+
+            <div className="small" style={{ marginTop: 8 }}>
+              Order: <b>{voidOrder.orderNo}</b> • Meja: <b>{voidOrder.tableNo || "-"}</b> • Total: <b>Rp {rupiah(voidOrder.total)}</b>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div className="small">Alasan Pembatalan (opsional)</div>
+              <textarea
+                className="input"
+                style={{ minHeight: 80 }}
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                placeholder="Contoh: salah input, customer batal pesan"
+              />
+            </div>
+
+            <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+              Order yang dibatalkan akan berubah status menjadi <b>CANCELLED</b> dan tidak masuk ke laporan penjualan.
+            </div>
+
+            {err && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{err}</div>}
+
+            <button
+              className="btn btn-danger"
+              style={{ width: "100%", marginTop: 12 }}
+              onClick={confirmVoid}
+              disabled={voidLoading}
+            >
+              {voidLoading ? "Membatalkan..." : "Konfirmasi Batalkan"}
             </button>
           </div>
         </div>
