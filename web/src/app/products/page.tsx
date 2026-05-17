@@ -27,6 +27,14 @@ export default function ProductsPage() {
   const [category, setCategory] = useState("Minuman");
   const [price, setPrice] = useState<number>(0);
 
+  // Edit state
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editPrice, setEditPrice] = useState<number>(0);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editErr, setEditErr] = useState<string | null>(null);
+
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -79,6 +87,45 @@ export default function ProductsPage() {
     }
   }
 
+  function openEdit(p: Product) {
+    setEditProduct(p);
+    setEditName(p.name);
+    setEditCategory(p.category);
+    setEditPrice(p.price);
+    setEditErr(null);
+  }
+
+  function closeEdit() {
+    setEditProduct(null);
+    setEditName("");
+    setEditCategory("");
+    setEditPrice(0);
+    setEditErr(null);
+  }
+
+  async function saveEdit() {
+    if (!tenantId || !editProduct) return;
+    setEditErr(null);
+    const n = editName.trim();
+    if (!n) return setEditErr("Nama wajib diisi.");
+    if (Number(editPrice) <= 0) return setEditErr("Harga harus > 0.");
+
+    setEditBusy(true);
+    try {
+      await updateDoc(doc(db, `tenants/${tenantId}/products/${editProduct.id}`), {
+        name: n,
+        category: editCategory.trim(),
+        price: Number(editPrice),
+        updatedAt: serverTimestamp(),
+      });
+      closeEdit();
+    } catch (e: any) {
+      setEditErr(e?.message || "Gagal update produk");
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
   async function toggleActive(p: Product) {
     if (!tenantId) return;
     await updateDoc(doc(db, `tenants/${tenantId}/products/${p.id}`), { isActive: !p.isActive, updatedAt: serverTimestamp() });
@@ -106,6 +153,60 @@ export default function ProductsPage() {
 
   return (
     <TerraPage>
+      <style>{`
+        .modal-overlay{
+          position:fixed;
+          inset:0;
+          background:rgba(0,0,0,0.5);
+          display:grid;
+          place-items:center;
+          z-index:100;
+          padding:16px;
+        }
+        .modal-box{
+          background:#fff;
+          border-radius:18px;
+          padding:24px;
+          width:100%;
+          max-width:420px;
+          box-shadow:0 20px 50px rgba(0,0,0,0.15);
+        }
+      `}</style>
+
+      {/* Edit Modal */}
+      {editProduct && (
+        <div className="modal-overlay" onClick={closeEdit}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="h1">Edit Produk</div>
+            <div className="small" style={{ marginTop: 4 }}>ID: {editProduct.id}</div>
+
+            <div style={{ marginTop: 16 }}>
+              <div className="small">Nama</div>
+              <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+
+            <div style={{ marginTop: 10 }}>
+              <div className="small">Kategori</div>
+              <input className="input" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} />
+            </div>
+
+            <div style={{ marginTop: 10 }}>
+              <div className="small">Harga</div>
+              <input className="input" type="number" value={editPrice} onChange={(e) => setEditPrice(Number(e.target.value || 0))} />
+            </div>
+
+            {editErr && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{editErr}</div>}
+
+            <div className="row" style={{ marginTop: 16 }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} disabled={editBusy} onClick={saveEdit}>
+                {editBusy ? "Menyimpan..." : "Simpan"}
+              </button>
+              <button className="btn" style={{ flex: 1 }} onClick={closeEdit}>Batal</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <div className="row">
           <div>
@@ -162,6 +263,7 @@ export default function ProductsPage() {
                 <div className="small">{p.category}</div>
                 <div style={{ marginTop: 6, fontWeight: 900, color: "var(--brand)" }}>Rp {rupiah(p.price)}</div>
                 <div className="row" style={{ marginTop: 10 }}>
+                  <button className="btn" onClick={() => openEdit(p)}>Edit</button>
                   <button className={"btn " + (p.isActive ? "btn-primary" : "")} onClick={() => toggleActive(p)}>
                     {p.isActive ? "Aktif" : "Nonaktif"}
                   </button>
