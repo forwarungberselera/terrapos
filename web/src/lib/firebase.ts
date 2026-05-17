@@ -1,5 +1,10 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
+  indexedDBLocalPersistence,
+} from "firebase/auth";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import {
   enableIndexedDbPersistence,
@@ -45,6 +50,15 @@ const safeConfig = {
 export const app = getApps().length ? getApps()[0] : initializeApp(safeConfig);
 
 export const auth = getAuth(app);
+
+// Paksa auth persist di IndexedDB/localStorage supaya tidak logout sendiri
+if (typeof window !== "undefined") {
+  setPersistence(auth, indexedDBLocalPersistence).catch(() => {
+    // fallback ke localStorage jika IndexedDB gagal
+    setPersistence(auth, browserLocalPersistence).catch(() => {});
+  });
+}
+
 export const functions = getFunctions(app);
 
 // Firestore init (client/server aman)
