@@ -20,6 +20,12 @@ type UpdateRefundPinRequest = {
   refundPin?: string;
 };
 
+/**
+ * Validates that a value is a non-empty string.
+ * @param {unknown} value - The value to validate.
+ * @param {string} fieldName - The field name for error messages.
+ * @return {string} The trimmed non-empty string.
+ */
 function mustNonEmptyString(value: unknown, fieldName: string): string {
   const parsed = typeof value === "string" ? value.trim() : "";
   if (!parsed) {
@@ -28,10 +34,17 @@ function mustNonEmptyString(value: unknown, fieldName: string): string {
   return parsed;
 }
 
+/**
+ * Gets the tenant access context for a given user.
+ * @param {string} tenantId - The tenant ID.
+ * @param {string} uid - The user ID.
+ * @return {Promise<object>} Access context with role info.
+ */
 async function getTenantAccessContext(tenantId: string, uid: string) {
   const tenantRef = db.doc(`tenants/${tenantId}`);
   const staffRef = db.doc(`tenants/${tenantId}/staff/${uid}`);
-  const [tenantSnap, staffSnap] = await Promise.all([tenantRef.get(), staffRef.get()]);
+  const [tenantSnap, staffSnap] =
+    await Promise.all([tenantRef.get(), staffRef.get()]);
 
   if (!tenantSnap.exists) {
     throw new HttpsError("not-found", "Tenant tidak ditemukan.");
@@ -53,6 +66,11 @@ async function getTenantAccessContext(tenantId: string, uid: string) {
   };
 }
 
+/**
+ * Retrieves the saved refund PIN for a tenant.
+ * @param {string} tenantId - The tenant ID.
+ * @return {Promise<string>} The refund PIN or default.
+ */
 async function getSavedRefundPin(tenantId: string): Promise<string> {
   const privateSecurityRef = db.doc(`tenants/${tenantId}/private/security`);
   const settingsRef = db.doc(`tenants/${tenantId}/settings/main`);
@@ -130,7 +148,8 @@ export const refundOrder = onCall<RefundOrderRequest>(async (request) => {
   const refundRef = refundsRef.doc();
   const refundedByEmail =
     typeof auth.token.email === "string" ? auth.token.email : "";
-  const refundedByRole = access.isOwner ? "owner" : access.allowedRole || "admin";
+  const refundedByRole = access.isOwner ?
+    "owner" : access.allowedRole || "admin";
 
   const batch = db.batch();
   batch.set(refundRef, {
@@ -163,54 +182,55 @@ export const refundOrder = onCall<RefundOrderRequest>(async (request) => {
   };
 });
 
-export const updateRefundPin = onCall<UpdateRefundPinRequest>(async (request) => {
-  const auth = request.auth;
-  if (!auth?.uid) {
-    throw new HttpsError("unauthenticated", "User harus login.");
-  }
+export const updateRefundPin =
+  onCall<UpdateRefundPinRequest>(async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) {
+      throw new HttpsError("unauthenticated", "User harus login.");
+    }
 
-  const tenantId = mustNonEmptyString(request.data?.tenantId, "tenantId");
-  const refundPin = mustNonEmptyString(request.data?.refundPin, "refundPin");
+    const tenantId = mustNonEmptyString(request.data?.tenantId, "tenantId");
+    const refundPin = mustNonEmptyString(request.data?.refundPin, "refundPin");
 
-  if (refundPin.length < 6) {
-    throw new HttpsError("invalid-argument", "PIN refund minimal 6 digit.");
-  }
+    if (refundPin.length < 6) {
+      throw new HttpsError("invalid-argument", "PIN refund minimal 6 digit.");
+    }
 
-  const access = await getTenantAccessContext(tenantId, auth.uid);
-  if (!access.isOwner) {
-    throw new HttpsError(
-      "permission-denied",
-      "Hanya owner yang bisa mengubah PIN refund."
-    );
-  }
+    const access = await getTenantAccessContext(tenantId, auth.uid);
+    if (!access.isOwner) {
+      throw new HttpsError(
+        "permission-denied",
+        "Hanya owner yang bisa mengubah PIN refund."
+      );
+    }
 
-  const privateSecurityRef = db.doc(`tenants/${tenantId}/private/security`);
-  const settingsRef = db.doc(`tenants/${tenantId}/settings/main`);
+    const privateSecurityRef = db.doc(`tenants/${tenantId}/private/security`);
+    const settingsRef = db.doc(`tenants/${tenantId}/settings/main`);
 
-  const batch = db.batch();
-  batch.set(
-    privateSecurityRef,
-    {
-      refundPin,
-      updatedAt: FieldValue.serverTimestamp(),
-      updatedByUid: auth.uid,
-      updatedByEmail:
+    const batch = db.batch();
+    batch.set(
+      privateSecurityRef,
+      {
+        refundPin,
+        updatedAt: FieldValue.serverTimestamp(),
+        updatedByUid: auth.uid,
+        updatedByEmail:
         typeof auth.token.email === "string" ? auth.token.email : "",
-    },
-    {merge: true}
-  );
-  batch.set(
-    settingsRef,
-    {
-      refundPin: FieldValue.delete(),
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-    {merge: true}
-  );
+      },
+      {merge: true}
+    );
+    batch.set(
+      settingsRef,
+      {
+        refundPin: FieldValue.delete(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
 
-  await batch.commit();
+    await batch.commit();
 
-  return {
-    ok: true,
-  };
-});
+    return {
+      ok: true,
+    };
+  });
