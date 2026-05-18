@@ -21,10 +21,44 @@ echo ""
 echo "=== Building Next.js (static export)... ==="
 NEXT_OUTPUT=export npx next build
 
-# 3. Sync Capacitor
+# 3. Copy web assets ke Android (manual sync tanpa cap CLI)
 echo ""
-echo "=== Syncing Capacitor... ==="
-npx cap sync android
+echo "=== Syncing web assets to Android... ==="
+rm -rf android/app/src/main/assets/public
+cp -r out android/app/src/main/assets/public
+
+# Copy icon dari web ke semua mipmap folders
+echo "=== Syncing app icon... ==="
+if [ -f "public/icon-192.png" ]; then
+  cp public/icon-192.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+  cp public/icon-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+  echo "Icon synced from public/icon-192.png"
+fi
+
+# Copy capacitor config
+cat > android/app/src/main/assets/capacitor.config.json << 'EOF'
+{
+  "appId": "com.terrapos.app",
+  "appName": "TerraPOS",
+  "webDir": "out",
+  "server": {
+    "androidScheme": "https"
+  }
+}
+EOF
 
 # 4. Build APK
 echo ""
