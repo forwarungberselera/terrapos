@@ -21,7 +21,9 @@ import {
 
 function must(v: string | undefined, name: string) {
   if (v && v.trim()) return v.trim();
-  // bikin error yang gampang dimengerti
+  // Saat build/prerender, env mungkin belum tersedia - jangan crash
+  if (typeof window === "undefined") return "PLACEHOLDER";
+  // Di browser, kalau env kosong kasih error yang jelas
   throw new Error(
     `Firebase config missing: ${name}. Cek file .env.local di folder web (Terra POS/web).`
   );
