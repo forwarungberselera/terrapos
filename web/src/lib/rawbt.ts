@@ -114,13 +114,15 @@ export function sendToRawBT(text: string) {
   window.location.href = intentUrl;
 }
 
-export function getPrintMode(): "browser" | "rawbt" {
+export function getPrintMode(): "browser" | "rawbt" | "bluetooth" {
   if (typeof window === "undefined") return "browser";
   const mode = localStorage.getItem("terrapos_print_mode");
-  return mode === "rawbt" ? "rawbt" : "browser";
+  if (mode === "rawbt") return "rawbt";
+  if (mode === "bluetooth") return "bluetooth";
+  return "browser";
 }
 
-export function setPrintMode(mode: "browser" | "rawbt") {
+export function setPrintMode(mode: "browser" | "rawbt" | "bluetooth") {
   if (typeof window === "undefined") return;
   localStorage.setItem("terrapos_print_mode", mode);
 }
