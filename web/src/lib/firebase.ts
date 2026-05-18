@@ -53,11 +53,19 @@ export const app = getApps().length ? getApps()[0] : initializeApp(safeConfig);
 
 export const auth = getAuth(app);
 
-// Paksa auth persist di IndexedDB/localStorage supaya tidak logout sendiri
+// Paksa auth persist di IndexedDB/localStorage supaya tidak logout saat keluar app
 if (typeof window !== "undefined") {
+  // indexedDBLocalPersistence paling tahan — bertahan meskipun app ditutup
   setPersistence(auth, indexedDBLocalPersistence).catch(() => {
-    // fallback ke localStorage jika IndexedDB gagal
     setPersistence(auth, browserLocalPersistence).catch(() => {});
+  });
+
+  // Untuk Capacitor: simpan token ke localStorage sebagai backup
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      localStorage.setItem("terrapos_uid", user.uid);
+      localStorage.setItem("terrapos_email", user.email || "");
+    }
   });
 }
 

@@ -350,8 +350,24 @@ export default function POSPage() {
     });
   }
 
-  function printBySelectedMode(html: string, text: string) {
+  async function printBySelectedMode(html: string, text: string) {
     const mode = getPrintMode();
+
+    if (mode === "bluetooth") {
+      try {
+        const NativePrinter = await import("@/lib/native-printer");
+        if (NativePrinter.isNative()) {
+          const status = await NativePrinter.isConnected();
+          if (!status.connected) { await NativePrinter.autoReconnect(); }
+          await NativePrinter.printText(text);
+        } else {
+          const WebBT = await import("@/lib/bluetooth-printer");
+          if (!WebBT.isPrinterConnected()) { alert("Printer belum terkonek. Buka halaman Printer dulu."); return; }
+          await WebBT.printText(text);
+        }
+      } catch (e: any) { alert("Gagal print: " + (e?.message || "")); }
+      return;
+    }
 
     if (mode === "rawbt") {
       sendToRawBT(text);
@@ -359,10 +375,7 @@ export default function POSPage() {
     }
 
     const printWin = window.open("", "_blank", "width=420,height=800");
-    if (!printWin) {
-      alert("Pop-up print diblokir. Izinkan pop-up lalu coba lagi.");
-      return;
-    }
+    if (!printWin) { alert("Pop-up print diblokir."); return; }
     printWin.document.open();
     printWin.document.write(html);
     printWin.document.close();
@@ -454,7 +467,7 @@ export default function POSPage() {
       localStorage.setItem("terrapos_last_receipt_html", html);
 
       const text = buildReceiptText(billNo, "BILL");
-      printBySelectedMode(html, text);
+      void printBySelectedMode(html, text);
 
       resetCart();
 
@@ -507,7 +520,7 @@ export default function POSPage() {
       localStorage.setItem("terrapos_last_receipt_html", html);
 
       const text = buildReceiptText(orderNo, "STRUK");
-      printBySelectedMode(html, text);
+      void printBySelectedMode(html, text);
 
       resetCart();
     } catch (e: any) {

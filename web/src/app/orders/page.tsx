@@ -437,8 +437,24 @@ export default function OrdersPage() {
     });
   }
 
-  function printBySelectedMode(html: string, text: string) {
+  async function printBySelectedMode(html: string, text: string) {
     const mode = getPrintMode();
+
+    if (mode === "bluetooth") {
+      try {
+        const NativePrinter = await import("@/lib/native-printer");
+        if (NativePrinter.isNative()) {
+          const status = await NativePrinter.isConnected();
+          if (!status.connected) { await NativePrinter.autoReconnect(); }
+          await NativePrinter.printText(text);
+        } else {
+          const WebBT = await import("@/lib/bluetooth-printer");
+          if (!WebBT.isPrinterConnected()) { alert("Printer belum terkonek. Buka halaman Printer dulu."); return; }
+          await WebBT.printText(text);
+        }
+      } catch (e: any) { alert("Gagal print: " + (e?.message || "")); }
+      return;
+    }
 
     if (mode === "rawbt") {
       sendToRawBT(text);
@@ -446,10 +462,7 @@ export default function OrdersPage() {
     }
 
     const w = window.open("", "_blank", "width=420,height=800");
-    if (!w) {
-      alert("Pop-up print diblokir. Izinkan pop-up untuk localhost:3000.");
-      return;
-    }
+    if (!w) { alert("Pop-up print diblokir."); return; }
     w.document.open();
     w.document.write(html);
     w.document.close();
@@ -496,7 +509,7 @@ export default function OrdersPage() {
       const text = buildReceiptText(payOrder, "STRUK", paymentMethod, paidAmount);
 
       localStorage.setItem("terrapos_last_receipt_html", html);
-      printBySelectedMode(html, text);
+      await printBySelectedMode(html, text);
 
       setPayOpen(false);
       setPayOrder(null);
@@ -549,7 +562,7 @@ export default function OrdersPage() {
     const text = buildReceiptText(o, "STRUK", payMethod, paid);
 
     localStorage.setItem("terrapos_last_receipt_html", html);
-    printBySelectedMode(html, text);
+    void printBySelectedMode(html, text);
   }
 
   function printOpenBill(o: Order) {
@@ -557,7 +570,7 @@ export default function OrdersPage() {
     const text = buildReceiptText(o, "BILL", null);
 
     localStorage.setItem("terrapos_last_receipt_html", html);
-    printBySelectedMode(html, text);
+    void printBySelectedMode(html, text);
   }
 
   function addItemToOpenBill(o: Order) {
