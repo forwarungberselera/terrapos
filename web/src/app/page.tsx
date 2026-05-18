@@ -1,10 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Capacitor } from "@capacitor/core";
 
 export default function HomePage() {
   const r = useRouter();
+
+  // APK: langsung ke login, skip landing page
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      r.replace("/login");
+    }
+  }, [r]);
 
   return (
     <main

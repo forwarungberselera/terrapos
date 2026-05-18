@@ -32,7 +32,7 @@ const CMD = {
   DOUBLE_WIDTH: GS + "!" + "\x10",
   NORMAL_SIZE: GS + "!" + "\x00",
   CUT: GS + "V" + "\x00",
-  FEED: ESC + "d" + "\x04",
+  FEED: ESC + "d" + "\x01",
 };
 
 /**

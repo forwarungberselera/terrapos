@@ -18,7 +18,7 @@ const FONT_NORMAL = [ESC, 0x4d, 0x00];
 const DOUBLE_WIDTH = [GS, 0x21, 0x10];
 const NORMAL_SIZE = [GS, 0x21, 0x00];
 const CUT_PAPER = [GS, 0x56, 0x00]; // Full cut
-const FEED_LINES = [ESC, 0x64, 0x04]; // Feed 4 lines
+const FEED_LINES = [ESC, 0x64, 0x01]; // Feed 1 line
 
 type PrinterDevice = {
   device: BluetoothDevice;

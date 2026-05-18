@@ -88,8 +88,6 @@ export function buildPlainReceipt(d: RawBtReceiptData) {
   rows.push(line());
   rows.push(center(d.footer || "Terima kasih."));
   rows.push("");
-  rows.push("");
-  rows.push("");
 
   return rows.join("\n");
 }

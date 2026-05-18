@@ -55,12 +55,17 @@ export const auth = getAuth(app);
 
 // Paksa auth persist di IndexedDB/localStorage supaya tidak logout saat keluar app
 if (typeof window !== "undefined") {
-  // indexedDBLocalPersistence paling tahan — bertahan meskipun app ditutup
-  setPersistence(auth, indexedDBLocalPersistence).catch(() => {
-    setPersistence(auth, browserLocalPersistence).catch(() => {});
+  // Untuk Capacitor WebView: browserLocalPersistence (localStorage) lebih stabil
+  // daripada indexedDB yang bisa di-clear saat app di-kill di beberapa device
+  const isCapacitor = typeof (window as any).Capacitor !== "undefined";
+  const primaryPersistence = isCapacitor ? browserLocalPersistence : indexedDBLocalPersistence;
+  const fallbackPersistence = isCapacitor ? indexedDBLocalPersistence : browserLocalPersistence;
+  
+  setPersistence(auth, primaryPersistence).catch(() => {
+    setPersistence(auth, fallbackPersistence).catch(() => {});
   });
 
-  // Untuk Capacitor: simpan token ke localStorage sebagai backup
+  // Simpan info user ke localStorage sebagai backup
   auth.onAuthStateChanged((user) => {
     if (user) {
       localStorage.setItem("terrapos_uid", user.uid);
