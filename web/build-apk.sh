@@ -60,7 +60,26 @@ cat > android/app/src/main/assets/capacitor.config.json << 'EOF'
 }
 EOF
 
-# 4. Build APK
+# 4. Patch plugin namespace (capacitor-bluetooth-serial tidak punya namespace)
+echo ""
+echo "=== Patching capacitor-bluetooth-serial namespace... ==="
+BT_BUILD="../node_modules/capacitor-bluetooth-serial/android/build.gradle"
+if [ -f "$BT_BUILD" ]; then
+  if ! grep -q "^namespace" "$BT_BUILD" && ! grep -q "namespace " "$BT_BUILD"; then
+    # Tambahkan namespace setelah baris "android {"
+    sed -i 's/^android {/android {\n    namespace "com.bluetoothserial"/' "$BT_BUILD"
+    echo "Namespace patched: $BT_BUILD"
+  else
+    echo "Namespace already exists, skip."
+  fi
+fi
+
+# 4b. Patch compileOptions ke Java 17
+echo "=== Patching Java version to 17... ==="
+sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' android/app/capacitor.build.gradle
+echo "Java version patched."
+
+# 5. Build APK
 echo ""
 echo "=== Building APK... ==="
 cd android
