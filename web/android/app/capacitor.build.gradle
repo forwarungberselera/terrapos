@@ -9,8 +9,6 @@ android {
 
 apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
-    // capacitor-bluetooth-serial removed (incompatible with AGP 8+)
-    // Web Bluetooth API is used instead via bluetooth-printer.ts
 }
 
 if (hasProperty('postBuildExtras')) {

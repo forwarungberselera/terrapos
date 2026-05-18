@@ -18,18 +18,28 @@ echo "ANDROID_HOME: $ANDROID_HOME"
 java -version
 echo ""
 
-# 2. Build Next.js static export
+# 2. Install dependencies
+echo "=== Installing dependencies... ==="
+npm install
+
+# 3. Patch @capacitor/android - force Java 17 (library uses Java 21 by default)
+echo "=== Patching @capacitor/android Java version to 17... ==="
+find node_modules/@capacitor/android -name "*.gradle" 2>/dev/null | while read f; do
+  sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' "$f"
+done
+echo "Patch done."
+
+# 4. Build Next.js static export
 echo "=== Building Next.js (static export)... ==="
 NEXT_OUTPUT=export npx next build
 
-# 3. Copy web assets ke Android (manual tanpa cap CLI)
-echo ""
+# 5. Copy web assets to Android
 echo "=== Syncing web assets to Android... ==="
 rm -rf android/app/src/main/assets/public
 cp -r out android/app/src/main/assets/public
 echo "Web assets copied."
 
-# 4. Copy icon dari web ke semua mipmap folders
+# 6. Copy icons to all mipmap folders
 echo "=== Syncing app icon... ==="
 if [ -f "public/icon-192.png" ]; then
   for density in hdpi mdpi xhdpi xxhdpi xxxhdpi; do
@@ -42,8 +52,8 @@ if [ -f "public/icon-192.png" ]; then
   echo "Icons synced from public/icon-192.png"
 fi
 
-# 5. Write capacitor config
-cat > android/app/src/main/assets/capacitor.config.json << 'EOF'
+# 7. Write capacitor config
+cat > android/app/src/main/assets/capacitor.config.json << 'CAPEOF'
 {
   "appId": "com.terrapos.app",
   "appName": "TerraPOS",
@@ -52,17 +62,17 @@ cat > android/app/src/main/assets/capacitor.config.json << 'EOF'
     "androidScheme": "https"
   }
 }
-EOF
+CAPEOF
 echo "Capacitor config written."
 
-# 6. Build APK
+# 8. Build APK
 echo ""
 echo "=== Building APK... ==="
 cd android
 chmod +x gradlew
 ./gradlew assembleDebug
 
-# 7. Copy APK to public folder
+# 9. Copy APK to public folder
 cd ..
 cp android/app/build/outputs/apk/debug/app-debug.apk public/terrapos.apk
 

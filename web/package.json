@@ -10,9 +10,9 @@
     "deploy:pages": "wrangler pages deploy out --project-name terrapos-web --branch main"
   },
   "dependencies": {
-    "@capacitor/android": "^8.3.4",
-    "@capacitor/cli": "^8.3.4",
-    "@capacitor/core": "^8.3.4",
+    "@capacitor/android": "6.2.0",
+    "@capacitor/cli": "6.2.0",
+    "@capacitor/core": "6.2.0",
     "firebase": "^12.9.0",
     "next": "16.1.6",
     "qrcode.react": "^4.2.0",
