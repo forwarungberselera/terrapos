@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
-import { auth, db, functions } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import {
+  addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -17,7 +19,6 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
 import { receiptHTML } from "@/lib/receipt";
 import { buildPlainReceipt, getPrintMode, sendToRawBT } from "@/lib/rawbt";
 import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shifts";
@@ -55,11 +56,6 @@ type ReceiptSettings = {
   address: string;
   footer: string;
   cashierName: string;
-};
-
-type RefundOrderResult = {
-  ok: boolean;
-  refundId: string;
 };
 
 type ReceiptTitle = "STRUK" | "BILL";
@@ -468,19 +464,6 @@ export default function OrdersPage() {
     w.document.close();
   }
 
-  function mapRefundError(error: any) {
-    const code = (error?.code || "").toString().toLowerCase();
-    const message = (error?.message || "").toString();
-
-    if (code.includes("unauthenticated")) return "User harus login.";
-    if (code.includes("permission-denied")) return message || "Kamu tidak punya akses refund.";
-    if (code.includes("failed-precondition")) return message || "Order tidak bisa direfund.";
-    if (code.includes("not-found")) return message || "Order atau tenant tidak ditemukan.";
-    if (code.includes("invalid-argument")) return message || "Data refund belum lengkap.";
-
-    return message || "Gagal refund";
-  }
-
   async function payAndPrint() {
     try {
       if (!tenantId || !payOrder) return;
@@ -530,17 +513,53 @@ export default function OrdersPage() {
       }
 
       setRefundLoading(true);
-      const refundOrderFn = httpsCallable<
-        { tenantId: string; orderId: string; refundPin: string; reason: string },
-        RefundOrderResult
-      >(functions, "refundOrder");
 
-      await refundOrderFn({
-        tenantId,
+      // Cek PIN dari settings
+      const settingsSnap = await getDoc(doc(db, `tenants/${tenantId}/settings/main`));
+      const savedPin = (settingsSnap.exists() ? (settingsSnap.data() as any)?.refundPin : "") || "123456";
+
+      if (savedPin !== inputPin) {
+        setErr("PIN refund salah.");
+        return;
+      }
+
+      // Ambil data order
+      const orderRef = doc(db, `tenants/${tenantId}/orders/${refundOrder.id}`);
+      const orderSnap = await getDoc(orderRef);
+      if (!orderSnap.exists()) {
+        setErr("Order tidak ditemukan.");
+        return;
+      }
+
+      const orderData = orderSnap.data() as any;
+      if ((orderData.status || "").toUpperCase() !== "PAID") {
+        setErr("Hanya order PAID yang bisa direfund.");
+        return;
+      }
+
+      // Simpan ke refunds collection
+      await addDoc(collection(db, `tenants/${tenantId}/refunds`), {
         orderId: refundOrder.id,
-        refundPin: inputPin,
+        orderNo: orderData.orderNo || refundOrder.id,
+        statusBeforeRefund: orderData.status || "PAID",
+        mode: orderData.mode || null,
+        tableNo: orderData.tableNo ?? null,
+        paymentMethod: orderData.paymentMethod ?? null,
+        paidAmount: orderData.paidAmount ?? null,
+        subtotal: Number(orderData.subtotal || 0),
+        discount: Number(orderData.discount || 0),
+        total: Number(orderData.total || 0),
+        items: Array.isArray(orderData.items) ? orderData.items : [],
+        originalCreatedAt: orderData.createdAt ?? null,
+        originalPaidAt: orderData.paidAt ?? null,
+        refundedAt: serverTimestamp(),
+        refundedByUid: email || "",
+        refundedByEmail: email || "",
         reason: (refundReason || "").trim(),
       });
+
+      // Hapus order asli
+      await deleteDoc(orderRef);
 
       setRefundOpen(false);
       setRefundOrder(null);
@@ -548,7 +567,7 @@ export default function OrdersPage() {
       setRefundReason("");
       setErr(null);
     } catch (e: any) {
-      setErr(mapRefundError(e));
+      setErr(e?.message || "Gagal refund.");
     } finally {
       setRefundLoading(false);
     }

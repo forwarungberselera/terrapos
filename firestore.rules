@@ -102,7 +102,8 @@ service cloud.firestore {
 
       match /refunds/{refundId} {
         allow read: if isTenantAdmin(tenantId);
-        allow create, update, delete: if false;
+        allow create: if isTenantAdmin(tenantId);
+        allow update, delete: if false;
       }
 
       match /shifts/{shiftId} {
