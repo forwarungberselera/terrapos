@@ -6,9 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "build:apk": "NEXT_OUTPUT=export next build && npx cap sync android",
     "deploy:pages": "wrangler pages deploy out --project-name terrapos-web --branch main"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "capacitor-bluetooth-serial": "^0.0.4",
     "firebase": "^12.9.0",
     "next": "16.1.6",
     "qrcode.react": "^4.2.0",
