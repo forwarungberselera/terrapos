@@ -1,12 +1,11 @@
 package com.terrapos.app;
 
+import android.app.Activity;
 import android.net.Uri;
 import android.os.Bundle;
 import androidx.browser.customtabs.CustomTabsIntent;
-import androidx.browser.trusted.TrustedWebActivityIntentBuilder;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class LauncherActivity extends AppCompatActivity {
+public class LauncherActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -14,11 +13,11 @@ public class LauncherActivity extends AppCompatActivity {
 
         Uri url = Uri.parse("https://npos.gtomodachi.fun/pos");
 
-        TrustedWebActivityIntentBuilder builder = new TrustedWebActivityIntentBuilder(url);
-        
-        CustomTabsIntent customTabsIntent = builder.buildCustomTabsIntent();
-        customTabsIntent.launchUrl(this, url);
-        
+        CustomTabsIntent intent = new CustomTabsIntent.Builder()
+            .setShowTitle(false)
+            .build();
+
+        intent.launchUrl(this, url);
         finish();
     }
 }
