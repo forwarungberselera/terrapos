@@ -13,7 +13,6 @@
     "@capacitor/android": "^8.3.4",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
-    "capacitor-bluetooth-serial": "^0.0.4",
     "firebase": "^12.9.0",
     "next": "16.1.6",
     "qrcode.react": "^4.2.0",
