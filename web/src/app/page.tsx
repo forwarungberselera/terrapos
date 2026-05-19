@@ -46,13 +46,13 @@ export default function HomePage() {
           content:"";
           position:fixed;top:0;left:0;right:0;bottom:0;
           pointer-events:none;z-index:0;
-          opacity:0.035;
+          opacity:0.12;
           background-image:
-            radial-gradient(ellipse 300px 300px at 10% 20%, #c8a882 0%, transparent 70%),
-            radial-gradient(ellipse 250px 250px at 85% 15%, #b8976e 0%, transparent 70%),
-            radial-gradient(ellipse 200px 200px at 70% 80%, #d4b896 0%, transparent 70%),
-            radial-gradient(ellipse 180px 180px at 20% 75%, #a08060 0%, transparent 70%),
-            url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5c2 0 4 3 3 6s-4 5-7 4-4-4-3-7 4-4 7-3zm15 20c1.5 0 3 2 2.5 4.5s-3 3.5-5 3-3-3-2.5-5.5 3-3 5-2zm-35 8c1 0 2.5 2 2 4s-2.5 3-4 2.5-2.5-2.5-2-4.5 2.5-2.5 4-2zm20 22c1.5 0 3.5 2.5 3 5.5s-3.5 4-5.5 3.5-3-3.5-2.5-6 3.5-3.5 5-3z' fill='%23a08060' fill-opacity='0.4'/%3E%3C/svg%3E");
+            radial-gradient(ellipse 400px 400px at 8% 15%, #c8a882 0%, transparent 70%),
+            radial-gradient(ellipse 350px 350px at 88% 10%, #b8976e 0%, transparent 70%),
+            radial-gradient(ellipse 300px 300px at 75% 85%, #d4b896 0%, transparent 70%),
+            radial-gradient(ellipse 250px 250px at 15% 80%, #a08060 0%, transparent 70%),
+            url("data:image/svg+xml,%3Csvg width='80' height='80' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1.5' fill='%23b8976e' opacity='0.5'/%3E%3Ccircle cx='60' cy='15' r='1' fill='%23a08060' opacity='0.4'/%3E%3Ccircle cx='40' cy='50' r='1.2' fill='%23c8a882' opacity='0.45'/%3E%3Ccircle cx='70' cy='65' r='1.8' fill='%23b8976e' opacity='0.35'/%3E%3Ccircle cx='10' cy='70' r='1' fill='%23d4b896' opacity='0.4'/%3E%3Cpath d='M35 30c1 0 2.5 1.5 2 3.5s-2.5 3-4 2.5-2-2-1.5-4 2.5-2.5 3.5-2z' fill='%23a08060' opacity='0.3'/%3E%3C/svg%3E");
         }
         .lp>*{position:relative;z-index:1;}
 
@@ -93,15 +93,15 @@ export default function HomePage() {
           overflow:hidden;
         }
         .lp-hero::before{
-          content:"";position:absolute;top:-100px;right:-100px;
+          content:"";position:absolute;top:-80px;right:-80px;
           width:500px;height:500px;border-radius:50%;
-          background:radial-gradient(circle,rgba(213,149,103,0.06) 0%,transparent 70%);
+          background:radial-gradient(circle,rgba(213,149,103,0.15) 0%,transparent 70%);
           pointer-events:none;
         }
         .lp-hero::after{
-          content:"";position:absolute;bottom:-60px;left:-80px;
+          content:"";position:absolute;bottom:-40px;left:-60px;
           width:400px;height:400px;border-radius:50%;
-          background:radial-gradient(circle,rgba(180,140,100,0.04) 0%,transparent 70%);
+          background:radial-gradient(circle,rgba(180,140,100,0.1) 0%,transparent 70%);
           pointer-events:none;
         }
         .lp-badge{
@@ -203,13 +203,18 @@ export default function HomePage() {
         .lp-cta{padding:60px 24px 80px;text-align:center;}
         .lp-cta-box{
           max-width:540px;margin:0 auto;padding:48px 32px;border-radius:24px;
-          background:linear-gradient(135deg,#fdf8f4,#faf5f0);border:1px solid #f0e6dc;
+          background:linear-gradient(135deg,#fdf5ef,#f8ece0);border:1px solid #e8d5c4;
           position:relative;overflow:hidden;
         }
         .lp-cta-box::before{
           content:"";position:absolute;top:-30px;right:-30px;
-          width:120px;height:120px;border-radius:50%;
-          background:rgba(213,149,103,0.06);pointer-events:none;
+          width:150px;height:150px;border-radius:50%;
+          background:rgba(213,149,103,0.1);pointer-events:none;
+        }
+        .lp-cta-box::after{
+          content:"";position:absolute;bottom:-20px;left:-20px;
+          width:100px;height:100px;border-radius:50%;
+          background:rgba(180,140,100,0.08);pointer-events:none;
         }
         .lp-cta-box h2{font-size:26px;font-weight:900;letter-spacing:-0.02em;margin:0 0 10px;}
         .lp-cta-box p{color:#666;font-size:15px;line-height:1.6;margin:0 0 24px;}
