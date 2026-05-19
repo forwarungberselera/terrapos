@@ -46,9 +46,16 @@ export function useTenant() {
 
         setTenantId(current);
         setLoading(false);
-      } catch {
-        setLoading(false);
-        r.push("/setup");
+      } catch (e: any) {
+        // Network error: try localStorage fallback instead of redirecting
+        const storedTenantId = getStoredTenantId();
+        if (storedTenantId) {
+          setTenantId(storedTenantId);
+          setLoading(false);
+        } else {
+          setLoading(false);
+          r.push("/setup");
+        }
       }
     });
 

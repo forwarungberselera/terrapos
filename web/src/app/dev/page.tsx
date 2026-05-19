@@ -704,10 +704,22 @@ export default function DevConsolePage() {
                     const confirmText = prompt("Ketik HAPUS untuk konfirmasi:");
                     if (confirmText !== "HAPUS") { toast.error("Dibatalkan."); return; }
                     try {
-                      // Delete tenant document
-                      const { deleteDoc, doc: docRef } = await import("firebase/firestore");
+                      const { deleteDoc, doc: docRef, getDocs: getDocsFn, collection: colFn, query: qFn, where: wFn } = await import("firebase/firestore");
+
+                      // 1. Delete tenant document
                       await deleteDoc(docRef(db, `tenants/${t.id}`));
-                      toast.success(`Tenant "${t.name || t.id}" dihapus.`);
+
+                      // 2. Cleanup: remove tenantMemberships from all users who have this tenant
+                      try {
+                        const usersSnap = await getDocsFn(colFn(db, "users"));
+                        for (const userDoc of usersSnap.docs) {
+                          try {
+                            await deleteDoc(docRef(db, `users/${userDoc.id}/tenantMemberships/${t.id}`));
+                          } catch {}
+                        }
+                      } catch {}
+
+                      toast.success(`Tenant "${t.name || t.id}" dihapus + memberships dibersihkan.`);
                       // Refresh list
                       setTenants((prev) => prev.filter((x) => x.id !== t.id));
                     } catch (e: any) {

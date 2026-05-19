@@ -7,6 +7,7 @@ import BrandColorProvider from "@/components/BrandColorProvider";
 import { ToastProvider } from "@/components/Toast";
 import { PrintingOverlayProvider } from "@/components/PrintingOverlay";
 import MaintenanceGuard from "@/components/MaintenanceGuard";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export const metadata = {
   title: "TerraPOS",
@@ -46,18 +47,20 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ToastProvider>
-          <PrintingOverlayProvider>
-            <MaintenanceGuard>
-              <BrandColorProvider />
-              <Suspense fallback={null}>
-                <OfflineBanner />
-                <PWARegister />
-              </Suspense>
-              {children}
-            </MaintenanceGuard>
-          </PrintingOverlayProvider>
-        </ToastProvider>
+        <ErrorBoundary>
+          <ToastProvider>
+            <PrintingOverlayProvider>
+              <MaintenanceGuard>
+                <BrandColorProvider />
+                <Suspense fallback={null}>
+                  <OfflineBanner />
+                  <PWARegister />
+                </Suspense>
+                {children}
+              </MaintenanceGuard>
+            </PrintingOverlayProvider>
+          </ToastProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

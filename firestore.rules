@@ -63,7 +63,8 @@ service cloud.firestore {
 
     // ============ SYSTEM COLLECTION ============
     match /system/{docId} {
-      allow read: if isSignedIn();
+      // landingPage readable by anyone (public landing page)
+      allow read: if docId == "landingPage" || isSignedIn();
       allow create, update: if isDeveloper();
       allow delete: if false;
     }
@@ -72,14 +73,14 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn() && request.auth.uid == userId;
-      allow delete: if false;
+      allow delete: if isDeveloper();
 
       match /tenantMemberships/{tenantId} {
         allow read: if isSignedIn() && (request.auth.uid == userId || isTenantAdmin(tenantId));
         allow create, update: if isSignedIn() && (
           request.auth.uid == userId || isTenantAdmin(tenantId)
         );
-        allow delete: if false;
+        allow delete: if isSignedIn() && (request.auth.uid == userId || isDeveloper());
       }
     }
 
@@ -92,12 +93,12 @@ service cloud.firestore {
       );
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow update: if isTenantOwnerByDoc(tenantId);
-      allow delete: if false;
+      allow delete: if isDeveloper();
 
       match /staff/{staffUserId} {
         allow read: if isTenantMember(tenantId);
         allow create, update: if isTenantOwnerByDoc(tenantId);
-        allow delete: if false;
+        allow delete: if isTenantOwnerByDoc(tenantId) || isDeveloper();
       }
 
       match /settings/{docId} {
@@ -131,6 +132,17 @@ service cloud.firestore {
         allow read: if isTenantAdmin(tenantId);
         allow create, update: if isTenantAdmin(tenantId);
         allow delete: if false;
+      }
+
+      match /promos/{promoId} {
+        allow read: if isTenantAdmin(tenantId);
+        allow create, update, delete: if isTenantAdmin(tenantId);
+      }
+
+      match /auditLogs/{logId} {
+        allow read: if isTenantAdmin(tenantId);
+        allow create: if isTenantAdmin(tenantId);
+        allow update, delete: if false;
       }
 
       match /private/{document=**} {

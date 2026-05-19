@@ -182,7 +182,7 @@ export default function StaffPage() {
                 border: "1px solid var(--border)",
                 borderRadius: 14,
                 padding: 14,
-                background: "#fff",
+                background: "var(--panel)",
               }}
             >
               <div style={{ fontWeight: 900 }}>{s.email || s.uid}</div>

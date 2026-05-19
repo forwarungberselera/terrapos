@@ -164,7 +164,7 @@ export default function ProductsPage() {
           padding:16px;
         }
         .modal-box{
-          background:#fff;
+          background:var(--panel);
           border-radius:18px;
           padding:24px;
           width:100%;

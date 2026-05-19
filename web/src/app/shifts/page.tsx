@@ -338,11 +338,11 @@ export default function ShiftsPage() {
         @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
         .stats{ margin-top:12px; display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
         @media (max-width: 700px){ .stats{ grid-template-columns: 1fr; } }
-        .statbox{ border:1px solid var(--border); border-radius:16px; padding:14px; background:#fffaf5; }
+        .statbox{ border:1px solid var(--border); border-radius:16px; padding:14px; background:var(--brandSoft); }
         .statlabel{ font-size:12px; color:var(--muted); font-weight:700; }
         .statvalue{ margin-top:6px; font-size:22px; font-weight:900; }
         .history{ margin-top:12px; display:grid; gap:12px; }
-        .history-card{ border:1px solid var(--border); border-radius:16px; padding:14px; background:#fff; }
+        .history-card{ border:1px solid var(--border); border-radius:16px; padding:14px; background:var(--panel); }
         .badge{ display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid var(--border); font-size:12px; font-weight:900; }
       `}</style>
 
@@ -373,7 +373,7 @@ export default function ShiftsPage() {
           <div className="row">
             <div className="h1">Shift Aktif</div>
             <div className="spacer" />
-            <span className="badge" style={{ background: activeShift ? "#ecfdf5" : "#fff7f0" }}>
+            <span className="badge" style={{ background: activeShift ? "var(--brandSoft)" : "var(--input-bg)" }}>
               {activeShift ? "OPEN" : "BELUM ADA SHIFT"}
             </span>
           </div>
