@@ -6,9 +6,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // MASTER KEY: developer email hardcoded
     function isDeveloper() {
       return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDeveloper == true;
+        request.auth.token.email == "lovinbeneran@gmail.com";
     }
 
     function tenantDoc(tenantId) {
@@ -55,7 +56,12 @@ service cloud.firestore {
         );
     }
 
-    // ============ SYSTEM COLLECTION (developer only) ============
+    // ============ DEVELOPER: FULL ACCESS TO EVERYTHING ============
+    match /{document=**} {
+      allow read, write: if isDeveloper();
+    }
+
+    // ============ SYSTEM COLLECTION ============
     match /system/{docId} {
       allow read: if isSignedIn();
       allow create, update: if isDeveloper();
@@ -65,19 +71,13 @@ service cloud.firestore {
     // ============ USERS ============
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && (
-        request.auth.uid == userId ||
-        isDeveloper()
-      );
-      // Protect isDeveloper field: only existing developers can set it
-      allow update: if isSignedIn() && request.auth.uid == userId &&
-        (!("isDeveloper" in request.resource.data) || request.resource.data.isDeveloper == resource.data.isDeveloper);
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
       allow delete: if false;
 
       match /tenantMemberships/{tenantId} {
-        allow read: if isSignedIn() && (request.auth.uid == userId || isTenantAdmin(tenantId) || isDeveloper());
+        allow read: if isSignedIn() && (request.auth.uid == userId || isTenantAdmin(tenantId));
         allow create, update: if isSignedIn() && (
-          request.auth.uid == userId || isTenantAdmin(tenantId) || isDeveloper()
+          request.auth.uid == userId || isTenantAdmin(tenantId)
         );
         allow delete: if false;
       }
@@ -86,71 +86,60 @@ service cloud.firestore {
     // ============ TENANTS ============
     match /tenants/{tenantId} {
       allow read: if isSignedIn() && (
-        isDeveloper() ||
         resource.data.ownerUid == request.auth.uid ||
         hasTenantMembership(tenantId) ||
         hasTenantStaffRole(tenantId)
       );
-      allow create: if isSignedIn() && (
-        request.resource.data.ownerUid == request.auth.uid ||
-        isDeveloper()
-      );
-      allow update: if isTenantOwnerByDoc(tenantId) || isDeveloper();
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isTenantOwnerByDoc(tenantId);
       allow delete: if false;
 
-      // Developer can list all tenants (collection group query)
-      allow list: if isDeveloper();
-
       match /staff/{staffUserId} {
-        allow read: if isTenantMember(tenantId) || isDeveloper();
-        allow create, update: if isTenantOwnerByDoc(tenantId) || isDeveloper();
+        allow read: if isTenantMember(tenantId);
+        allow create, update: if isTenantOwnerByDoc(tenantId);
         allow delete: if false;
       }
 
       match /settings/{docId} {
-        allow read: if isTenantMember(tenantId) || isDeveloper();
-        allow create, update: if isTenantAdmin(tenantId) || isDeveloper();
+        allow read: if isTenantMember(tenantId);
+        allow create, update: if isTenantAdmin(tenantId);
         allow delete: if false;
       }
 
       match /products/{productId} {
-        allow read: if isTenantAdmin(tenantId) || isDeveloper();
-        allow create, update, delete: if isTenantAdmin(tenantId) || isDeveloper();
+        allow read: if isTenantAdmin(tenantId);
+        allow create, update, delete: if isTenantAdmin(tenantId);
       }
 
       match /members/{memberId} {
-        allow read: if isTenantAdmin(tenantId) || isDeveloper();
-        allow create, update, delete: if isTenantAdmin(tenantId) || isDeveloper();
+        allow read: if isTenantAdmin(tenantId);
+        allow create, update, delete: if isTenantAdmin(tenantId);
       }
 
       match /orders/{orderId} {
-        allow read: if isTenantAdmin(tenantId) || isDeveloper();
-        allow create, update, delete: if isTenantAdmin(tenantId) || isDeveloper();
+        allow read: if isTenantAdmin(tenantId);
+        allow create, update, delete: if isTenantAdmin(tenantId);
       }
 
       match /refunds/{refundId} {
-        allow read: if isTenantAdmin(tenantId) || isDeveloper();
-        allow create: if isTenantAdmin(tenantId) || isDeveloper();
+        allow read: if isTenantAdmin(tenantId);
+        allow create: if isTenantAdmin(tenantId);
         allow update, delete: if false;
       }
 
       match /shifts/{shiftId} {
-        allow read: if isTenantAdmin(tenantId) || isDeveloper();
-        allow create, update: if isTenantAdmin(tenantId) || isDeveloper();
+        allow read: if isTenantAdmin(tenantId);
+        allow create, update: if isTenantAdmin(tenantId);
         allow delete: if false;
       }
 
       match /private/{document=**} {
-        allow read, write: if isDeveloper();
+        allow read, write: if false;
       }
 
       match /{document=**} {
         allow read, write: if false;
       }
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
     }
   }
 }
