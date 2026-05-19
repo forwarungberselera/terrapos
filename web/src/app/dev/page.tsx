@@ -100,18 +100,26 @@ export default function DevConsolePage() {
   // Subscribe maintenance status
   useEffect(() => {
     if (!isDeveloper) return;
-    const unsub = subscribeMaintenanceStatus((status) => {
-      setMaintenance(status);
-      setMaintenanceMsg(status.message);
-    });
-    return () => unsub();
+    // Delay to let auth propagate
+    const timer = setTimeout(() => {
+      const unsub = subscribeMaintenanceStatus((status) => {
+        setMaintenance(status);
+        setMaintenanceMsg(status.message);
+      });
+      return () => unsub();
+    }, 300);
+    return () => clearTimeout(timer);
   }, [isDeveloper]);
 
-  // Load all tenants (developer only)
+  // Load all tenants (developer only) — with retry for permission timing
   useEffect(() => {
     if (!isDeveloper) return;
     setLoadingTenants(true);
-    (async () => {
+
+    let retries = 0;
+    const maxRetries = 3;
+
+    async function loadTenants() {
       try {
         const snap = await getDocs(collection(db, "tenants"));
         const arr: TenantItem[] = snap.docs.map((d) => {
@@ -125,12 +133,26 @@ export default function DevConsolePage() {
           };
         });
         setTenants(arr);
-      } catch (e: any) {
-        toast.error("Gagal load tenants: " + (e?.message || ""));
-      } finally {
         setLoadingTenants(false);
+      } catch (e: any) {
+        const msg = (e?.message || "").toLowerCase();
+        const isPermission = msg.includes("permission") || msg.includes("insufficient");
+        // Retry on permission errors (auth might not be ready yet)
+        if (isPermission && retries < maxRetries) {
+          retries++;
+          setTimeout(loadTenants, 1500 * retries);
+        } else {
+          // Only show non-permission errors or after retries exhausted
+          if (!isPermission) {
+            toast.error("Gagal load tenants: " + (e?.message || ""));
+          }
+          setLoadingTenants(false);
+        }
       }
-    })();
+    }
+
+    // Small delay to let auth state propagate to Firestore
+    setTimeout(loadTenants, 500);
   }, [isDeveloper]);
 
   // Load test build marker
