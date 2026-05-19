@@ -64,8 +64,8 @@ export default function POSPage() {
   const toast = useToast();
   const { showPrinting, hidePrinting } = usePrinting();
 
-  const isOwner = (role || "").toString().toLowerCase() === "owner";
-  const canUse = ["owner", "admin"].includes((role || "").toString().toLowerCase());
+  const isOwner = ["owner", "developer"].includes((role || "").toString().toLowerCase());
+  const canUse = ["owner", "admin", "developer"].includes((role || "").toString().toLowerCase());
 
   const [mode, setMode] = useState<OrderMode>("PAY_NOW");
   const [products, setProducts] = useState<Product[]>([]);

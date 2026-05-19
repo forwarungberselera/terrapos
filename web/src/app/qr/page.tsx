@@ -13,7 +13,7 @@ export default function QRPage() {
   const { role, loadingRole } = useRole();
 
   const roleLower = (role || "").toString().toLowerCase();
-  const canView = roleLower === "owner" || roleLower === "admin";
+  const canView = roleLower === "owner" || roleLower === "admin" || roleLower === "developer";
 
   const [table, setTable] = useState("1");
 

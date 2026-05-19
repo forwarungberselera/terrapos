@@ -85,8 +85,8 @@ export default function DashboardPage() {
   const { role, loadingRole } = useRole();
 
   const roleLower = (role || "").toString().toLowerCase();
-  const isOwner = roleLower === "owner";
-  const canView = roleLower === "owner" || roleLower === "admin";
+  const isOwner = roleLower === "owner" || roleLower === "developer";
+  const canView = roleLower === "owner" || roleLower === "admin" || roleLower === "developer";
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [err, setErr] = useState<string | null>(null);

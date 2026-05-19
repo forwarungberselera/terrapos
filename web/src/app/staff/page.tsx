@@ -30,7 +30,7 @@ export default function StaffPage() {
   const { tenantId, loading } = useTenant();
   const { role, loadingRole } = useRole();
 
-  const isOwner = (role || "").toLowerCase() === "owner";
+  const isOwner = ["owner", "developer"].includes((role || "").toLowerCase());
 
   const [staff, setStaff] = useState<StaffItem[]>([]);
   const [newEmail, setNewEmail] = useState("");

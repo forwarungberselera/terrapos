@@ -146,7 +146,7 @@ export default function ReportsPage() {
   const { role, loadingRole } = useRole();
 
   const roleLower = (role || "").toString().toLowerCase();
-  const canView = roleLower === "owner" || roleLower === "admin";
+  const canView = roleLower === "owner" || roleLower === "admin" || roleLower === "developer";
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [refundLogs, setRefundLogs] = useState<RefundLog[]>([]);

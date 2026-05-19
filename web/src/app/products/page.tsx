@@ -139,7 +139,7 @@ export default function ProductsPage() {
 
   if (loading || loadingRole) return <TerraPage><div className="card">Loading...</div></TerraPage>;
 
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "developer") {
     return (
       <TerraPage>
         <div className="card">

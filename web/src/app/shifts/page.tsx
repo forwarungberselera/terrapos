@@ -46,7 +46,7 @@ export default function ShiftsPage() {
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
 
-  const canUse = ["owner", "admin"].includes((role || "").toString().toLowerCase());
+  const canUse = ["owner", "admin", "developer"].includes((role || "").toString().toLowerCase());
 
   const [shifts, setShifts] = useState<ShiftRecord[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);

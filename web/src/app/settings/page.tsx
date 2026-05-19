@@ -61,7 +61,7 @@ export default function SettingsPage() {
 
   if (loading || loadingRole) return <TerraPage><SkeletonStyles /><PageSkeleton cards={2} /></TerraPage>;
 
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "developer") {
     return (
       <TerraPage>
         <div className="card">
