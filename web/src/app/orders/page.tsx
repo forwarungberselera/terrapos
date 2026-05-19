@@ -606,6 +606,7 @@ export default function OrdersPage() {
 
       if (savedPin !== inputPin) {
         setErr("PIN refund salah.");
+        setRefundLoading(false);
         return;
       }
 
@@ -614,12 +615,14 @@ export default function OrdersPage() {
       const orderSnap = await getDoc(orderRef);
       if (!orderSnap.exists()) {
         setErr("Order tidak ditemukan.");
+        setRefundLoading(false);
         return;
       }
 
       const orderData = orderSnap.data() as any;
       if ((orderData.status || "").toUpperCase() !== "PAID") {
         setErr("Hanya order PAID yang bisa direfund.");
+        setRefundLoading(false);
         return;
       }
 

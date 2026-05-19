@@ -106,12 +106,14 @@ export default function DashboardPage() {
   const [topPeriodFilter, setTopPeriodFilter] = useState<TopPeriodFilter>("month");
   const [topCategoryFilter, setTopCategoryFilter] = useState("Semua");
 
-  const [printMode, setPrintMode] = useState<"browser" | "rawbt">("browser");
+  const [printMode, setPrintMode] = useState<"browser" | "rawbt" | "bluetooth">("browser");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const mode = localStorage.getItem("terrapos_print_mode");
-      setPrintMode(mode === "rawbt" ? "rawbt" : "browser");
+      if (mode === "rawbt") setPrintMode("rawbt");
+      else if (mode === "bluetooth") setPrintMode("bluetooth");
+      else setPrintMode("browser");
     }
   }, []);
 
@@ -875,7 +877,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="hero-badges">
-                <span className="badge">Print: {printMode === "rawbt" ? "RawBT" : "Browser"}</span>
+                <span className="badge">Print: {printMode === "bluetooth" ? "Bluetooth" : printMode === "rawbt" ? "RawBT" : "Browser"}</span>
                 <span className="badge">OPEN: {openOrders.length}</span>
                 <span className="badge">PAID: {paidOrders.length}</span>
                 <span className="badge">Shift: {shiftAccessBlocked ? "Belum Aktif" : activeShift ? "OPEN" : "Belum Buka"}</span>

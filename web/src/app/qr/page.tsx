@@ -6,11 +6,13 @@ import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { QRCodeCanvas } from "qrcode.react";
+import { useToast } from "@/components/Toast";
 
 export default function QRPage() {
   const router = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const toast = useToast();
 
   const roleLower = (role || "").toString().toLowerCase();
   const canView = roleLower === "owner" || roleLower === "admin" || roleLower === "developer";
@@ -100,7 +102,7 @@ export default function QRPage() {
             disabled={!link}
             onClick={() => {
               navigator.clipboard.writeText(link);
-              alert("Link disalin.");
+              toast.success("Link disalin.");
             }}
           >
             Copy Link

@@ -24,7 +24,7 @@ export default function PrinterPage() {
   const { role, loadingRole } = useRole();
   const toast = useToast();
   const { showPrinting, hidePrinting } = usePrinting();
-  const canEdit = ["owner", "admin"].includes((role || "").toString().toLowerCase());
+  const canEdit = ["owner", "admin", "developer"].includes((role || "").toString().toLowerCase());
 
   const [settings, setSettings] = useState<ReceiptSettings>({ storeName: "TerraPOS", address: "", footer: "Terima kasih.", cashierName: "Kasir TerraPOS" });
   const [customText, setCustomText] = useState("Tes Printer TerraPOS\nTerima kasih");

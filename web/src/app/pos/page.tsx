@@ -554,7 +554,7 @@ export default function POSPage() {
 
           const merged = [...oldItems, ...cart];
           const newSubtotal = merged.reduce((a, i) => a + i.price * i.qty, 0);
-          const newDiscount = Number(old.discount || 0) + discountAmount;
+          const newDiscount = Number(old.discount || 0) + totalDiscount;
           const newTotal = Math.max(0, newSubtotal - newDiscount);
 
           await updateDoc(refDoc, {
