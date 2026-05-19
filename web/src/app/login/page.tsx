@@ -154,7 +154,7 @@ export default function LoginPage() {
 
       <div className="auth-wrap">
         <div className="auth-card">
-          <img src="/logo-header.png" alt="TerraPOS" style={{ height: 48, width: 48, objectFit: "contain", borderRadius: 10, marginBottom: 8 }} />
+          <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "var(--font-primary)", lineHeight: 1, marginBottom: 8 }}>terra <span style={{ color: "var(--brand)" }}>POS</span></div>
           <div className="small" style={{ marginTop: 6 }}>
             Login atau daftar akun baru untuk mulai memakai TerraPOS.
           </div>
