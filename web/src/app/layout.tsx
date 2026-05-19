@@ -4,6 +4,7 @@ import PWARegister from "@/components/PWARegister";
 import OfflineBanner from "@/components/OfflineBanner";
 import { ToastProvider } from "@/components/Toast";
 import { PrintingOverlayProvider } from "@/components/PrintingOverlay";
+import MaintenanceGuard from "@/components/MaintenanceGuard";
 
 export const metadata = {
   title: "TerraPOS",
@@ -28,9 +29,11 @@ export default function RootLayout({
       <body>
         <ToastProvider>
           <PrintingOverlayProvider>
-            <OfflineBanner />
-            <PWARegister />
-            {children}
+            <MaintenanceGuard>
+              <OfflineBanner />
+              <PWARegister />
+              {children}
+            </MaintenanceGuard>
           </PrintingOverlayProvider>
         </ToastProvider>
       </body>

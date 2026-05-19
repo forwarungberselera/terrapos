@@ -175,13 +175,25 @@ export default function DevConsolePage() {
     }
   }
 
-  function switchToTenant(tid: string) {
-    setStoredTenantId(tid);
-    setTenantId(tid);
-    toast.success(`Switched ke tenant: ${tid}`);
-    setTimeout(() => {
-      window.location.href = "/pos";
-    }, 500);
+  async function switchToTenant(tid: string) {
+    try {
+      // Update localStorage
+      setStoredTenantId(tid);
+      setTenantId(tid);
+
+      // Update Firestore juga supaya useTenant() konsisten
+      if (uid) {
+        const { setActiveTenantId } = await import("@/lib/tenant");
+        await setActiveTenantId(uid, tid);
+      }
+
+      toast.success(`Switched ke tenant: ${tid}`);
+      setTimeout(() => {
+        window.location.href = "/pos";
+      }, 500);
+    } catch (e: any) {
+      toast.error("Gagal switch: " + (e?.message || ""));
+    }
   }
 
   if (loading) {
