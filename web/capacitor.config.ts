@@ -5,13 +5,19 @@ const config: CapacitorConfig = {
   appName: "TerraPOS",
   webDir: "out",
   server: {
+    // Load dari server — APK selalu tampilkan versi terbaru tanpa rebuild
+    url: "https://npos.gtomodachi.fun",
     androidScheme: "https",
+    // Jika server unreachable, Capacitor akan tampilkan error page
+    // User bisa retry saat online kembali
+    cleartext: false,
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1000,
+      launchShowDuration: 1500,
       backgroundColor: "#ffffff",
       showSpinner: false,
+      launchAutoHide: true,
     },
   },
   android: {
@@ -19,6 +25,8 @@ const config: CapacitorConfig = {
       keystorePath: undefined,
       keystoreAlias: undefined,
     },
+    // Izinkan WebView load dari server
+    allowMixedContent: false,
   },
 };
 

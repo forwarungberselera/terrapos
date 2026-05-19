@@ -1,6 +1,8 @@
 #!/bin/bash
 # ===========================================
 # TerraPOS APK Build Script (Capacitor)
+# APK akan load dari server (auto-update)
+# Native plugins (Bluetooth) tetap berfungsi
 # Jalankan di VPS: bash build-apk.sh
 # ===========================================
 
@@ -29,15 +31,15 @@ find node_modules/@capacitor/android -name "*.gradle" 2>/dev/null | while read f
 done
 echo "Patch done."
 
-# 4. Build Next.js static export
-echo "=== Building Next.js (static export)... ==="
+# 4. Build Next.js static export (sebagai fallback offline)
+echo "=== Building Next.js (static export for fallback)... ==="
 NEXT_OUTPUT=export npx next build
 
-# 5. Copy web assets to Android
+# 5. Copy web assets to Android (fallback jika server unreachable)
 echo "=== Syncing web assets to Android... ==="
 rm -rf android/app/src/main/assets/public
 cp -r out android/app/src/main/assets/public
-echo "Web assets copied."
+echo "Web assets copied (fallback)."
 
 # 6. Copy icons to all mipmap folders
 echo "=== Syncing app icon... ==="
@@ -52,18 +54,28 @@ if [ -f "public/icon-192.png" ]; then
   echo "Icons synced from public/icon-192.png"
 fi
 
-# 7. Write capacitor config
+# 7. Write capacitor config - POINT TO SERVER (auto-update)
 cat > android/app/src/main/assets/capacitor.config.json << 'CAPEOF'
 {
   "appId": "com.terrapos.app",
   "appName": "TerraPOS",
   "webDir": "out",
   "server": {
-    "androidScheme": "https"
+    "url": "https://npos.gtomodachi.fun",
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#ffffff",
+      "showSpinner": false,
+      "launchAutoHide": true
+    }
   }
 }
 CAPEOF
-echo "Capacitor config written."
+echo "Capacitor config written (server mode - auto update)."
 
 # 8. Build APK
 echo ""
@@ -72,12 +84,18 @@ cd android
 chmod +x gradlew
 ./gradlew assembleDebug
 
-# 9. Copy APK to public folder
+# 9. Copy APK to public folder for download
 cd ..
 cp android/app/build/outputs/apk/debug/app-debug.apk public/terrapos.apk
 
 echo ""
 echo "========================================="
 echo "BUILD SUCCESSFUL!"
+echo ""
+echo "APK: android/app/build/outputs/apk/debug/app-debug.apk"
 echo "Download: https://npos.gtomodachi.fun/terrapos.apk"
+echo ""
+echo "MODE: Server (auto-update)"
+echo "APK akan selalu menampilkan versi terbaru dari server."
+echo "Native plugins (Bluetooth printer) tetap berfungsi."
 echo "========================================="
