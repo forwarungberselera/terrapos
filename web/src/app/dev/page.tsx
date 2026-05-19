@@ -360,6 +360,7 @@ export default function DevConsolePage() {
             </div>
           </div>
           <div className="spacer" />
+          <button className="btn" onClick={() => r.push("/dev/landing")}>Landing Page</button>
           <button className="btn" onClick={() => r.push("/pos")}>POS</button>
           <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
           <button className="btn" onClick={() => r.push("/setup")}>Setup Tenant</button>
