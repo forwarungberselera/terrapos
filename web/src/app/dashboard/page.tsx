@@ -21,6 +21,7 @@ import { httpsCallable } from "firebase/functions";
 import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shifts";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type OrderItem = {
   name: string;
@@ -844,6 +845,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="sidegroup">
+            <div className="row" style={{ justifyContent: "flex-end" }}><ThemeToggle /></div>
             <button className="sidebtn" onClick={() => r.push("/pos")}>POS</button>
             <button className="sidebtn" onClick={() => r.push("/orders")}>Orders</button>
             <button className="sidebtn" onClick={() => r.push("/shifts")}>Shift</button>

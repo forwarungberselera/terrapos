@@ -28,6 +28,7 @@ import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
 import { logAudit } from "@/lib/audit";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type Product = { id: string; name: string; category: string; price: number; isActive?: boolean };
 type CartItem = {
@@ -51,6 +52,7 @@ type ActivePromo = {
   startTime: string;
   endTime: string;
   days: number[];
+  code: string;
 };
 
 const paymentMethodButtonStyle: React.CSSProperties = {
@@ -107,6 +109,8 @@ export default function POSPage() {
   });
   const [activeShift, setActiveShift] = useState<ShiftRecord | null>(null);
   const [promos, setPromos] = useState<ActivePromo[]>([]);
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [redeemedCode, setRedeemedCode] = useState("");
 
   const searchRef = useRef<HTMLInputElement | null>(null);
 
@@ -261,6 +265,7 @@ export default function POSPage() {
             startTime: data.startTime || "00:00",
             endTime: data.endTime || "23:59",
             days: Array.isArray(data.days) ? data.days : [0, 1, 2, 3, 4, 5, 6],
+            code: data.code || "",
             isActive: data.isActive ?? true,
           };
         })
@@ -303,6 +308,9 @@ export default function POSPage() {
       if (!p.days.includes(currentDay)) return false;
       if (currentTime < p.startTime || currentTime > p.endTime) return false;
       if (p.minSubtotal > 0 && subtotal < p.minSubtotal) return false;
+      // Promo dengan kode hanya berlaku jika kode di-redeem
+      if (p.code && p.code !== redeemedCode) return false;
+      // Promo tanpa kode = auto-apply
       return true;
     });
 
@@ -319,7 +327,7 @@ export default function POSPage() {
       }
     }
     return best;
-  }, [promos, subtotal]);
+  }, [promos, subtotal, redeemedCode]);
 
   const promoDiscountAmount = useMemo(() => {
     if (!appliedPromo) return 0;
@@ -394,6 +402,8 @@ export default function POSPage() {
     setNoteDraft("");
     setEditingOrderId(null);
     setEditingOrderNo(null);
+    setPromoCodeInput("");
+    setRedeemedCode("");
   }
 
   function buildReceiptHtml(orderNo: string, title: "STRUK" | "BILL") {
@@ -721,6 +731,7 @@ export default function POSPage() {
           <div className="spacer" />
 
           <div className="topnav">
+            <ThemeToggle />
             <button className="btn" onClick={() => r.push("/orders")}>Orders</button>
             <button className="btn" onClick={() => r.push("/shifts")}>Shift</button>
             <button className="btn" onClick={() => r.push("/printer")}>Printer</button>
@@ -897,13 +908,44 @@ export default function POSPage() {
               <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, background: "var(--brandSoft)", border: "1px solid #f5c2d4" }}>
                 <div className="row" style={{ justifyContent: "space-between" }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#8a1d4a" }}>
-                    Promo: {appliedPromo.name}
+                    Promo: {appliedPromo.name} {appliedPromo.code && `(${appliedPromo.code})`}
                   </span>
                   <b style={{ fontSize: 13, color: "var(--brand)" }}>- Rp {rupiah(promoDiscountAmount)}</b>
                 </div>
                 <div className="small" style={{ marginTop: 2 }}>
-                  {appliedPromo.type === "percent" ? `${appliedPromo.value}% off` : `Rp ${rupiah(appliedPromo.value)} off`} &bull; otomatis
+                  {appliedPromo.type === "percent" ? `${appliedPromo.value}% off` : `Rp ${rupiah(appliedPromo.value)} off`} &bull; {appliedPromo.code ? "kode promo" : "otomatis"}
                 </div>
+                {appliedPromo.code && (
+                  <button className="btn" style={{ marginTop: 6, padding: "4px 8px", fontSize: 11 }} onClick={() => { setRedeemedCode(""); setPromoCodeInput(""); }}>
+                    Hapus Kode
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!redeemedCode && (
+              <div className="row" style={{ marginTop: 8, gap: 6 }}>
+                <input
+                  className="input"
+                  style={{ flex: 1, textTransform: "uppercase" }}
+                  value={promoCodeInput}
+                  onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                  placeholder="Kode promo..."
+                />
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: "10px 14px", fontSize: 12 }}
+                  onClick={() => {
+                    const code = promoCodeInput.trim().toUpperCase();
+                    if (!code) return;
+                    const found = promos.find((p) => p.code === code);
+                    if (!found) { toast.error("Kode promo tidak ditemukan"); return; }
+                    setRedeemedCode(code);
+                    toast.success(`Kode "${code}" berhasil dipakai!`);
+                  }}
+                >
+                  Pakai
+                </button>
               </div>
             )}
 

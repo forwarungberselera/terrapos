@@ -30,6 +30,7 @@ export type Promo = {
   startTime: string; // "HH:mm"
   endTime: string;   // "HH:mm"
   days: number[];    // 0=Sun, 1=Mon, ... 6=Sat
+  code: string;      // kode unik (opsional, kalau kosong = auto-apply)
   isActive: boolean;
   createdAt: any;
 };
@@ -59,6 +60,7 @@ export default function PromosPage() {
   const [startTime, setStartTime] = useState("00:00");
   const [endTime, setEndTime] = useState("23:59");
   const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  const [promoCode, setPromoCode] = useState("");
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
 
@@ -80,6 +82,7 @@ export default function PromosPage() {
             startTime: data.startTime || "00:00",
             endTime: data.endTime || "23:59",
             days: Array.isArray(data.days) ? data.days : [0, 1, 2, 3, 4, 5, 6],
+            code: data.code || "",
             isActive: data.isActive ?? true,
             createdAt: data.createdAt,
           };
@@ -103,6 +106,7 @@ export default function PromosPage() {
     setStartTime("00:00");
     setEndTime("23:59");
     setDays([0, 1, 2, 3, 4, 5, 6]);
+    setPromoCode("");
     setEditId(null);
   }
 
@@ -115,6 +119,7 @@ export default function PromosPage() {
     setStartTime(promo.startTime);
     setEndTime(promo.endTime);
     setDays(promo.days);
+    setPromoCode(promo.code || "");
   }
 
   async function handleSave() {
@@ -133,6 +138,7 @@ export default function PromosPage() {
         startTime,
         endTime,
         days,
+        code: promoCode.trim().toUpperCase(),
         isActive: true,
         updatedAt: serverTimestamp(),
       };
@@ -278,6 +284,12 @@ export default function PromosPage() {
           </div>
 
           <div style={{ marginTop: 12 }}>
+            <div className="small">Kode Promo (opsional, kosongkan untuk auto-apply)</div>
+            <input className="input" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} placeholder="Contoh: HEMAT20" style={{ textTransform: "uppercase" }} />
+            <div className="small" style={{ marginTop: 4 }}>Jika diisi, promo hanya berlaku saat kasir memasukkan kode ini di POS.</div>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
             <div className="small">Jam Berlaku</div>
             <div className="row" style={{ marginTop: 6 }}>
               <input className="input" type="time" style={{ width: 130 }} value={startTime} onChange={(e) => setStartTime(e.target.value)} />
@@ -326,6 +338,7 @@ export default function PromosPage() {
                     <div className="small" style={{ marginTop: 4 }}>
                       Diskon: <b>{p.type === "percent" ? `${p.value}%` : rupiah(p.value)}</b>
                       {p.minSubtotal > 0 && <> &bull; Min. {rupiah(p.minSubtotal)}</>}
+                      {p.code && <> &bull; Kode: <b>{p.code}</b></>}
                     </div>
                     <div className="small">
                       Jam: {p.startTime} — {p.endTime} &bull; Hari: {p.days.map((d) => DAY_NAMES[d]).join(", ")}
