@@ -15,767 +15,399 @@ export default function HomePage() {
   }, [r]);
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#fffaf5",
-        color: "#1f2937",
-      }}
-    >
+    <main>
       <style>{`
-        .container{
-          width:100%;
-          max-width:1200px;
-          margin:0 auto;
-          padding:0 20px;
+        .lp {
+          min-height: 100vh;
+          background: #0a0a0a;
+          color: #fafafa;
+          font-family: var(--font-primary, ui-sans-serif, system-ui, -apple-system, sans-serif);
+          overflow-x: hidden;
         }
 
-        .topbar{
-          position:sticky;
-          top:0;
-          z-index:30;
-          backdrop-filter: blur(10px);
-          background: rgba(255,250,245,0.9);
-          border-bottom:1px solid #f1e5d8;
+        .lp-nav {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 50;
+          padding: 20px 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          backdrop-filter: blur(20px);
+          background: rgba(10,10,10,0.7);
+          border-bottom: 1px solid rgba(255,255,255,0.06);
         }
 
-        .nav{
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap:16px;
-          min-height:72px;
+        .lp-logo {
+          font-size: 20px;
+          font-weight: 900;
+          letter-spacing: -0.03em;
         }
 
-        .brand{
-          font-size:24px;
-          font-weight:900;
-          letter-spacing:-0.02em;
-          color:#c9376e;
+        .lp-logo span {
+          color: #d59567;
         }
 
-        .navlinks{
-          display:flex;
-          align-items:center;
-          gap:12px;
-          flex-wrap:wrap;
+        .lp-nav-btns {
+          display: flex;
+          gap: 8px;
+          align-items: center;
         }
 
-        .btn{
-          border:1px solid #e5d5c4;
-          background:#fff;
-          color:#1f2937;
-          padding:11px 16px;
-          border-radius:14px;
-          font-weight:800;
-          cursor:pointer;
+        .lp-btn {
+          padding: 10px 18px;
+          border-radius: 10px;
+          font-weight: 700;
+          font-size: 13px;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
         }
 
-        .btn:hover{
-          background:#fdf0f4;
+        .lp-btn-ghost {
+          background: transparent;
+          color: #a1a1aa;
+          border: 1px solid rgba(255,255,255,0.1);
         }
 
-        .btn-primary{
-          background:#f97316;
-          color:#fff;
-          border-color:#f97316;
+        .lp-btn-ghost:hover {
+          color: #fff;
+          border-color: rgba(255,255,255,0.25);
         }
 
-        .btn-primary:hover{
-          background:#ea580c;
+        .lp-btn-fill {
+          background: #d59567;
+          color: #fff;
         }
 
-        .hero{
-          padding:72px 0 34px;
+        .lp-btn-fill:hover {
+          background: #c07f52;
+          transform: translateY(-1px);
         }
 
-        .hero-grid{
-          display:grid;
-          grid-template-columns: 1.1fr 0.9fr;
-          gap:28px;
-          align-items:center;
+        .lp-hero {
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 100px 24px 60px;
+          position: relative;
         }
 
-        @media (max-width: 960px){
-          .hero-grid{
+        .lp-hero::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 600px;
+          height: 600px;
+          background: radial-gradient(circle, rgba(213,149,103,0.12) 0%, transparent 70%);
+          pointer-events: none;
+        }
+
+        .lp-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border-radius: 999px;
+          background: rgba(213,149,103,0.1);
+          border: 1px solid rgba(213,149,103,0.25);
+          color: #d59567;
+          font-size: 12px;
+          font-weight: 700;
+          margin-bottom: 28px;
+        }
+
+        .lp-hero h1 {
+          font-size: clamp(40px, 8vw, 72px);
+          font-weight: 900;
+          line-height: 1.05;
+          letter-spacing: -0.04em;
+          margin: 0;
+          max-width: 700px;
+        }
+
+        .lp-hero h1 em {
+          font-style: normal;
+          background: linear-gradient(135deg, #d59567, #e4b896);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .lp-hero-sub {
+          margin-top: 20px;
+          font-size: 17px;
+          line-height: 1.7;
+          color: #71717a;
+          max-width: 520px;
+        }
+
+        .lp-hero-actions {
+          margin-top: 36px;
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .lp-btn-lg {
+          padding: 14px 28px;
+          font-size: 15px;
+          border-radius: 12px;
+        }
+
+        .lp-stats {
+          margin-top: 64px;
+          display: flex;
+          gap: 48px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .lp-stat {
+          text-align: center;
+        }
+
+        .lp-stat-val {
+          font-size: 28px;
+          font-weight: 900;
+          color: #fff;
+        }
+
+        .lp-stat-label {
+          margin-top: 4px;
+          font-size: 12px;
+          color: #71717a;
+          font-weight: 600;
+        }
+
+        .lp-features {
+          padding: 80px 24px;
+          max-width: 1000px;
+          margin: 0 auto;
+        }
+
+        .lp-section-title {
+          text-align: center;
+          font-size: 32px;
+          font-weight: 900;
+          letter-spacing: -0.03em;
+          margin-bottom: 48px;
+        }
+
+        .lp-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1px;
+          background: rgba(255,255,255,0.06);
+          border-radius: 20px;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @media (max-width: 768px) {
+          .lp-grid {
             grid-template-columns: 1fr;
           }
         }
 
-        .hero-card{
-          background:#fff;
-          border:1px solid #f1e5d8;
-          border-radius:28px;
-          padding:28px;
-          box-shadow: 0 10px 30px rgba(17,24,39,0.05);
+        .lp-feature {
+          padding: 32px 24px;
+          background: #0a0a0a;
+          transition: background 0.2s ease;
         }
 
-        .eyebrow{
-          display:inline-flex;
-          align-items:center;
-          gap:8px;
-          background:#fdf0f4;
-          color:#c9376e;
-          border:1px solid #f5c2d4;
-          padding:8px 12px;
-          border-radius:999px;
-          font-size:12px;
-          font-weight:900;
+        .lp-feature:hover {
+          background: #111;
         }
 
-        .hero h1{
-          margin:18px 0 0;
-          font-size:54px;
-          line-height:1.02;
-          letter-spacing:-0.04em;
+        .lp-feature-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background: rgba(213,149,103,0.1);
+          display: grid;
+          place-items: center;
+          font-size: 18px;
+          margin-bottom: 16px;
         }
 
-        @media (max-width: 640px){
-          .hero h1{
-            font-size:38px;
-          }
+        .lp-feature h3 {
+          font-size: 15px;
+          font-weight: 800;
+          margin: 0 0 8px;
         }
 
-        .hero p{
-          margin:18px 0 0;
-          font-size:18px;
-          line-height:1.7;
-          color:#6b7280;
-          max-width:700px;
+        .lp-feature p {
+          font-size: 13px;
+          line-height: 1.6;
+          color: #71717a;
+          margin: 0;
         }
 
-        .hero-actions{
-          display:flex;
-          flex-wrap:wrap;
-          gap:12px;
-          margin-top:24px;
+        .lp-cta {
+          padding: 80px 24px 100px;
+          text-align: center;
         }
 
-        .hero-badges{
-          display:grid;
-          grid-template-columns: repeat(3, minmax(0,1fr));
-          gap:12px;
-          margin-top:22px;
+        .lp-cta-box {
+          max-width: 560px;
+          margin: 0 auto;
+          padding: 48px 32px;
+          border-radius: 24px;
+          background: linear-gradient(145deg, rgba(213,149,103,0.08), rgba(213,149,103,0.02));
+          border: 1px solid rgba(213,149,103,0.15);
         }
 
-        @media (max-width: 640px){
-          .hero-badges{
-            grid-template-columns: 1fr;
-          }
+        .lp-cta-box h2 {
+          font-size: 28px;
+          font-weight: 900;
+          letter-spacing: -0.02em;
+          margin: 0 0 12px;
         }
 
-        .mini{
-          background:#fff;
-          border:1px solid #f1e5d8;
-          border-radius:18px;
-          padding:14px;
+        .lp-cta-box p {
+          color: #71717a;
+          font-size: 15px;
+          line-height: 1.6;
+          margin: 0 0 28px;
         }
 
-        .mini-label{
-          font-size:12px;
-          color:#6b7280;
-          font-weight:800;
+        .lp-footer {
+          padding: 24px;
+          text-align: center;
+          color: #3f3f46;
+          font-size: 12px;
+          border-top: 1px solid rgba(255,255,255,0.04);
         }
 
-        .mini-value{
-          margin-top:8px;
-          font-size:22px;
-          font-weight:900;
-          color:#111827;
-        }
-
-        .mockup{
-          background:#111827;
-          color:#fff;
-          border-radius:28px;
-          padding:18px;
-          box-shadow: 0 20px 45px rgba(17,24,39,0.16);
-        }
-
-        .mockup-top{
-          display:flex;
-          gap:8px;
-          margin-bottom:14px;
-        }
-
-        .dot{
-          width:10px;
-          height:10px;
-          border-radius:999px;
-          background:#374151;
-        }
-
-        .mockup-screen{
-          background:#fffaf5;
-          color:#111827;
-          border-radius:22px;
-          padding:18px;
-          min-height:420px;
-          border:1px solid rgba(255,255,255,0.08);
-        }
-
-        .screen-grid{
-          display:grid;
-          grid-template-columns: 1fr 240px;
-          gap:14px;
-        }
-
-        @media (max-width: 640px){
-          .screen-grid{
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .screen-panel{
-          background:#fff;
-          border:1px solid #f1e5d8;
-          border-radius:18px;
-          padding:14px;
-        }
-
-        .screen-title{
-          font-size:14px;
-          font-weight:900;
-        }
-
-        .screen-sub{
-          margin-top:4px;
-          font-size:12px;
-          color:#6b7280;
-        }
-
-        .menu-grid{
-          display:grid;
-          grid-template-columns: repeat(2, minmax(0,1fr));
-          gap:10px;
-          margin-top:12px;
-        }
-
-        .menu-item{
-          border:1px solid #f1e5d8;
-          border-radius:14px;
-          padding:12px;
-          background:#fffaf5;
-        }
-
-        .menu-name{
-          font-weight:900;
-          font-size:13px;
-        }
-
-        .menu-price{
-          margin-top:6px;
-          color:#c9376e;
-          font-weight:900;
-          font-size:13px;
-        }
-
-        .section{
-          padding:22px 0 14px;
-        }
-
-        .section-head{
-          max-width:760px;
-          margin-bottom:18px;
-        }
-
-        .section-head h2{
-          margin:0;
-          font-size:36px;
-          line-height:1.1;
-          letter-spacing:-0.03em;
-        }
-
-        .section-head p{
-          margin:12px 0 0;
-          color:#6b7280;
-          line-height:1.7;
-          font-size:16px;
-        }
-
-        .cards{
-          display:grid;
-          grid-template-columns: repeat(3, minmax(0,1fr));
-          gap:16px;
-        }
-
-        @media (max-width: 980px){
-          .cards{
-            grid-template-columns: 1fr 1fr;
-          }
-        }
-
-        @media (max-width: 640px){
-          .cards{
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .card{
-          background:#fff;
-          border:1px solid #f1e5d8;
-          border-radius:22px;
-          padding:20px;
-          box-shadow: 0 10px 25px rgba(17,24,39,0.04);
-        }
-
-        .card h3{
-          margin:0;
-          font-size:18px;
-        }
-
-        .card p{
-          margin:10px 0 0;
-          color:#6b7280;
-          line-height:1.7;
-          font-size:14px;
-        }
-
-        .steps{
-          display:grid;
-          grid-template-columns: repeat(4, minmax(0,1fr));
-          gap:16px;
-        }
-
-        @media (max-width: 980px){
-          .steps{
-            grid-template-columns: 1fr 1fr;
-          }
-        }
-
-        @media (max-width: 640px){
-          .steps{
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .step-no{
-          width:36px;
-          height:36px;
-          border-radius:999px;
-          background:#fdf0f4;
-          border:1px solid #f5c2d4;
-          color:#c9376e;
-          display:grid;
-          place-items:center;
-          font-weight:900;
-          margin-bottom:12px;
-        }
-
-        .pricing{
-          display:grid;
-          grid-template-columns: repeat(3, minmax(0,1fr));
-          gap:16px;
-        }
-
-        @media (max-width: 980px){
-          .pricing{
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .price-card{
-          background:#fff;
-          border:1px solid #f1e5d8;
-          border-radius:24px;
-          padding:24px;
-          box-shadow: 0 10px 25px rgba(17,24,39,0.04);
-        }
-
-        .price-card.featured{
-          border-color:#f97316;
-          box-shadow: 0 18px 40px rgba(249,115,22,0.14);
-        }
-
-        .price-name{
-          font-size:18px;
-          font-weight:900;
-        }
-
-        .price{
-          margin-top:14px;
-          font-size:40px;
-          font-weight:900;
-          line-height:1;
-        }
-
-        .price-sub{
-          margin-top:8px;
-          color:#6b7280;
-          font-size:14px;
-        }
-
-        .feature-list{
-          margin-top:18px;
-          display:grid;
-          gap:10px;
-          color:#374151;
-          font-size:14px;
-        }
-
-        .feature{
-          display:flex;
-          gap:10px;
-          align-items:flex-start;
-        }
-
-        .cta{
-          padding:30px 0 72px;
-        }
-
-        .cta-box{
-          background:#111827;
-          color:#fff;
-          border-radius:28px;
-          padding:30px;
-          display:flex;
-          justify-content:space-between;
-          gap:20px;
-          align-items:center;
-          flex-wrap:wrap;
-        }
-
-        .cta-box h3{
-          margin:0;
-          font-size:34px;
-          line-height:1.1;
-        }
-
-        .cta-box p{
-          margin:10px 0 0;
-          color:rgba(255,255,255,0.78);
-          max-width:620px;
-          line-height:1.7;
-        }
-
-        .footer{
-          border-top:1px solid #f1e5d8;
-          padding:20px 0 36px;
-          color:#6b7280;
-          font-size:14px;
+        @media (max-width: 640px) {
+          .lp-nav { padding: 14px 16px; }
+          .lp-hero { padding: 80px 16px 40px; }
+          .lp-stats { gap: 32px; }
+          .lp-features { padding: 48px 16px; }
+          .lp-cta { padding: 48px 16px 64px; }
         }
       `}</style>
 
-      {/* TOPBAR */}
-      <header className="topbar">
-        <div className="container nav">
-          <div className="brand">TerraPOS</div>
+      <div className="lp">
+        {/* NAV */}
+        <nav className="lp-nav">
+          <div className="lp-logo">terra<span>POS</span></div>
+          <div className="lp-nav-btns">
+            <button className="lp-btn lp-btn-ghost" onClick={() => r.push("/login")}>
+              Masuk
+            </button>
+            <button className="lp-btn lp-btn-fill" onClick={() => r.push("/setup")}>
+              Daftar Gratis
+            </button>
+          </div>
+        </nav>
 
-          <div className="navlinks">
-            <button className="btn" onClick={() => document.getElementById("fitur")?.scrollIntoView({ behavior: "smooth" })}>
-              Fitur
-            </button>
-            <button className="btn" onClick={() => document.getElementById("harga")?.scrollIntoView({ behavior: "smooth" })}>
-              Harga
-            </button>
-            <button className="btn" onClick={() => r.push("/login")}>
-              Login
-            </button>
-            <button className="btn btn-primary" onClick={() => r.push("/setup")}>
+        {/* HERO */}
+        <section className="lp-hero">
+          <div className="lp-badge">Sistem POS Modern untuk Cafe & Resto</div>
+
+          <h1>
+            Kasir <em>lebih cepat</em>,<br />
+            laporan lebih rapi.
+          </h1>
+
+          <p className="lp-hero-sub">
+            Kelola order, cetak struk, pantau omzet, dan atur meja — semua dari satu dashboard. Gratis untuk mulai.
+          </p>
+
+          <div className="lp-hero-actions">
+            <button className="lp-btn lp-btn-fill lp-btn-lg" onClick={() => r.push("/setup")}>
               Mulai Sekarang
             </button>
-          </div>
-        </div>
-      </header>
-
-      {/* HERO */}
-      <section className="hero">
-        <div className="container hero-grid">
-          <div className="hero-card">
-            <div className="eyebrow">POS SaaS untuk Cafe & Resto</div>
-
-            <h1>
-              Kelola kasir, meja, laporan, dan printer dalam satu sistem.
-            </h1>
-
-            <p>
-              TerraPOS membantu cafe dan resto menjalankan operasional lebih rapi:
-              order cepat, bayar sekarang atau nanti, QR meja, laporan penjualan,
-              dan cetak struk langsung ke RawBT.
-            </p>
-
-            <div className="hero-actions">
-              <button className="btn btn-primary" onClick={() => r.push("/setup")}>
-                Coba TerraPOS
-              </button>
-              <button className="btn" onClick={() => r.push("/login")}>
-                Masuk ke Dashboard
-              </button>
-            </div>
-
-            <div className="hero-badges">
-              <div className="mini">
-                <div className="mini-label">Cocok untuk</div>
-                <div className="mini-value">Cafe & Resto</div>
-              </div>
-              <div className="mini">
-                <div className="mini-label">Mode Print</div>
-                <div className="mini-value">Browser + RawBT</div>
-              </div>
-              <div className="mini">
-                <div className="mini-label">Sistem</div>
-                <div className="mini-value">Multi Tenant SaaS</div>
-              </div>
-            </div>
+            <button className="lp-btn lp-btn-ghost lp-btn-lg" onClick={() => r.push("/login")}>
+              Login
+            </button>
           </div>
 
-          <div className="mockup">
-            <div className="mockup-top">
-              <div className="dot" />
-              <div className="dot" />
-              <div className="dot" />
+          <div className="lp-stats">
+            <div className="lp-stat">
+              <div className="lp-stat-val">3</div>
+              <div className="lp-stat-label">Mode Print</div>
             </div>
-
-            <div className="mockup-screen">
-              <div className="screen-grid">
-                <div className="screen-panel">
-                  <div className="screen-title">POS TerraPOS</div>
-                  <div className="screen-sub">Bayar Sekarang / Bayar Nanti</div>
-
-                  <div className="menu-grid">
-                    <div className="menu-item">
-                      <div className="menu-name">Kopi Susu</div>
-                      <div className="menu-price">Rp 18.000</div>
-                    </div>
-                    <div className="menu-item">
-                      <div className="menu-name">Nasi Goreng</div>
-                      <div className="menu-price">Rp 22.000</div>
-                    </div>
-                    <div className="menu-item">
-                      <div className="menu-name">Es Teh</div>
-                      <div className="menu-price">Rp 8.000</div>
-                    </div>
-                    <div className="menu-item">
-                      <div className="menu-name">Mie Ayam</div>
-                      <div className="menu-price">Rp 20.000</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="screen-panel">
-                  <div className="screen-title">Keranjang</div>
-                  <div className="screen-sub">Meja 3</div>
-
-                  <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                    <div className="menu-item">
-                      <div className="menu-name">Kopi Susu x1</div>
-                      <div className="menu-price">Rp 18.000</div>
-                    </div>
-                    <div className="menu-item">
-                      <div className="menu-name">Nasi Goreng x1</div>
-                      <div className="menu-price">Rp 22.000</div>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 14 }}>
-                    <div className="screen-sub">Total</div>
-                    <div style={{ fontSize: 24, fontWeight: 900, color: "#c9376e", marginTop: 4 }}>
-                      Rp 40.000
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 14 }}>
-                <div className="screen-panel">
-                  <div className="screen-title">Dashboard Admin</div>
-                  <div className="screen-sub">Omzet, top produk, printer, QR meja, dan laporan dalam satu panel.</div>
-                </div>
-              </div>
+            <div className="lp-stat">
+              <div className="lp-stat-val">2</div>
+              <div className="lp-stat-label">Mode Bayar</div>
+            </div>
+            <div className="lp-stat">
+              <div className="lp-stat-val">24/7</div>
+              <div className="lp-stat-label">Offline Ready</div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FITUR */}
-      <section className="section" id="fitur">
-        <div className="container">
-          <div className="section-head">
-            <h2>Fitur lengkap untuk operasional cafe dan resto</h2>
-            <p>
-              TerraPOS dirancang agar admin dan kasir bisa bekerja cepat, sambil tetap mudah memantau penjualan dan mengatur sistem.
-            </p>
-          </div>
+        {/* FEATURES */}
+        <section className="lp-features" id="fitur">
+          <h2 className="lp-section-title">Semua yang kamu butuhkan</h2>
 
-          <div className="cards">
-            <div className="card">
+          <div className="lp-grid">
+            <div className="lp-feature">
+              <div className="lp-feature-icon">&#9889;</div>
               <h3>POS Dual Mode</h3>
-              <p>
-                Terima order dengan dua alur: bayar langsung atau simpan dulu per meja lalu bayar nanti di kasir.
-              </p>
+              <p>Bayar langsung atau simpan per meja, bayar nanti di kasir.</p>
             </div>
 
-            <div className="card">
-              <h3>RawBT Print</h3>
-              <p>
-                Struk bisa langsung terkirim ke RawBT, cocok untuk printer bluetooth thermal yang umum dipakai cafe.
-              </p>
+            <div className="lp-feature">
+              <div className="lp-feature-icon">&#128424;</div>
+              <h3>Cetak Struk</h3>
+              <p>Browser, RawBT, atau Bluetooth ESC/POS langsung ke thermal printer.</p>
             </div>
 
-            <div className="card">
-              <h3>Dashboard Premium</h3>
-              <p>
-                Lihat omzet hari ini, omzet bulan ini, grafik 7 hari, metode pembayaran, dan top produk dalam satu tampilan modern.
-              </p>
+            <div className="lp-feature">
+              <div className="lp-feature-icon">&#128200;</div>
+              <h3>Dashboard Realtime</h3>
+              <p>Omzet harian, grafik 7 hari, top produk, dan breakdown CASH vs QRIS.</p>
             </div>
 
-            <div className="card">
+            <div className="lp-feature">
+              <div className="lp-feature-icon">&#128241;</div>
               <h3>QR Meja</h3>
-              <p>
-                Buat QR untuk tiap meja supaya order lebih cepat dan alur resto lebih rapi.
-              </p>
+              <p>Generate QR per meja untuk alur order yang lebih cepat dan teratur.</p>
             </div>
 
-            <div className="card">
-              <h3>Reports & Export Excel</h3>
-              <p>
-                Rekap penjualan tersimpan rapi dan bisa diexport ke Excel untuk kebutuhan analisis atau pembukuan.
-              </p>
+            <div className="lp-feature">
+              <div className="lp-feature-icon">&#128202;</div>
+              <h3>Laporan & Export</h3>
+              <p>Rekap penjualan harian/mingguan/bulanan, export ke Excel satu klik.</p>
             </div>
 
-            <div className="card">
-              <h3>Multi Tenant SaaS</h3>
-              <p>
-                Struktur sistem sudah siap untuk banyak tenant/outlet sehingga cocok dijual sebagai layanan SaaS.
-              </p>
+            <div className="lp-feature">
+              <div className="lp-feature-icon">&#127760;</div>
+              <h3>Multi Outlet</h3>
+              <p>Satu akun bisa kelola banyak tenant. Cocok untuk ekspansi bisnis.</p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CARA KERJA */}
-      <section className="section">
-        <div className="container">
-          <div className="section-head">
-            <h2>Cara kerja TerraPOS</h2>
-            <p>
-              Alur sederhana, cepat dipahami, dan cocok untuk operasional harian di outlet.
-            </p>
+        {/* CTA */}
+        <section className="lp-cta">
+          <div className="lp-cta-box">
+            <h2>Siap digitalisasi kasir outlet kamu?</h2>
+            <p>Buat akun, setup tenant, dan langsung terima order hari ini juga.</p>
+            <button className="lp-btn lp-btn-fill lp-btn-lg" onClick={() => r.push("/setup")}>
+              Daftar Gratis Sekarang
+            </button>
           </div>
+        </section>
 
-          <div className="steps">
-            <div className="card">
-              <div className="step-no">1</div>
-              <h3>Setup Tenant</h3>
-              <p>Buat tenant/outlet dan masuk dengan akun yang sudah terhubung ke sistem.</p>
-            </div>
-
-            <div className="card">
-              <div className="step-no">2</div>
-              <h3>Kelola Menu</h3>
-              <p>Tambahkan produk, kategori, harga, dan siapkan tampilan kasir sesuai kebutuhan outlet.</p>
-            </div>
-
-            <div className="card">
-              <div className="step-no">3</div>
-              <h3>Terima Order</h3>
-              <p>Input order di POS, pilih meja bila perlu, lalu lanjut bayar sekarang atau simpan untuk bayar nanti.</p>
-            </div>
-
-            <div className="card">
-              <div className="step-no">4</div>
-              <h3>Cetak & Analisis</h3>
-              <p>Struk tercetak ke printer, data tersimpan ke dashboard, dan admin bisa lihat statistik penjualan.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* HARGA */}
-      <section className="section" id="harga">
-        <div className="container">
-          <div className="section-head">
-            <h2>Harga sederhana, mudah dipilih</h2>
-            <p>
-              Cocok untuk outlet kecil sampai bisnis yang ingin berkembang menjadi banyak tenant atau cabang.
-            </p>
-          </div>
-
-          <div className="pricing">
-            <div className="price-card">
-              <div className="price-name">Starter</div>
-              <div className="price">Rp79k</div>
-              <div className="price-sub">per bulan / outlet</div>
-
-              <div className="feature-list">
-                <div className="feature">✓ POS dasar</div>
-                <div className="feature">✓ Order & pembayaran</div>
-                <div className="feature">✓ Browser print</div>
-                <div className="feature">✓ Laporan dasar</div>
-              </div>
-
-              <button className="btn" style={{ width: "100%", marginTop: 20 }} onClick={() => r.push("/setup")}>
-                Pilih Starter
-              </button>
-            </div>
-
-            <div className="price-card featured">
-              <div className="price-name">Pro</div>
-              <div className="price">Rp149k</div>
-              <div className="price-sub">per bulan / outlet</div>
-
-              <div className="feature-list">
-                <div className="feature">✓ Semua fitur Starter</div>
-                <div className="feature">✓ RawBT direct print</div>
-                <div className="feature">✓ Dashboard premium</div>
-                <div className="feature">✓ QR meja</div>
-                <div className="feature">✓ Export Excel</div>
-              </div>
-
-              <button className="btn btn-primary" style={{ width: "100%", marginTop: 20 }} onClick={() => r.push("/setup")}>
-                Pilih Pro
-              </button>
-            </div>
-
-            <div className="price-card">
-              <div className="price-name">Enterprise</div>
-              <div className="price">Custom</div>
-              <div className="price-sub">untuk multi outlet besar</div>
-
-              <div className="feature-list">
-                <div className="feature">✓ Multi tenant / cabang</div>
-                <div className="feature">✓ Kustomisasi lanjutan</div>
-                <div className="feature">✓ Integrasi operasional</div>
-                <div className="feature">✓ Dukungan prioritas</div>
-              </div>
-
-              <button className="btn" style={{ width: "100%", marginTop: 20 }} onClick={() => r.push("/login")}>
-                Hubungi Kami
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="cta">
-        <div className="container">
-          <div className="cta-box">
-            <div>
-              <h3>Siap pakai TerraPOS untuk outlet kamu?</h3>
-              <p>
-                Mulai atur tenant, kelola menu, terima order, cetak struk, dan pantau penjualan dari dashboard premium.
-              </p>
-            </div>
-
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <button className="btn btn-primary" onClick={() => r.push("/setup")}>
-                Mulai Sekarang
-              </button>
-              <button className="btn" onClick={() => r.push("/login")}>
-                Login
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="footer">
-        <div className="container">
-          © {new Date().getFullYear()} TerraPOS — SaaS POS untuk cafe & resto.
-        </div>
-      </footer>
+        {/* FOOTER */}
+        <footer className="lp-footer">
+          &copy; {new Date().getFullYear()} TerraPOS &mdash; POS modern untuk cafe & resto.
+        </footer>
+      </div>
     </main>
   );
 }
