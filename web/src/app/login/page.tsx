@@ -131,30 +131,58 @@ export default function LoginPage() {
     <TerraPage maxWidth={540}>
       <style>{`
         .auth-wrap{
-          min-height:80vh;
+          min-height:85vh;
+          min-height:85dvh;
           display:grid;
           place-items:center;
+          padding:16px 0;
         }
         .auth-card{
           width:100%;
-          background:#fff;
+          background:var(--panel);
           border:1px solid var(--border);
-          border-radius:24px;
-          padding:24px;
-          box-shadow:0 12px 28px rgba(17,24,39,.06);
+          border-radius: var(--radius-lg);
+          padding:28px 24px;
+          box-shadow: var(--shadow-lg);
+          transition: background 0.25s ease, border-color 0.25s ease;
+        }
+        @media (max-width: 540px){
+          .auth-card{
+            padding:24px 18px;
+            border-radius: var(--radius);
+          }
         }
         .switch{
           display:grid;
           grid-template-columns:1fr 1fr;
-          gap:10px;
-          margin-top:16px;
-          margin-bottom:18px;
+          gap:8px;
+          margin-top:18px;
+          margin-bottom:20px;
+        }
+        .switch .btn{
+          padding:12px;
+          font-size:14px;
+        }
+        .auth-logo{
+          font-size:28px;
+          font-weight:900;
+          font-family:var(--font-primary);
+          line-height:1;
+          margin-bottom:6px;
+          color:var(--text);
+        }
+        .auth-field{
+          margin-top:14px;
+        }
+        .auth-field .small{
+          margin-bottom:6px;
+          font-weight:600;
         }
       `}</style>
 
       <div className="auth-wrap">
         <div className="auth-card">
-          <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "var(--font-primary)", lineHeight: 1, marginBottom: 8 }}>terra <span style={{ color: "var(--brand)" }}>POS</span></div>
+          <div className="auth-logo">terra <span style={{ color: "var(--brand)" }}>POS</span></div>
           <div className="small" style={{ marginTop: 6 }}>
             Login atau daftar akun baru untuk mulai memakai TerraPOS.
           </div>
@@ -182,7 +210,7 @@ export default function LoginPage() {
           </div>
 
           {mode === "register" && (
-            <div style={{ marginTop: 12 }}>
+            <div className="auth-field">
               <div className="small">Nama</div>
               <input
                 className="input"
@@ -193,7 +221,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <div style={{ marginTop: 12 }}>
+          <div className="auth-field">
             <div className="small">Email</div>
             <input
               className="input"
@@ -205,7 +233,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div style={{ marginTop: 12 }}>
+          <div className="auth-field">
             <div className="small">Password</div>
             <input
               className="input"

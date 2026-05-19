@@ -21,7 +21,7 @@ export function Skeleton({ width = "100%", height = 16, borderRadius = 8, style 
         width,
         height,
         borderRadius,
-        background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)",
+        background: "linear-gradient(90deg, var(--border) 25%, var(--input-bg) 50%, var(--border) 75%)",
         backgroundSize: "200% 100%",
         animation: "skeleton-shimmer 1.5s infinite",
         ...style,
@@ -40,7 +40,7 @@ export function CardSkeleton({ rows = 3 }: { rows?: number }) {
         border: "1px solid var(--border)",
         borderRadius: 12,
         padding: 16,
-        background: "#fff",
+        background: "var(--panel)",
         display: "grid",
         gap: 12,
       }}
@@ -63,7 +63,7 @@ export function OrderCardSkeleton() {
         border: "1px solid var(--border)",
         borderRadius: 18,
         padding: 16,
-        background: "#fff",
+        background: "var(--panel)",
         display: "flex",
         gap: 16,
       }}

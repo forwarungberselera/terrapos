@@ -5,8 +5,13 @@ import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
-import { QRCodeCanvas } from "qrcode.react";
+import dynamic from "next/dynamic";
 import { useToast } from "@/components/Toast";
+
+const QRCodeCanvas = dynamic(
+  () => import("qrcode.react").then((mod) => mod.QRCodeCanvas),
+  { ssr: false, loading: () => <div style={{ width: 240, height: 240, background: "var(--input-bg)", borderRadius: 12 }} /> }
+);
 
 export default function QRPage() {
   const router = useRouter();

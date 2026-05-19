@@ -666,23 +666,111 @@ export default function POSPage() {
   return (
     <TerraPage>
       <style>{`
-        .pos-grid{ margin-top:14px; display:grid; grid-template-columns: 1fr 340px; gap:14px; align-items:start; }
+        .pos-grid{
+          display:grid;
+          grid-template-columns: 1fr 360px;
+          gap:14px;
+          align-items:start;
+        }
+        @media (max-width: 1080px){ .pos-grid{ grid-template-columns: 1fr 320px; } }
         @media (max-width: 980px){ .pos-grid{ grid-template-columns: 1fr !important; } }
-        .product-grid{ margin-top:12px; display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
-        .product-btn{ text-align:left; padding:14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; }
-        .product-btn:hover{ background: var(--brandSoft); border-color: #f5c2d4; }
-        .product-name{ font-weight:900; font-size:16px; line-height:1.2; }
-        .product-meta{ font-size:12px; color: var(--muted); margin-top:4px; }
-        .product-price{ margin-top:10px; font-weight:900; color: var(--brand); font-size:16px; }
-        .cart-item{ padding:10px 0; border-bottom:1px solid var(--border); }
-        .topnav{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-        .modebar{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+        .product-grid{
+          margin-top:12px;
+          display:grid;
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap:10px;
+        }
+        @media (max-width: 640px){
+          .product-grid{ grid-template-columns: repeat(2, 1fr); gap:8px; }
+        }
+        @media (max-width: 380px){
+          .product-grid{ grid-template-columns: 1fr; }
+        }
+        .product-btn{
+          text-align:left;
+          padding:14px;
+          border-radius: var(--radius);
+          border:1px solid var(--border);
+          background: var(--panel);
+          cursor:pointer;
+          transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+          touch-action: manipulation;
+        }
+        .product-btn:hover{
+          background: var(--brandSoft);
+          border-color: var(--brand2);
+          box-shadow: var(--shadow);
+        }
+        .product-btn:active{
+          transform: scale(0.97);
+        }
+        .product-name{ font-weight:800; font-size:14px; line-height:1.3; color: var(--text); }
+        .product-meta{ font-size:11px; color: var(--muted); margin-top:3px; }
+        .product-price{ margin-top:8px; font-weight:900; color: var(--brand); font-size:15px; font-family: var(--font-mono); }
+        .cart-item{
+          padding:12px 0;
+          border-bottom:1px solid var(--border);
+          transition: background 0.15s ease;
+        }
+        .cart-item:last-child{ border-bottom:none; }
+        .topnav{
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
+          align-items:center;
+        }
+        @media (max-width: 768px){
+          .topnav{ gap:6px; }
+          .topnav .btn{ padding:8px 10px; font-size:12px; }
+        }
+        .modebar{
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
+          margin-top:10px;
+        }
         .note-box{
           margin-top:8px;
-          padding:10px;
+          padding:12px;
           border:1px dashed var(--border);
-          border-radius:12px;
-          background:#fffaf5;
+          border-radius: var(--radius-sm);
+          background: var(--brandSoft);
+        }
+        .pos-categories{
+          display:flex;
+          gap:8px;
+          margin-top:10px;
+          overflow-x:auto;
+          padding-bottom:4px;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .pos-categories::-webkit-scrollbar{ display:none; }
+        .pos-categories .btn{ flex-shrink:0; }
+        .cart-summary{
+          margin-top:14px;
+          padding-top:14px;
+          border-top:1px solid var(--border);
+          display:grid;
+          gap:8px;
+        }
+        .cart-total-row{
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+        }
+        .cart-total-value{
+          font-size:20px;
+          font-weight:900;
+          color:var(--brand);
+          font-family: var(--font-mono);
+        }
+        @media (max-width: 980px){
+          .pos-cart-mobile{
+            position:sticky;
+            bottom:0;
+            z-index:10;
+          }
         }
       `}</style>
 
@@ -733,14 +821,14 @@ export default function POSPage() {
           <div className="topnav">
             <ThemeToggle />
             <button className="btn" onClick={() => r.push("/orders")}>Orders</button>
-            <button className="btn" onClick={() => r.push("/shifts")}>Shift</button>
-            <button className="btn" onClick={() => r.push("/printer")}>Printer</button>
+            <button className="btn hide-mobile" onClick={() => r.push("/shifts")}>Shift</button>
+            <button className="btn hide-mobile" onClick={() => r.push("/printer")}>Printer</button>
             {isOwner && (
               <button className="btn btn-primary" onClick={() => r.push("/dashboard")}>
                 Dashboard
               </button>
             )}
-            <button className="btn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
+            <button className="btn hide-mobile" onClick={() => r.push("/setup")}>Ganti Tenant</button>
             <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>
               Logout
             </button>
@@ -750,24 +838,25 @@ export default function POSPage() {
 
       <div className="pos-grid">
         <div className="card">
-          <div className="row">
+          <div className="row" style={{ gap: 8 }}>
             <input
               ref={searchRef}
               className="input"
+              style={{ flex: 1, minWidth: 0 }}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cari menu..."
             />
             <input
               className="input"
-              style={{ width: 170 }}
+              style={{ width: 120, flexShrink: 0 }}
               value={tableNo}
               onChange={(e) => setTableNo(e.target.value)}
-              placeholder="Meja (opsional)"
+              placeholder="No. Meja"
             />
           </div>
 
-          <div className="row" style={{ marginTop: 10 }}>
+          <div className="pos-categories">
             {categories.map((c) => (
               <button
                 key={c}
@@ -787,7 +876,6 @@ export default function POSPage() {
                 <div className="product-name">{p.name}</div>
                 <div className="product-meta">{p.category}</div>
                 <div className="product-price">Rp {rupiah(p.price)}</div>
-                <div className="product-meta" style={{ marginTop: 6 }}>Klik untuk tambah</div>
               </button>
             ))}
           </div>

@@ -721,50 +721,94 @@ export default function OrdersPage() {
   return (
     <TerraPage maxWidth={1100}>
       <style>{`
-        .topnav{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-        .row2{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-        .pill{ border:1px solid var(--border); padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; background:#fff; }
-        .day-group{ margin-top:14px; display:grid; gap:12px; }
+        .topnav{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+        @media (max-width: 768px){ .topnav .btn{ padding:8px 10px; font-size:12px; } }
+        .row2{
+          display:flex;
+          gap:8px;
+          align-items:center;
+          overflow-x:auto;
+          padding-bottom:4px;
+          -webkit-overflow-scrolling:touch;
+          scrollbar-width:none;
+        }
+        .row2::-webkit-scrollbar{ display:none; }
+        .row2 .btn{ flex-shrink:0; }
+        .pill{
+          border:1px solid var(--border);
+          padding:6px 12px;
+          border-radius:999px;
+          font-weight:900;
+          font-size:13px;
+          background:var(--panel);
+          color:var(--brand);
+          font-family:var(--font-mono);
+        }
+        .day-group{ display:grid; gap:12px; }
         .day-header{
           position:sticky;
           top:8px;
           z-index:2;
           border:1px solid var(--border);
-          background:#fff7f0;
-          color:#111827;
-          border-radius:14px;
-          padding:12px 14px;
+          background:var(--brandSoft);
+          color:var(--text);
+          border-radius:12px;
+          padding:10px 14px;
           font-weight:900;
+          font-size:13px;
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
         }
         .order-card{
           border:1px solid var(--border);
-          border-radius:18px;
+          border-radius: var(--radius);
           padding:16px;
-          background:#fff;
+          background:var(--panel);
+          box-shadow: var(--shadow-card);
+          transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .order-card:hover{
+          box-shadow: var(--shadow);
+          border-color: var(--border-hover);
+        }
+        @media (max-width: 768px){
+          .order-card{ padding:12px; }
+          .order-card .row{ flex-direction:column; align-items:stretch; }
+          .order-actions{ min-width:unset !important; text-align:left !important; display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+          .order-actions .btn{ flex:1; min-width:0; }
+          .order-actions .pill{ flex:none; }
         }
         .meta{
           display:grid;
-          gap:4px;
+          gap:3px;
           margin-top:6px;
         }
         .items-full{
-          margin-top:12px;
+          margin-top:10px;
           display:grid;
-          gap:8px;
+          gap:6px;
         }
         .item-row{
           display:flex;
           justify-content:space-between;
-          gap:12px;
+          align-items:center;
+          gap:10px;
           font-size:13px;
           padding:8px 10px;
           border:1px solid var(--border);
-          border-radius:12px;
-          background:#fffaf5;
+          border-radius:10px;
+          background:var(--brandSoft);
+          transition: background 0.15s ease;
         }
         .item-left{
           display:grid;
-          gap:3px;
+          gap:2px;
+          min-width:0;
+        }
+        .item-left div:first-child{
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
         }
       `}</style>
 
@@ -782,14 +826,14 @@ export default function OrdersPage() {
 
           <div className="topnav">
             <button className="btn" onClick={() => r.push("/pos")}>POS</button>
-            <button className="btn" onClick={() => r.push("/shifts")}>Shift</button>
-            <button className="btn" onClick={() => r.push("/printer")}>Printer</button>
+            <button className="btn hide-mobile" onClick={() => r.push("/shifts")}>Shift</button>
+            <button className="btn hide-mobile" onClick={() => r.push("/printer")}>Printer</button>
             {isOwner && (
               <button className="btn btn-primary" onClick={() => r.push("/dashboard")}>
                 Dashboard
               </button>
             )}
-            <button className="btn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
+            <button className="btn hide-mobile" onClick={() => r.push("/setup")}>Ganti Tenant</button>
             <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>
               Logout
             </button>
@@ -875,7 +919,7 @@ export default function OrdersPage() {
                         </div>
                       </div>
 
-                      <div style={{ textAlign: "right", minWidth: 160 }}>
+                      <div className="order-actions" style={{ textAlign: "right", minWidth: 160 }}>
                         <div className="pill">Rp {rupiah(o.total)}</div>
 
                         {o.status === "OPEN" ? (
