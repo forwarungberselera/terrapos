@@ -20,6 +20,7 @@ import { calculateShiftTotals, isShiftPermissionError, normalizeShift, ShiftReco
 import { getPrintMode, sendToRawBT } from "@/lib/rawbt";
 import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
+import { logAudit } from "@/lib/audit";
 
 type Order = {
   id: string;
@@ -149,6 +150,13 @@ export default function ShiftsPage() {
       setOpeningCash("0");
       setOpeningNote("");
       setMsg("Shift berhasil dibuka.");
+
+      logAudit(tenantId, {
+        action: "SHIFT_OPEN",
+        userEmail: email || "",
+        description: `Buka shift baru (kas awal: Rp ${Number(openingCash || 0).toLocaleString("id-ID")})`,
+        metadata: { openingCash: Number(openingCash || 0) },
+      });
     } catch (e: any) {
       setMsg(e?.message || "Gagal buka shift.");
     } finally {
@@ -185,6 +193,18 @@ export default function ShiftsPage() {
       setClosingCashActual("0");
       setClosingNote("");
       setMsg("Shift berhasil ditutup.");
+
+      logAudit(tenantId, {
+        action: "SHIFT_CLOSE",
+        userEmail: email || "",
+        description: `Tutup shift (omzet: Rp ${activeSummary.totalSales.toLocaleString("id-ID")}, ${activeSummary.orderCount} transaksi)`,
+        metadata: {
+          shiftId: activeShift.id,
+          totalSales: activeSummary.totalSales,
+          orderCount: activeSummary.orderCount,
+          variance: actual - expected,
+        },
+      });
 
       // Auto-print laporan tutup shift
       printShiftReport({

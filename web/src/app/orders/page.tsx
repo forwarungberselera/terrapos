@@ -25,6 +25,7 @@ import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shift
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
+import { logAudit } from "@/lib/audit";
 
 type Order = {
   id: string;
@@ -435,6 +436,13 @@ export default function OrdersPage() {
       setVoidOrder(null);
       setVoidReason("");
       toast.success("Order berhasil dibatalkan.");
+
+      logAudit(tenantId, {
+        action: "ORDER_CANCEL",
+        userEmail: email || "",
+        description: `Batalkan order ${voidOrder.orderNo} (total: Rp ${Number(voidOrder.total || 0).toLocaleString("id-ID")})`,
+        metadata: { orderId: voidOrder.id, orderNo: voidOrder.orderNo, total: voidOrder.total, reason: (voidReason || "").trim() },
+      });
     } catch (e: any) {
       setErr(e?.message ?? "Gagal batalkan order");
       toast.error(e?.message ?? "Gagal batalkan order");
@@ -645,6 +653,13 @@ export default function OrdersPage() {
       setRefundReason("");
       setErr(null);
       toast.success("Refund berhasil diproses.");
+
+      logAudit(tenantId, {
+        action: "ORDER_REFUND",
+        userEmail: email || "",
+        description: `Refund order ${refundOrder.orderNo} (total: Rp ${Number(refundOrder.total || 0).toLocaleString("id-ID")})`,
+        metadata: { orderId: refundOrder.id, orderNo: refundOrder.orderNo, total: refundOrder.total, reason: (refundReason || "").trim() },
+      });
     } catch (e: any) {
       setErr(e?.message || "Gagal refund.");
       toast.error(e?.message || "Gagal refund.");

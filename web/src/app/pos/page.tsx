@@ -27,6 +27,7 @@ import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shift
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
+import { logAudit } from "@/lib/audit";
 
 type Product = { id: string; name: string; category: string; price: number; isActive?: boolean };
 type CartItem = {
@@ -40,6 +41,17 @@ type CartItem = {
 type ReceiptSettings = { storeName: string; address: string; footer: string; cashierName: string };
 type OrderStatus = "OPEN" | "PAID" | "CANCELLED";
 type OrderMode = "PAY_NOW" | "PAY_LATER";
+
+type ActivePromo = {
+  id: string;
+  name: string;
+  type: "percent" | "nominal";
+  value: number;
+  minSubtotal: number;
+  startTime: string;
+  endTime: string;
+  days: number[];
+};
 
 const paymentMethodButtonStyle: React.CSSProperties = {
   flex: 1,
@@ -94,6 +106,7 @@ export default function POSPage() {
     cashierName: "Kasir TerraPOS",
   });
   const [activeShift, setActiveShift] = useState<ShiftRecord | null>(null);
+  const [promos, setPromos] = useState<ActivePromo[]>([]);
 
   const searchRef = useRef<HTMLInputElement | null>(null);
 
@@ -230,6 +243,32 @@ export default function POSPage() {
     }
   }, [activeShift, canUse, loading, loadingRole, shiftAccessBlocked]);
 
+  // Fetch active promos
+  useEffect(() => {
+    if (!tenantId) return;
+    const ref = collection(db, `tenants/${tenantId}/promos`);
+    const qy = query(ref, orderBy("createdAt", "desc"));
+    return onSnapshot(qy, (snap) => {
+      const arr: ActivePromo[] = snap.docs
+        .map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            name: data.name || "",
+            type: data.type || "percent",
+            value: Number(data.value || 0),
+            minSubtotal: Number(data.minSubtotal || 0),
+            startTime: data.startTime || "00:00",
+            endTime: data.endTime || "23:59",
+            days: Array.isArray(data.days) ? data.days : [0, 1, 2, 3, 4, 5, 6],
+            isActive: data.isActive ?? true,
+          };
+        })
+        .filter((p: any) => p.isActive);
+      setPromos(arr);
+    });
+  }, [tenantId]);
+
   const categories = useMemo(() => {
     const set = new Set(products.map((p) => p.category || "Lainnya"));
     return ["Semua", ...Array.from(set)];
@@ -251,13 +290,52 @@ export default function POSPage() {
   }, [products, search, activeCat]);
 
   const subtotal = useMemo(() => cart.reduce((a, i) => a + i.price * i.qty, 0), [cart]);
+
+  // Auto-apply promo: cari promo terbaik yang berlaku saat ini
+  const appliedPromo = useMemo(() => {
+    if (promos.length === 0 || subtotal === 0) return null;
+
+    const now = new Date();
+    const currentDay = now.getDay();
+    const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    const eligible = promos.filter((p) => {
+      if (!p.days.includes(currentDay)) return false;
+      if (currentTime < p.startTime || currentTime > p.endTime) return false;
+      if (p.minSubtotal > 0 && subtotal < p.minSubtotal) return false;
+      return true;
+    });
+
+    if (eligible.length === 0) return null;
+
+    // Pilih promo dengan diskon terbesar
+    let best: ActivePromo | null = null;
+    let bestAmount = 0;
+    for (const p of eligible) {
+      const amt = p.type === "percent" ? Math.round((subtotal * p.value) / 100) : p.value;
+      if (amt > bestAmount) {
+        bestAmount = amt;
+        best = p;
+      }
+    }
+    return best;
+  }, [promos, subtotal]);
+
+  const promoDiscountAmount = useMemo(() => {
+    if (!appliedPromo) return 0;
+    return appliedPromo.type === "percent"
+      ? Math.round((subtotal * appliedPromo.value) / 100)
+      : appliedPromo.value;
+  }, [appliedPromo, subtotal]);
+
   const discountAmount = useMemo(() => {
     if (discountType === "persen") {
       return Math.round((subtotal * Number(discount || 0)) / 100);
     }
     return Number(discount || 0);
   }, [subtotal, discount, discountType]);
-  const total = useMemo(() => Math.max(0, subtotal - discountAmount), [subtotal, discountAmount]);
+  const totalDiscount = useMemo(() => discountAmount + promoDiscountAmount, [discountAmount, promoDiscountAmount]);
+  const total = useMemo(() => Math.max(0, subtotal - totalDiscount), [subtotal, totalDiscount]);
 
   function addToCart(p: Product) {
     setCart((prev) => {
@@ -332,7 +410,7 @@ export default function POSPage() {
       cashierEmail: receiptSettings.cashierName || email || "",
       paymentMethod: receiptPaymentMethod,
       subtotal,
-      discount: discountAmount,
+      discount: totalDiscount,
       total,
       paidAmount: receiptPaymentMethod === "CASH" ? paidAmount : null,
       items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price, notes: c.notes || "" })),
@@ -352,7 +430,7 @@ export default function POSPage() {
       cashierEmail: receiptSettings.cashierName || email || "",
       paymentMethod: receiptPaymentMethod,
       subtotal,
-      discount: discountAmount,
+      discount: totalDiscount,
       total,
       paidAmount: receiptPaymentMethod === "CASH" ? paidAmount : null,
       items: cart.map((c) => ({
@@ -432,7 +510,7 @@ export default function POSPage() {
           tableNo: tNo,
           items: cart,
           subtotal,
-          discount: discountAmount,
+          discount: totalDiscount,
           total,
           updatedAt: serverTimestamp(),
         });
@@ -447,7 +525,7 @@ export default function POSPage() {
             status: "OPEN" as OrderStatus,
             mode: "PAY_LATER" as OrderMode,
             tableNo: tNo,
-            discount: discountAmount,
+            discount: totalDiscount,
             subtotal,
             total,
             items: cart,
@@ -522,7 +600,7 @@ export default function POSPage() {
         tableNo: tableNo.trim() || null,
         paymentMethod,
         paidAmount: paymentMethod === "CASH" ? paidAmount : total,
-        discount: discountAmount,
+        discount: totalDiscount,
         subtotal,
         total,
         items: cart,
@@ -538,6 +616,13 @@ export default function POSPage() {
 
       const text = buildReceiptText(orderNo, "STRUK");
       void printBySelectedMode(html, text);
+
+      logAudit(tenantId!, {
+        action: "ORDER_PAID",
+        userEmail: email || "",
+        description: `Order ${orderNo} dibayar ${paymentMethod} (Rp ${total.toLocaleString("id-ID")})`,
+        metadata: { orderNo, paymentMethod, total, itemCount: cart.length },
+      });
 
       resetCart();
     } catch (e: any) {
@@ -805,6 +890,20 @@ export default function POSPage() {
             {discountType === "persen" && discount > 0 && (
               <div className="small" style={{ textAlign: "right", marginTop: 4 }}>
                 = Rp {rupiah(discountAmount)}
+              </div>
+            )}
+
+            {appliedPromo && promoDiscountAmount > 0 && (
+              <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, background: "var(--brandSoft)", border: "1px solid #f5c2d4" }}>
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#8a1d4a" }}>
+                    Promo: {appliedPromo.name}
+                  </span>
+                  <b style={{ fontSize: 13, color: "var(--brand)" }}>- Rp {rupiah(promoDiscountAmount)}</b>
+                </div>
+                <div className="small" style={{ marginTop: 2 }}>
+                  {appliedPromo.type === "percent" ? `${appliedPromo.value}% off` : `Rp ${rupiah(appliedPromo.value)} off`} &bull; otomatis
+                </div>
               </div>
             )}
 

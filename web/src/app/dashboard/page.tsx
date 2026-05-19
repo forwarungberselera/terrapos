@@ -851,6 +851,8 @@ export default function DashboardPage() {
             <button className="sidebtn" onClick={() => r.push("/products")}>Products</button>
             <button className="sidebtn" onClick={() => r.push("/members")}>Members</button>
             <button className="sidebtn" onClick={() => r.push("/staff")}>Staff</button>
+            <button className="sidebtn" onClick={() => r.push("/promos")}>Promo</button>
+            <button className="sidebtn" onClick={() => r.push("/audit")}>Audit Log</button>
             <button className="sidebtn" onClick={() => r.push("/printer")}>Printer</button>
             <button className="sidebtn" onClick={() => r.push("/qr")}>QR Meja</button>
             <button className="sidebtn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
