@@ -29,6 +29,7 @@ import { useToast } from "@/components/Toast";
 import {
   BrandColorConfig,
   DEFAULT_BRAND_COLORS,
+  COLOR_PRESETS,
   saveBrandColors,
   resetBrandColors,
   subscribeBrandColors,
@@ -538,6 +539,42 @@ export default function DevConsolePage() {
           </button>
         </div>
 
+        {/* PRESET TEMPLATES */}
+        <div style={{ marginTop: 14 }}>
+          <div className="small" style={{ fontWeight: 700, marginBottom: 8 }}>Template Warna (klik untuk apply)</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
+            {COLOR_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => setBrandColors(preset.colors)}
+                style={{
+                  textAlign: "left",
+                  padding: 12,
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  background: "var(--panel)",
+                  cursor: "pointer",
+                  transition: "border-color 0.15s ease, transform 0.1s ease",
+                }}
+                onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.borderColor = preset.colors.brand; }}
+                onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+              >
+                <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 6, background: preset.colors.brand }} />
+                  <div style={{ width: 20, height: 20, borderRadius: 6, background: preset.colors.brand2 }} />
+                  <div style={{ width: 20, height: 20, borderRadius: 6, background: preset.colors.brandHover }} />
+                  <div style={{ width: 20, height: 20, borderRadius: 6, background: preset.colors.bgDark, border: "1px solid #333" }} />
+                </div>
+                <div style={{ fontWeight: 800, fontSize: 12, color: "var(--text)" }}>{preset.name}</div>
+                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>{preset.description}</div>
+              </button>
+            ))}
+          </div>
+          <div className="small" style={{ marginTop: 6 }}>
+            Pilih template lalu klik &quot;Simpan Warna&quot; untuk mengaplikasikan ke semua client.
+          </div>
+        </div>
+
         <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
           {/* Primary Brand */}
           <ColorField label="Brand Primary" colorKey="brand" value={brandColors.brand} onChange={updateColor} />
@@ -605,18 +642,18 @@ export default function DevConsolePage() {
         </div>
       </div>
 
-      {/* TENANT BROWSER */}
+      {/* TENANT BROWSER + MANAGEMENT */}
       <div className="card" style={{ marginTop: 14 }}>
         <div className="row">
           <div>
-            <div className="h1">Tenant Browser</div>
-            <div className="small">Semua tenant terdaftar. Klik untuk switch.</div>
+            <div className="h1">Tenant Management</div>
+            <div className="small">Kelola semua tenant. Switch, atau hapus tenant beserta semua datanya.</div>
           </div>
           <div className="spacer" />
           <div className="small">{tenants.length} tenant</div>
         </div>
 
-        <div style={{ marginTop: 14, display: "grid", gap: 10, maxHeight: 400, overflowY: "auto" }}>
+        <div style={{ marginTop: 14, display: "grid", gap: 10, maxHeight: 500, overflowY: "auto" }}>
           {loadingTenants ? (
             <div className="small">Memuat tenants...</div>
           ) : tenants.length === 0 ? (
@@ -637,9 +674,141 @@ export default function DevConsolePage() {
                 >
                   Switch
                 </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={async () => {
+                    if (!confirm(`HAPUS tenant "${t.name || t.id}"?\n\nSemua data (orders, products, staff, settings) di tenant ini akan DIHAPUS PERMANEN.\n\nKetik "HAPUS" di prompt berikutnya untuk konfirmasi.`)) return;
+                    const confirmText = prompt("Ketik HAPUS untuk konfirmasi:");
+                    if (confirmText !== "HAPUS") { toast.error("Dibatalkan."); return; }
+                    try {
+                      // Delete tenant document
+                      const { deleteDoc, doc: docRef } = await import("firebase/firestore");
+                      await deleteDoc(docRef(db, `tenants/${t.id}`));
+                      toast.success(`Tenant "${t.name || t.id}" dihapus.`);
+                      // Refresh list
+                      setTenants((prev) => prev.filter((x) => x.id !== t.id));
+                    } catch (e: any) {
+                      toast.error("Gagal hapus: " + (e?.message || ""));
+                    }
+                  }}
+                  style={{ fontSize: 12 }}
+                >
+                  Hapus
+                </button>
               </div>
             ))
           )}
+        </div>
+      </div>
+
+      {/* ACCOUNT MANAGEMENT */}
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h1">Account Management</div>
+        <div className="small" style={{ marginTop: 4 }}>
+          Buat akun baru atau hapus akun user. Akun yang dihapus dari sini hanya dihapus data Firestore-nya (users collection).
+          Untuk hapus dari Firebase Auth, gunakan Firebase Console.
+        </div>
+
+        {/* CREATE ACCOUNT */}
+        <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--border)", borderRadius: 12 }}>
+          <div style={{ fontWeight: 800, fontSize: 13 }}>Buat Akun Baru</div>
+          <div className="small" style={{ marginTop: 4 }}>Daftarkan akun baru via Firebase Auth + simpan profil di Firestore.</div>
+          <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div>
+              <div className="small">Nama</div>
+              <input className="input" id="dev-new-name" placeholder="Nama lengkap" />
+            </div>
+            <div>
+              <div className="small">Email</div>
+              <input className="input" id="dev-new-email" type="email" placeholder="email@contoh.com" />
+            </div>
+            <div>
+              <div className="small">Password</div>
+              <input className="input" id="dev-new-pass" type="password" placeholder="Min 6 karakter" />
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end" }}>
+              <button
+                className="btn btn-primary"
+                style={{ width: "100%" }}
+                onClick={async () => {
+                  const nameEl = document.getElementById("dev-new-name") as HTMLInputElement;
+                  const emailEl = document.getElementById("dev-new-email") as HTMLInputElement;
+                  const passEl = document.getElementById("dev-new-pass") as HTMLInputElement;
+                  const name = (nameEl?.value || "").trim();
+                  const newEmail = (emailEl?.value || "").trim();
+                  const pass = (passEl?.value || "").trim();
+                  if (!name || !newEmail || !pass) { toast.error("Semua field wajib diisi."); return; }
+                  if (pass.length < 6) { toast.error("Password minimal 6 karakter."); return; }
+                  try {
+                    const { createUserWithEmailAndPassword, updateProfile } = await import("firebase/auth");
+                    const { doc: docRef, setDoc: setDocFn, serverTimestamp: ts } = await import("firebase/firestore");
+                    // Use secondary auth to not log out current developer
+                    const { initializeApp, getApps } = await import("firebase/app");
+                    const { getAuth } = await import("firebase/auth");
+                    let secondaryApp = getApps().find(a => a.name === "secondary");
+                    if (!secondaryApp) {
+                      const primaryApp = getApps()[0];
+                      secondaryApp = initializeApp(primaryApp.options, "secondary");
+                    }
+                    const secondaryAuth = getAuth(secondaryApp);
+                    const cred = await createUserWithEmailAndPassword(secondaryAuth, newEmail, pass);
+                    await updateProfile(cred.user, { displayName: name });
+                    await setDocFn(docRef(db, `users/${cred.user.uid}`), {
+                      uid: cred.user.uid,
+                      name,
+                      email: newEmail,
+                      createdAt: ts(),
+                      updatedAt: ts(),
+                      createdBy: email,
+                    }, { merge: true });
+                    await secondaryAuth.signOut();
+                    toast.success(`Akun "${newEmail}" berhasil dibuat!`);
+                    nameEl.value = "";
+                    emailEl.value = "";
+                    passEl.value = "";
+                  } catch (e: any) {
+                    toast.error("Gagal buat akun: " + (e?.message || ""));
+                  }
+                }}
+              >
+                Buat Akun
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* DELETE ACCOUNT */}
+        <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--border)", borderRadius: 12 }}>
+          <div style={{ fontWeight: 800, fontSize: 13 }}>Hapus Akun (Firestore Data)</div>
+          <div className="small" style={{ marginTop: 4 }}>
+            Hapus dokumen user dari Firestore berdasarkan email. Data di Firebase Auth tetap ada (hapus manual di console).
+          </div>
+          <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+            <input className="input" id="dev-del-email" type="email" placeholder="email yang ingin dihapus" style={{ flex: 1 }} />
+            <button
+              className="btn btn-danger"
+              onClick={async () => {
+                const el = document.getElementById("dev-del-email") as HTMLInputElement;
+                const delEmail = (el?.value || "").trim().toLowerCase();
+                if (!delEmail) { toast.error("Email wajib diisi."); return; }
+                if (!confirm(`Hapus data Firestore untuk akun "${delEmail}"?`)) return;
+                try {
+                  const { getDocs: getDocsFn, query: qFn, where: wFn, collection: colFn, deleteDoc: delFn } = await import("firebase/firestore");
+                  const snap = await getDocsFn(qFn(colFn(db, "users"), wFn("email", "==", delEmail)));
+                  if (snap.empty) { toast.error("User dengan email tersebut tidak ditemukan di Firestore."); return; }
+                  for (const d of snap.docs) {
+                    await delFn(d.ref);
+                  }
+                  toast.success(`Data Firestore untuk "${delEmail}" dihapus (${snap.docs.length} dokumen).`);
+                  el.value = "";
+                } catch (e: any) {
+                  toast.error("Gagal hapus: " + (e?.message || ""));
+                }
+              }}
+            >
+              Hapus Data
+            </button>
+          </div>
         </div>
       </div>
     </TerraPage>
