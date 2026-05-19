@@ -42,18 +42,6 @@ export default function HomePage() {
           overflow-x:hidden;
           position:relative;
         }
-        .lp::before{
-          content:"";
-          position:fixed;top:0;left:0;right:0;bottom:0;
-          pointer-events:none;z-index:0;
-          opacity:0.12;
-          background-image:
-            radial-gradient(ellipse 400px 400px at 8% 15%, #c8a882 0%, transparent 70%),
-            radial-gradient(ellipse 350px 350px at 88% 10%, #b8976e 0%, transparent 70%),
-            radial-gradient(ellipse 300px 300px at 75% 85%, #d4b896 0%, transparent 70%),
-            radial-gradient(ellipse 250px 250px at 15% 80%, #a08060 0%, transparent 70%),
-            url("data:image/svg+xml,%3Csvg width='80' height='80' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1.5' fill='%23b8976e' opacity='0.5'/%3E%3Ccircle cx='60' cy='15' r='1' fill='%23a08060' opacity='0.4'/%3E%3Ccircle cx='40' cy='50' r='1.2' fill='%23c8a882' opacity='0.45'/%3E%3Ccircle cx='70' cy='65' r='1.8' fill='%23b8976e' opacity='0.35'/%3E%3Ccircle cx='10' cy='70' r='1' fill='%23d4b896' opacity='0.4'/%3E%3Cpath d='M35 30c1 0 2.5 1.5 2 3.5s-2.5 3-4 2.5-2-2-1.5-4 2.5-2.5 3.5-2z' fill='%23a08060' opacity='0.3'/%3E%3C/svg%3E");
-        }
         .lp>*{position:relative;z-index:1;}
 
         /* NAV */
@@ -91,18 +79,6 @@ export default function HomePage() {
           padding:120px 24px 80px;
           position:relative;
           overflow:hidden;
-        }
-        .lp-hero::before{
-          content:"";position:absolute;top:-80px;right:-80px;
-          width:500px;height:500px;border-radius:50%;
-          background:radial-gradient(circle,rgba(213,149,103,0.15) 0%,transparent 70%);
-          pointer-events:none;
-        }
-        .lp-hero::after{
-          content:"";position:absolute;bottom:-40px;left:-60px;
-          width:400px;height:400px;border-radius:50%;
-          background:radial-gradient(circle,rgba(180,140,100,0.1) 0%,transparent 70%);
-          pointer-events:none;
         }
         .lp-badge{
           display:inline-flex;align-items:center;gap:6px;
@@ -234,6 +210,50 @@ export default function HomePage() {
       `}</style>
 
       <div className="lp">
+        {/* DECORATIVE BACKGROUND ELEMENTS */}
+        <div aria-hidden="true" style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,overflow:'hidden'}}>
+          {/* Large rock - bottom right */}
+          <svg viewBox="0 0 120 80" style={{position:'absolute',bottom:'5%',right:'3%',width:140,opacity:0.08}}>
+            <path d="M10 70c5-20 20-55 50-65s50 10 55 35c3 15-5 25-20 28s-40 5-60 8c-10 1-20-2-25-6z" fill="#8b7355"/>
+            <path d="M30 65c3-15 15-40 35-48s35 5 40 22c2 8-2 15-12 18s-30 6-45 10c-6 1-15-1-18-2z" fill="#a08968"/>
+          </svg>
+          {/* Small rocks - left side */}
+          <svg viewBox="0 0 60 40" style={{position:'absolute',bottom:'12%',left:'5%',width:70,opacity:0.1}}>
+            <ellipse cx="30" cy="25" rx="25" ry="14" fill="#9e8b6e"/>
+            <ellipse cx="22" cy="22" rx="15" ry="10" fill="#b3a084"/>
+          </svg>
+          {/* Pebbles cluster - top left */}
+          <svg viewBox="0 0 80 50" style={{position:'absolute',top:'15%',left:'8%',width:90,opacity:0.07}}>
+            <ellipse cx="20" cy="30" rx="12" ry="8" fill="#a08968"/>
+            <ellipse cx="45" cy="25" rx="8" ry="6" fill="#8b7355"/>
+            <ellipse cx="60" cy="35" rx="10" ry="7" fill="#b3a084"/>
+          </svg>
+          {/* Leaf 1 - top right area */}
+          <svg viewBox="0 0 60 100" style={{position:'absolute',top:'8%',right:'10%',width:50,opacity:0.09,transform:'rotate(-15deg)'}}>
+            <path d="M30 5c-15 20-25 50-20 80 0 0 8-5 15-20s10-35 12-55c0-3-2-5-7-5z" fill="#7a9e5a"/>
+            <path d="M30 10c0 25-5 50-10 70" stroke="#5c7a42" strokeWidth="1.2" fill="none"/>
+          </svg>
+          {/* Leaf 2 - mid left */}
+          <svg viewBox="0 0 50 80" style={{position:'absolute',top:'45%',left:'3%',width:40,opacity:0.08,transform:'rotate(20deg)'}}>
+            <path d="M25 5c-12 15-20 40-15 65 0 0 6-4 12-16s8-28 9-44c0-3-2-5-6-5z" fill="#8aad6a"/>
+            <path d="M25 8c0 20-4 40-8 56" stroke="#5c7a42" strokeWidth="1" fill="none"/>
+          </svg>
+          {/* Tree silhouette - far right */}
+          <svg viewBox="0 0 80 160" style={{position:'absolute',top:'25%',right:'2%',width:70,opacity:0.05}}>
+            <rect x="36" y="90" width="8" height="65" rx="3" fill="#6b5840"/>
+            <ellipse cx="40" cy="55" rx="32" ry="45" fill="#6b8f4a"/>
+            <ellipse cx="35" cy="40" rx="22" ry="30" fill="#7da35a"/>
+          </svg>
+          {/* Small leaf - bottom left area */}
+          <svg viewBox="0 0 40 60" style={{position:'absolute',bottom:'30%',left:'12%',width:30,opacity:0.07,transform:'rotate(-30deg)'}}>
+            <path d="M20 5c-8 12-14 30-10 48 0 0 5-3 9-12s6-22 6-32c0-2-1-4-5-4z" fill="#8aad6a"/>
+          </svg>
+          {/* Big rock - top right */}
+          <svg viewBox="0 0 100 60" style={{position:'absolute',top:'60%',right:'8%',width:100,opacity:0.06}}>
+            <path d="M5 50c8-15 25-40 50-45s35 8 40 25c3 10-3 18-15 20s-35 4-55 6c-8 0-16-2-20-6z" fill="#8b7355"/>
+          </svg>
+        </div>
+
         {/* NAV */}
         <nav className="lp-nav">
           <div className="lp-logo">terra<span>POS</span></div>
