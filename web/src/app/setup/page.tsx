@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
   collection,
+  deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -59,14 +61,45 @@ export default function SetupPage() {
       query(collection(db, `users/${userUid}/tenantMemberships`))
     );
 
-    const arr: TenantRow[] = membershipsSnap.docs.map((d) => {
+    const arr: TenantRow[] = [];
+    const deletePromises: Promise<void>[] = [];
+
+    for (const d of membershipsSnap.docs) {
       const x = d.data() as any;
-      return {
-        id: d.id,
-        name: x.name || d.id,
-        role: x.role || "",
-      };
-    });
+      const tenantId = d.id;
+
+      // Verifikasi apakah tenant masih ada di Firestore
+      try {
+        const tenantDoc = await getDoc(doc(db, `tenants/${tenantId}`));
+        if (!tenantDoc.exists()) {
+          // Tenant sudah dihapus — hapus membership stale ini
+          deletePromises.push(
+            deleteDoc(doc(db, `users/${userUid}/tenantMemberships/${tenantId}`))
+          );
+          continue;
+        }
+
+        // Tenant masih ada, ambil nama terbaru dari tenant doc
+        const tenantData = tenantDoc.data() as any;
+        arr.push({
+          id: tenantId,
+          name: tenantData.name || x.name || tenantId,
+          role: x.role || "",
+        });
+      } catch {
+        // Jika permission denied (bukan member), skip tapi tetap tampilkan dari cache
+        arr.push({
+          id: tenantId,
+          name: x.name || tenantId,
+          role: x.role || "",
+        });
+      }
+    }
+
+    // Cleanup stale memberships in background
+    if (deletePromises.length > 0) {
+      Promise.all(deletePromises).catch(() => {});
+    }
 
     setTenants(arr);
   }
@@ -129,8 +162,23 @@ export default function SetupPage() {
   }
 
   async function openTenant(t: TenantRow) {
-    await setActiveTenantId(uid, t.id);
-    r.push("/dashboard");
+    try {
+      // Double-check tenant masih ada sebelum masuk
+      const tenantDoc = await getDoc(doc(db, `tenants/${t.id}`));
+      if (!tenantDoc.exists()) {
+        // Tenant sudah dihapus, cleanup & refresh list
+        await deleteDoc(doc(db, `users/${uid}/tenantMemberships/${t.id}`));
+        setTenants((prev) => prev.filter((x) => x.id !== t.id));
+        setErr("Tenant ini sudah dihapus. Daftar telah diperbarui.");
+        return;
+      }
+
+      await setActiveTenantId(uid, t.id);
+      r.push("/dashboard");
+    } catch {
+      await setActiveTenantId(uid, t.id);
+      r.push("/dashboard");
+    }
   }
 
   if (loading) {
@@ -157,7 +205,7 @@ export default function SetupPage() {
           border:1px solid var(--border);
           border-radius:16px;
           padding:14px;
-          background:#fff;
+          background:var(--panel);
         }
       `}</style>
 
