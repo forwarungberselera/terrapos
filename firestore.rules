@@ -63,8 +63,8 @@ service cloud.firestore {
 
     // ============ SYSTEM COLLECTION ============
     match /system/{docId} {
-      // landingPage readable by anyone (public landing page)
-      allow read: if docId == "landingPage" || isSignedIn();
+      // landingPage & brandColors readable by anyone (public - no auth required)
+      allow read: if docId == "landingPage" || docId == "brandColors" || isSignedIn();
       allow create, update: if isDeveloper();
       allow delete: if false;
     }
