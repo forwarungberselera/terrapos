@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import PWARegister from "@/components/PWARegister";
 import OfflineBanner from "@/components/OfflineBanner";
+import BrandColorProvider from "@/components/BrandColorProvider";
 import { ToastProvider } from "@/components/Toast";
 import { PrintingOverlayProvider } from "@/components/PrintingOverlay";
 import MaintenanceGuard from "@/components/MaintenanceGuard";
@@ -48,6 +49,7 @@ export default function RootLayout({
         <ToastProvider>
           <PrintingOverlayProvider>
             <MaintenanceGuard>
+              <BrandColorProvider />
               <Suspense fallback={null}>
                 <OfflineBanner />
                 <PWARegister />

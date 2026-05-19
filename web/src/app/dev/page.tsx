@@ -26,6 +26,14 @@ import {
 import { setStoredTenantId, getStoredTenantId } from "@/lib/tenant";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
+import {
+  BrandColorConfig,
+  DEFAULT_BRAND_COLORS,
+  saveBrandColors,
+  resetBrandColors,
+  subscribeBrandColors,
+  triggerForceReload,
+} from "@/lib/brand-colors";
 
 type TenantItem = {
   id: string;
@@ -59,6 +67,11 @@ export default function DevConsolePage() {
 
   const [testBuildMarker, setTestBuildMarker] = useState("");
   const [savingMarker, setSavingMarker] = useState(false);
+
+  // Brand Colors state
+  const [brandColors, setBrandColors] = useState<BrandColorConfig>(DEFAULT_BRAND_COLORS);
+  const [savingColors, setSavingColors] = useState(false);
+  const [reloading, setReloading] = useState(false);
 
   const systemInfo = getSystemInfo();
 
@@ -132,6 +145,58 @@ export default function DevConsolePage() {
       } catch {}
     })();
   }, [isDeveloper]);
+
+  // Subscribe brand colors
+  useEffect(() => {
+    if (!isDeveloper) return;
+    const unsub = subscribeBrandColors((colors) => {
+      setBrandColors(colors);
+    });
+    return () => unsub();
+  }, [isDeveloper]);
+
+  async function handleSaveBrandColors() {
+    setSavingColors(true);
+    try {
+      await saveBrandColors(brandColors, email);
+      toast.success("Warna brand tersimpan! Semua client akan sync otomatis.");
+    } catch (e: any) {
+      toast.error("Gagal simpan warna: " + (e?.message || ""));
+    } finally {
+      setSavingColors(false);
+    }
+  }
+
+  async function handleResetBrandColors() {
+    if (!confirm("Reset semua warna ke default TerraPOS?")) return;
+    setSavingColors(true);
+    try {
+      await resetBrandColors(email);
+      setBrandColors(DEFAULT_BRAND_COLORS);
+      toast.success("Warna brand di-reset ke default.");
+    } catch (e: any) {
+      toast.error("Gagal reset: " + (e?.message || ""));
+    } finally {
+      setSavingColors(false);
+    }
+  }
+
+  async function handleForceReloadAll() {
+    if (!confirm("Reload SEMUA client yang sedang membuka TerraPOS?")) return;
+    setReloading(true);
+    try {
+      await triggerForceReload(email);
+      toast.success("Signal reload dikirim! Semua client akan reload dalam 1 detik.");
+    } catch (e: any) {
+      toast.error("Gagal kirim reload: " + (e?.message || ""));
+    } finally {
+      setReloading(false);
+    }
+  }
+
+  function updateColor(key: keyof BrandColorConfig, value: string) {
+    setBrandColors((prev) => ({ ...prev, [key]: value }));
+  }
 
   async function toggleMaintenance() {
     setSavingMaintenance(true);
@@ -460,6 +525,86 @@ export default function DevConsolePage() {
         </div>
       </div>
 
+      {/* BRAND COLOR CUSTOMIZATION */}
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="row">
+          <div>
+            <div className="h1">Brand Color Customization</div>
+            <div className="small">Ubah warna seluruh app. Perubahan langsung sync ke semua client realtime.</div>
+          </div>
+          <div className="spacer" />
+          <button className="btn btn-danger" onClick={handleResetBrandColors} disabled={savingColors}>
+            Reset Default
+          </button>
+        </div>
+
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+          {/* Primary Brand */}
+          <ColorField label="Brand Primary" colorKey="brand" value={brandColors.brand} onChange={updateColor} />
+          <ColorField label="Brand Secondary" colorKey="brand2" value={brandColors.brand2} onChange={updateColor} />
+          <ColorField label="Brand Soft" colorKey="brandSoft" value={brandColors.brandSoft} onChange={updateColor} />
+          <ColorField label="Brand Hover" colorKey="brandHover" value={brandColors.brandHover} onChange={updateColor} />
+
+          {/* Semantic */}
+          <ColorField label="Danger / Error" colorKey="danger" value={brandColors.danger} onChange={updateColor} />
+          <ColorField label="Success" colorKey="success" value={brandColors.success} onChange={updateColor} />
+          <ColorField label="Warning" colorKey="warning" value={brandColors.warning} onChange={updateColor} />
+
+          {/* Light Mode */}
+          <ColorField label="BG (Light)" colorKey="bgLight" value={brandColors.bgLight} onChange={updateColor} />
+          <ColorField label="Panel (Light)" colorKey="panelLight" value={brandColors.panelLight} onChange={updateColor} />
+          <ColorField label="Border (Light)" colorKey="borderLight" value={brandColors.borderLight} onChange={updateColor} />
+          <ColorField label="Text (Light)" colorKey="textLight" value={brandColors.textLight} onChange={updateColor} />
+          <ColorField label="Muted (Light)" colorKey="mutedLight" value={brandColors.mutedLight} onChange={updateColor} />
+          <ColorField label="Input BG (Light)" colorKey="inputBgLight" value={brandColors.inputBgLight} onChange={updateColor} />
+
+          {/* Dark Mode */}
+          <ColorField label="BG (Dark)" colorKey="bgDark" value={brandColors.bgDark} onChange={updateColor} />
+          <ColorField label="Panel (Dark)" colorKey="panelDark" value={brandColors.panelDark} onChange={updateColor} />
+          <ColorField label="Border (Dark)" colorKey="borderDark" value={brandColors.borderDark} onChange={updateColor} />
+          <ColorField label="Text (Dark)" colorKey="textDark" value={brandColors.textDark} onChange={updateColor} />
+          <ColorField label="Muted (Dark)" colorKey="mutedDark" value={brandColors.mutedDark} onChange={updateColor} />
+          <ColorField label="Input BG (Dark)" colorKey="inputBgDark" value={brandColors.inputBgDark} onChange={updateColor} />
+        </div>
+
+        <div className="row" style={{ marginTop: 16 }}>
+          <button
+            className="btn btn-primary"
+            style={{ flex: 1 }}
+            onClick={handleSaveBrandColors}
+            disabled={savingColors}
+          >
+            {savingColors ? "Menyimpan..." : "Simpan Warna"}
+          </button>
+        </div>
+
+        <div className="small" style={{ marginTop: 8 }}>
+          Perubahan warna langsung sync realtime ke semua device/browser yang membuka TerraPOS tanpa reload.
+        </div>
+      </div>
+
+      {/* FORCE RELOAD ALL */}
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h1">Reload All Clients</div>
+        <div className="small" style={{ marginTop: 4 }}>
+          Paksa SEMUA client (browser/HP) yang sedang membuka TerraPOS untuk reload halaman.
+          Berguna setelah deploy update besar atau ganti warna yang butuh refresh penuh.
+        </div>
+
+        <button
+          className="btn btn-danger"
+          style={{ width: "100%", marginTop: 14 }}
+          onClick={handleForceReloadAll}
+          disabled={reloading}
+        >
+          {reloading ? "Mengirim signal..." : "Reload Semua Client Sekarang"}
+        </button>
+
+        <div className="small" style={{ marginTop: 8 }}>
+          Semua user (termasuk kasir yang sedang transaksi) akan di-reload. Gunakan dengan hati-hati.
+        </div>
+      </div>
+
       {/* TENANT BROWSER */}
       <div className="card" style={{ marginTop: 14 }}>
         <div className="row">
@@ -498,5 +643,66 @@ export default function DevConsolePage() {
         </div>
       </div>
     </TerraPage>
+  );
+}
+
+
+// ============ COLOR FIELD COMPONENT ============
+
+function ColorField({
+  label,
+  colorKey,
+  value,
+  onChange,
+}: {
+  label: string;
+  colorKey: keyof BrandColorConfig;
+  value: string;
+  onChange: (key: keyof BrandColorConfig, value: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        border: "1px solid var(--border)",
+        borderRadius: 12,
+        padding: 12,
+        background: "var(--panel)",
+      }}
+    >
+      <div className="small" style={{ fontWeight: 700, marginBottom: 8 }}>
+        {label}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <input
+          type="color"
+          value={value || "#000000"}
+          onChange={(e) => onChange(colorKey, e.target.value)}
+          style={{
+            width: 40,
+            height: 40,
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            cursor: "pointer",
+            padding: 2,
+            background: "transparent",
+          }}
+        />
+        <input
+          className="input"
+          value={value || ""}
+          onChange={(e) => onChange(colorKey, e.target.value)}
+          placeholder="#hex"
+          style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: 12 }}
+        />
+      </div>
+      <div
+        style={{
+          marginTop: 8,
+          height: 6,
+          borderRadius: 999,
+          background: value || "#ccc",
+        }}
+      />
+    </div>
   );
 }
