@@ -43,12 +43,18 @@ function mustNonEmptyString(value: unknown, fieldName: string): string {
 async function getTenantAccessContext(tenantId: string, uid: string) {
   const tenantRef = db.doc(`tenants/${tenantId}`);
   const staffRef = db.doc(`tenants/${tenantId}/staff/${uid}`);
-  const [tenantSnap, staffSnap] =
-    await Promise.all([tenantRef.get(), staffRef.get()]);
+  const userRef = db.doc(`users/${uid}`);
+  const [tenantSnap, staffSnap, userSnap] =
+    await Promise.all([tenantRef.get(), staffRef.get(), userRef.get()]);
 
   if (!tenantSnap.exists) {
     throw new HttpsError("not-found", "Tenant tidak ditemukan.");
   }
+
+  // Check developer status
+  const userData = userSnap.exists ?
+    userSnap.data() as {isDeveloper?: boolean} : undefined;
+  const isDev = userData?.isDeveloper === true;
 
   const tenantData = tenantSnap.data() as {ownerUid?: string} | undefined;
   const isOwner = (tenantData?.ownerUid || "") === uid;
@@ -61,8 +67,10 @@ async function getTenantAccessContext(tenantId: string, uid: string) {
 
   return {
     isOwner,
+    isDeveloper: isDev,
     allowedRole,
-    canRefund: isOwner || allowedRole === "admin" || allowedRole === "owner",
+    canRefund: isDev || isOwner ||
+      allowedRole === "admin" || allowedRole === "owner",
   };
 }
 
@@ -182,6 +190,107 @@ export const refundOrder = onCall<RefundOrderRequest>(async (request) => {
   };
 });
 
+// ============ DEVELOPER MODE ============
+
+type SetDeveloperRequest = {
+  targetUid?: string;
+  targetEmail?: string;
+  enabled?: boolean;
+  secretKey?: string;
+};
+
+/**
+ * Checks if a user is a developer.
+ * @param {string} uid - The user ID.
+ * @return {Promise<boolean>} Whether the user is a developer.
+ */
+async function checkIsDeveloperServer(uid: string): Promise<boolean> {
+  const userSnap = await db.doc(`users/${uid}`).get();
+  if (!userSnap.exists) return false;
+  const data = userSnap.data() as {isDeveloper?: boolean} | undefined;
+  return data?.isDeveloper === true;
+}
+
+/**
+ * setDeveloper - Cloud Function untuk set/unset developer status.
+ *
+ * Keamanan: Hanya bisa dipanggil oleh:
+ * 1. Existing developer (sudah isDeveloper: true)
+ * 2. Atau dengan secretKey yang cocok (untuk bootstrap developer pertama)
+ *
+ * Secret key disimpan di environment variable DEVELOPER_SECRET_KEY
+ * atau default "terrapos-dev-bootstrap-2024" untuk development.
+ */
+export const setDeveloper = onCall<SetDeveloperRequest>(async (request) => {
+  const auth = request.auth;
+  if (!auth?.uid) {
+    throw new HttpsError("unauthenticated", "User harus login.");
+  }
+
+  const targetUid = typeof request.data?.targetUid === "string" ?
+    request.data.targetUid.trim() : "";
+  const targetEmail = typeof request.data?.targetEmail === "string" ?
+    request.data.targetEmail.trim().toLowerCase() : "";
+  const enabled = request.data?.enabled !== false; // default true
+  const secretKey = typeof request.data?.secretKey === "string" ?
+    request.data.secretKey.trim() : "";
+
+  // Resolve target UID
+  let resolvedUid = targetUid;
+
+  if (!resolvedUid && targetEmail) {
+    // Cari user by email
+    const usersSnap = await db.collection("users")
+      .where("email", "==", targetEmail).limit(1).get();
+    if (usersSnap.empty) {
+      throw new HttpsError("not-found",
+        `User dengan email "${targetEmail}" tidak ditemukan.`);
+    }
+    resolvedUid = usersSnap.docs[0].id;
+  }
+
+  if (!resolvedUid) {
+    throw new HttpsError("invalid-argument",
+      "targetUid atau targetEmail wajib diisi.");
+  }
+
+  // Authorization check
+  const callerIsDev = await checkIsDeveloperServer(auth.uid);
+  const envSecret = process.env.DEVELOPER_SECRET_KEY ||
+    "terrapos-dev-bootstrap-2024";
+
+  if (!callerIsDev && secretKey !== envSecret) {
+    throw new HttpsError("permission-denied",
+      "Hanya developer existing atau secret key yang valid " +
+      "yang bisa mengatur developer status.");
+  }
+
+  // Set developer status
+  const userRef = db.doc(`users/${resolvedUid}`);
+  const userSnap = await userRef.get();
+
+  if (!userSnap.exists) {
+    throw new HttpsError("not-found", "Target user tidak ditemukan.");
+  }
+
+  await userRef.set({
+    isDeveloper: enabled,
+    developerUpdatedAt: FieldValue.serverTimestamp(),
+    developerUpdatedBy: auth.uid,
+  }, {merge: true});
+
+  const targetData = userSnap.data() as {email?: string} | undefined;
+
+  return {
+    ok: true,
+    targetUid: resolvedUid,
+    targetEmail: targetData?.email || targetEmail || "",
+    isDeveloper: enabled,
+  };
+});
+
+// ============ REFUND PIN ============
+
 export const updateRefundPin =
   onCall<UpdateRefundPinRequest>(async (request) => {
     const auth = request.auth;
@@ -197,10 +306,10 @@ export const updateRefundPin =
     }
 
     const access = await getTenantAccessContext(tenantId, auth.uid);
-    if (!access.isOwner) {
+    if (!access.isOwner && !access.isDeveloper) {
       throw new HttpsError(
         "permission-denied",
-        "Hanya owner yang bisa mengubah PIN refund."
+        "Hanya owner/developer yang bisa mengubah PIN refund."
       );
     }
 
