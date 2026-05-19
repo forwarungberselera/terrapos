@@ -594,7 +594,7 @@ export default function POSPage() {
       <div className="card">
         <div className="row">
           <div>
-            <img src="/logo-header.png" alt="TerraPOS" style={{ height: 32 }} />
+            <img src="/logo-header.png" alt="TerraPOS" style={{ height: 38, width: 38, objectFit: "contain", borderRadius: 8 }} />
             <div className="small">Tenant: {tenantId}</div>
             <div className="small">
               User: {email || "-"} | Role: <b>{role || "-"}</b>
