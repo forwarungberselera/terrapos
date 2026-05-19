@@ -7,6 +7,9 @@ export default function PWARegister() {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
 
+    // Prevent infinite reload loop: only reload once per SW update
+    const RELOAD_KEY = "terrapos_sw_reload";
+
     navigator.serviceWorker.register("/sw.js").then((reg) => {
       // Cek update setiap kali halaman dibuka
       reg.update();
@@ -17,8 +20,15 @@ export default function PWARegister() {
         if (!newWorker) return;
 
         newWorker.addEventListener("statechange", () => {
-          if (newWorker.state === "activated") {
-            // Reload halaman supaya user dapat versi terbaru
+          if (newWorker.state === "activated" && navigator.serviceWorker.controller) {
+            // Only reload if we haven't just reloaded for this update
+            const lastReload = sessionStorage.getItem(RELOAD_KEY);
+            const now = Date.now();
+            if (lastReload && now - Number(lastReload) < 10000) {
+              // Already reloaded within 10 seconds, skip to prevent loop
+              return;
+            }
+            sessionStorage.setItem(RELOAD_KEY, String(now));
             window.location.reload();
           }
         });

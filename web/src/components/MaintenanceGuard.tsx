@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import {
@@ -23,12 +23,28 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
   });
   const [isDev, setIsDev] = useState(false);
   const [checking, setChecking] = useState(true);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Safety timeout: jika Firestore gagal, jangan stuck selamanya
+    // Setelah 8 detik, anggap maintenance off (let user through)
+    timeoutRef.current = setTimeout(() => {
+      setChecking(false);
+    }, 8000);
+
     const unsub = subscribeMaintenanceStatus((status) => {
       setMaintenance(status);
+      // Jika maintenance off, clear timeout & stop checking immediately
+      if (!status.enabled) {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setChecking(false);
+      }
     });
-    return () => unsub();
+
+    return () => {
+      unsub();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -46,9 +62,14 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
         return;
       }
 
-      // Fallback: Firestore check
-      const devStatus = await checkIsDeveloper(user.uid, user.email || "");
-      setIsDev(devStatus);
+      // Fallback: Firestore check (with timeout protection)
+      try {
+        const devStatus = await checkIsDeveloper(user.uid, user.email || "");
+        setIsDev(devStatus);
+      } catch {
+        // If Firestore fails, assume not developer but don't block
+        setIsDev(false);
+      }
       setChecking(false);
     });
     return () => unsub();
@@ -59,7 +80,7 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
     return <>{children}</>;
   }
 
-  // Masih loading auth
+  // Masih loading auth — render children (jangan blank screen)
   if (checking) {
     return <>{children}</>;
   }
