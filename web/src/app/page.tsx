@@ -23,10 +23,15 @@ export default function HomePage() {
     }
   }, [r]);
 
-  // Subscribe to landing config from Firestore
+  // Subscribe to landing config from Firestore (safe - fallback to defaults)
   useEffect(() => {
-    const unsub = subscribeLandingConfig((c) => setConfig(c));
-    return () => unsub();
+    try {
+      const unsub = subscribeLandingConfig((c) => setConfig(c));
+      return () => unsub();
+    } catch {
+      // If Firestore fails entirely, keep defaults
+      return () => {};
+    }
   }, []);
 
   const { hero, features, featuresTitle, pricing, pricingTitle, pricingSubtitle, ctaTitle, ctaSubtitle, footerText } = config;
@@ -70,9 +75,9 @@ export default function HomePage() {
           position:absolute;
           will-change:transform;
         }
-        .lp-float--leaf{animation:floatDrift var(--dur,20s) ease-in-out infinite;}
-        .lp-float--rock{animation:floatRock var(--dur,25s) ease-in-out infinite;}
-        .lp-float--tree{animation:floatSlow var(--dur,30s) ease-in-out infinite;}
+        .lp-float--leaf{animation:floatDrift 20s ease-in-out infinite;}
+        .lp-float--rock{animation:floatRock 25s ease-in-out infinite;}
+        .lp-float--tree{animation:floatSlow 30s ease-in-out infinite;}
 
         /* NAV */
         .lp-nav{
@@ -109,6 +114,7 @@ export default function HomePage() {
           padding:120px 24px 80px;
           position:relative;
           overflow:hidden;
+          background:linear-gradient(180deg,#fff 0%,#fdfaf7 100%);
         }
         .lp-badge{
           display:inline-flex;align-items:center;gap:6px;
@@ -136,6 +142,20 @@ export default function HomePage() {
         .lp-section{
           padding:80px 24px;max-width:1000px;margin:0 auto;
           position:relative;
+        }
+        .lp-section--features{
+          background:#f9f7f5;
+          max-width:100%;padding:80px 24px;
+        }
+        .lp-section--features .lp-section-inner{
+          max-width:1000px;margin:0 auto;
+        }
+        .lp-section--pricing{
+          background:#ffffff;
+          max-width:100%;padding:80px 24px;
+        }
+        .lp-section--pricing .lp-section-inner{
+          max-width:1000px;margin:0 auto;
         }
         .lp-section-title{
           text-align:center;font-size:30px;font-weight:900;
@@ -206,7 +226,7 @@ export default function HomePage() {
         .lp-price-card .lp-btn{width:100%;margin-top:20px;text-align:center;}
 
         /* CTA */
-        .lp-cta{padding:60px 24px 80px;text-align:center;}
+        .lp-cta{padding:60px 24px 80px;text-align:center;background:#faf8f6;}
         .lp-cta-box{
           max-width:540px;margin:0 auto;padding:48px 32px;border-radius:24px;
           background:linear-gradient(135deg,#fdf5ef,#f8ece0);border:1px solid #e8d5c4;
@@ -251,7 +271,7 @@ export default function HomePage() {
           ].map((p, i) => (
             <svg key={`leaf-${i}`} className="lp-float lp-float--leaf" viewBox="0 0 40 60"
               style={{top:`${p.t}%`,left:`${p.l}%`,width:p.s,opacity:0.09+(i%3)*0.02,
-                      ['--dur' as string]:`${p.d}s`,transform:`rotate(${p.r}deg)`,animationDelay:`${i*-1.5}s`}}>
+                      animationDuration:`${p.d}s`,transform:`rotate(${p.r}deg)`,animationDelay:`${i*-1.5}s`}}>
               <path d="M20 3c-10 12-16 32-12 50 0 0 5-3 10-14s7-24 7-32c0-2-1-4-5-4z" fill="#7a9e5a"/>
               <path d="M20 6c0 18-3 35-7 48" stroke="#5c7a42" strokeWidth="0.8" fill="none"/>
             </svg>
@@ -264,7 +284,7 @@ export default function HomePage() {
           ].map((p, i) => (
             <svg key={`rock-${i}`} className="lp-float lp-float--rock" viewBox="0 0 60 40"
               style={{top:`${p.t}%`,left:`${p.l}%`,width:p.s,opacity:0.06+(i%3)*0.015,
-                      ['--dur' as string]:`${p.d}s`,animationDelay:`${i*-2}s`}}>
+                      animationDuration:`${p.d}s`,animationDelay:`${i*-2}s`}}>
               <ellipse cx="30" cy="24" rx={22-i%5} ry={12-i%3} fill="#9e8b6e"/>
               <ellipse cx={25+i%8} cy={22} rx={14-i%4} ry={8-i%2} fill="#b3a084"/>
             </svg>
@@ -275,7 +295,7 @@ export default function HomePage() {
           ].map((p, i) => (
             <svg key={`tree-${i}`} className="lp-float lp-float--tree" viewBox="0 0 60 120"
               style={{top:`${p.t}%`,left:`${p.l}%`,width:p.s,opacity:0.04+i*0.01,
-                      ['--dur' as string]:`${p.d}s`,animationDelay:`${i*-4}s`}}>
+                      animationDuration:`${p.d}s`,animationDelay:`${i*-4}s`}}>
               <rect x="27" y="70" width="6" height="45" rx="2" fill="#6b5840"/>
               <ellipse cx="30" cy="42" rx="24" ry="35" fill="#6b8f4a"/>
               <ellipse cx="27" cy="32" rx="16" ry="24" fill="#7da35a"/>
@@ -314,45 +334,49 @@ export default function HomePage() {
         </section>
 
         {/* FEATURES */}
-        <section className="lp-section" id="fitur">
-          <h2 className="lp-section-title">{featuresTitle}</h2>
-          <div className="lp-features-grid">
-            {features.map((f, i) => (
-              <div key={i} className="lp-feature-card">
-                <div className="lp-feature-icon">{f.icon}</div>
-                <h3>{f.title}</h3>
-                <p>{f.description}</p>
-              </div>
-            ))}
+        <section className="lp-section--features" id="fitur">
+          <div className="lp-section-inner">
+            <h2 className="lp-section-title">{featuresTitle}</h2>
+            <div className="lp-features-grid">
+              {features.map((f, i) => (
+                <div key={i} className="lp-feature-card">
+                  <div className="lp-feature-icon">{f.icon}</div>
+                  <h3>{f.title}</h3>
+                  <p>{f.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* PRICING */}
-        <section className="lp-section" id="harga">
-          <h2 className="lp-section-title">{pricingTitle}</h2>
-          <p className="lp-section-sub">{pricingSubtitle}</p>
-          <div className="lp-pricing-grid">
-            {pricing.map((plan, i) => (
-              <div key={i} className={`lp-price-card ${plan.highlighted ? "highlighted" : ""}`}>
-                <div className="lp-price-name">{plan.name}</div>
-                <div className="lp-price-desc">{plan.description}</div>
-                <div>
-                  <span className="lp-price-amount">{plan.price}</span>
-                  {plan.period && <span className="lp-price-period">{plan.period}</span>}
+        <section className="lp-section--pricing" id="harga">
+          <div className="lp-section-inner">
+            <h2 className="lp-section-title">{pricingTitle}</h2>
+            <p className="lp-section-sub">{pricingSubtitle}</p>
+            <div className="lp-pricing-grid">
+              {pricing.map((plan, i) => (
+                <div key={i} className={`lp-price-card ${plan.highlighted ? "highlighted" : ""}`}>
+                  <div className="lp-price-name">{plan.name}</div>
+                  <div className="lp-price-desc">{plan.description}</div>
+                  <div>
+                    <span className="lp-price-amount">{plan.price}</span>
+                    {plan.period && <span className="lp-price-period">{plan.period}</span>}
+                  </div>
+                  <div className="lp-price-features">
+                    {plan.features.map((feat, j) => (
+                      <div key={j} className="lp-price-feat">{feat}</div>
+                    ))}
+                  </div>
+                  <button
+                    className={`lp-btn ${plan.highlighted ? "lp-btn-fill" : "lp-btn-ghost"}`}
+                    onClick={() => r.push("/setup")}
+                  >
+                    {plan.ctaText}
+                  </button>
                 </div>
-                <div className="lp-price-features">
-                  {plan.features.map((feat, j) => (
-                    <div key={j} className="lp-price-feat">{feat}</div>
-                  ))}
-                </div>
-                <button
-                  className={`lp-btn ${plan.highlighted ? "lp-btn-fill" : "lp-btn-ghost"}`}
-                  onClick={() => r.push("/setup")}
-                >
-                  {plan.ctaText}
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
 
