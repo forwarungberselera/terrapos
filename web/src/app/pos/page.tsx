@@ -24,6 +24,9 @@ import {
 import { receiptHTML } from "@/lib/receipt";
 import { buildPlainReceipt, getPrintMode, sendToRawBT } from "@/lib/rawbt";
 import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shifts";
+import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
+import { usePrinting } from "@/components/PrintingOverlay";
 
 type Product = { id: string; name: string; category: string; price: number; isActive?: boolean };
 type CartItem = {
@@ -58,6 +61,8 @@ export default function POSPage() {
 
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const toast = useToast();
+  const { showPrinting, hidePrinting } = usePrinting();
 
   const isOwner = (role || "").toString().toLowerCase() === "owner";
   const canUse = ["owner", "admin"].includes((role || "").toString().toLowerCase());
@@ -355,27 +360,31 @@ export default function POSPage() {
 
     if (mode === "bluetooth") {
       try {
+        showPrinting("Mencetak via Bluetooth...");
         const NativePrinter = await import("@/lib/native-printer");
         if (NativePrinter.isNative()) {
           const status = await NativePrinter.isConnected();
           if (!status.connected) { await NativePrinter.autoReconnect(); }
           await NativePrinter.printText(text);
+          toast.success("Struk berhasil dicetak!");
         } else {
           const WebBT = await import("@/lib/bluetooth-printer");
-          if (!WebBT.isPrinterConnected()) { alert("Printer belum terkonek. Buka halaman Printer dulu."); return; }
+          if (!WebBT.isPrinterConnected()) { toast.error("Printer belum terkonek. Buka halaman Printer dulu."); hidePrinting(); return; }
           await WebBT.printText(text);
+          toast.success("Struk berhasil dicetak!");
         }
-      } catch (e: any) { alert("Gagal print: " + (e?.message || "")); }
+      } catch (e: any) { toast.error("Gagal print: " + (e?.message || "")); } finally { hidePrinting(); }
       return;
     }
 
     if (mode === "rawbt") {
       sendToRawBT(text);
+      toast.success("Dikirim ke RawBT.");
       return;
     }
 
     const printWin = window.open("", "_blank", "width=420,height=800");
-    if (!printWin) { alert("Pop-up print diblokir."); return; }
+    if (!printWin) { toast.error("Pop-up print diblokir browser."); return; }
     printWin.document.open();
     printWin.document.write(html);
     printWin.document.close();
@@ -531,7 +540,8 @@ export default function POSPage() {
   if (loading || loadingRole) {
     return (
       <TerraPage>
-        <div className="card">Loading...</div>
+        <SkeletonStyles />
+        <PageSkeleton cards={3} />
       </TerraPage>
     );
   }

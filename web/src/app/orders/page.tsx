@@ -22,6 +22,9 @@ import {
 import { receiptHTML } from "@/lib/receipt";
 import { buildPlainReceipt, getPrintMode, sendToRawBT } from "@/lib/rawbt";
 import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shifts";
+import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
+import { usePrinting } from "@/components/PrintingOverlay";
 
 type Order = {
   id: string;
@@ -118,6 +121,8 @@ export default function OrdersPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const toast = useToast();
+  const { showPrinting, hidePrinting } = usePrinting();
 
   const isOwner = (role || "").toString().toLowerCase() === "owner";
   const canUse = ["owner", "admin"].includes((role || "").toString().toLowerCase());
@@ -126,6 +131,10 @@ export default function OrdersPage() {
   const [refundLogs, setRefundLogs] = useState<RefundLog[]>([]);
   const [tab, setTab] = useState<"OPEN" | "PAID" | "CANCELLED" | "REFUND">("OPEN");
   const [err, setErr] = useState<string | null>(null);
+
+  // Pagination
+  const ITEMS_PER_PAGE = 20;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [payOpen, setPayOpen] = useState(false);
   const [payOrder, setPayOrder] = useState<Order | null>(null);
@@ -328,6 +337,58 @@ export default function OrdersPage() {
       }));
   }, [refundLogs]);
 
+  // Reset page saat ganti tab
+  useEffect(() => { setCurrentPage(1); }, [tab]);
+
+  // Flatten grouped items for pagination
+  const allFlatItems = useMemo(() => {
+    if (tab === "REFUND") return [];
+    return grouped.flatMap((g) => g.items);
+  }, [grouped, tab]);
+
+  const refundFlatItems = useMemo(() => {
+    return refundGrouped.flatMap((g) => g.items);
+  }, [refundGrouped]);
+
+  const totalItems = tab === "REFUND" ? refundFlatItems.length : allFlatItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+
+  // Paginated grouped data
+  const paginatedGrouped = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    const sliced = allFlatItems.slice(start, end);
+
+    // Regroup sliced items by day
+    const map = new Map<string, { label: string; items: typeof sliced }>();
+    for (const item of sliced) {
+      const key = dayKey(item.displayDate);
+      const label = formatDateFull(item.displayDate);
+      if (!map.has(key)) map.set(key, { label, items: [] });
+      map.get(key)!.items.push(item);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([key, value]) => ({ key, label: value.label, items: value.items }));
+  }, [allFlatItems, currentPage]);
+
+  const paginatedRefundGrouped = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    const sliced = refundFlatItems.slice(start, end);
+
+    const map = new Map<string, { label: string; items: typeof sliced }>();
+    for (const item of sliced) {
+      const key = dayKey(item.displayDate);
+      const label = formatDateFull(item.displayDate);
+      if (!map.has(key)) map.set(key, { label, items: [] });
+      map.get(key)!.items.push(item);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([key, value]) => ({ key, label: value.label, items: value.items }));
+  }, [refundFlatItems, currentPage]);
+
   function openPay(o: Order) {
     if (!activeShift && !shiftAccessBlocked) {
       setShiftPromptOpen(true);
@@ -373,8 +434,10 @@ export default function OrdersPage() {
       setVoidOpen(false);
       setVoidOrder(null);
       setVoidReason("");
+      toast.success("Order berhasil dibatalkan.");
     } catch (e: any) {
       setErr(e?.message ?? "Gagal batalkan order");
+      toast.error(e?.message ?? "Gagal batalkan order");
     } finally {
       setVoidLoading(false);
     }
@@ -438,27 +501,31 @@ export default function OrdersPage() {
 
     if (mode === "bluetooth") {
       try {
+        showPrinting("Mencetak via Bluetooth...");
         const NativePrinter = await import("@/lib/native-printer");
         if (NativePrinter.isNative()) {
           const status = await NativePrinter.isConnected();
           if (!status.connected) { await NativePrinter.autoReconnect(); }
           await NativePrinter.printText(text);
+          toast.success("Struk berhasil dicetak!");
         } else {
           const WebBT = await import("@/lib/bluetooth-printer");
-          if (!WebBT.isPrinterConnected()) { alert("Printer belum terkonek. Buka halaman Printer dulu."); return; }
+          if (!WebBT.isPrinterConnected()) { toast.error("Printer belum terkonek. Buka halaman Printer dulu."); return; }
           await WebBT.printText(text);
+          toast.success("Struk berhasil dicetak!");
         }
-      } catch (e: any) { alert("Gagal print: " + (e?.message || "")); }
+      } catch (e: any) { toast.error("Gagal print: " + (e?.message || "")); } finally { hidePrinting(); }
       return;
     }
 
     if (mode === "rawbt") {
       sendToRawBT(text);
+      toast.success("Dikirim ke RawBT.");
       return;
     }
 
     const w = window.open("", "_blank", "width=420,height=800");
-    if (!w) { alert("Pop-up print diblokir."); return; }
+    if (!w) { toast.error("Pop-up print diblokir browser."); return; }
     w.document.open();
     w.document.write(html);
     w.document.close();
@@ -497,8 +564,10 @@ export default function OrdersPage() {
       setPayOpen(false);
       setPayOrder(null);
       setErr(null);
+      toast.success("Pembayaran berhasil!");
     } catch (e: any) {
       setErr(e?.message ?? "Gagal bayar");
+      toast.error(e?.message ?? "Gagal bayar");
     }
   }
 
@@ -566,8 +635,10 @@ export default function OrdersPage() {
       setRefundPinInput("");
       setRefundReason("");
       setErr(null);
+      toast.success("Refund berhasil diproses.");
     } catch (e: any) {
       setErr(e?.message || "Gagal refund.");
+      toast.error(e?.message || "Gagal refund.");
     } finally {
       setRefundLoading(false);
     }
@@ -598,8 +669,9 @@ export default function OrdersPage() {
 
   if (loading || loadingRole) {
     return (
-      <TerraPage>
-        <div className="card">Loading...</div>
+      <TerraPage maxWidth={1100}>
+        <SkeletonStyles />
+        <PageSkeleton cards={4} />
       </TerraPage>
     );
   }
@@ -714,12 +786,12 @@ export default function OrdersPage() {
       </div>
 
       {tab !== "REFUND" ? (
-        grouped.length === 0 ? (
+        paginatedGrouped.length === 0 ? (
           <div className="card" style={{ marginTop: 14 }}>
             <div className="small">Tidak ada data.</div>
           </div>
         ) : (
-          grouped.map((group) => (
+          paginatedGrouped.map((group) => (
             <div key={group.key} className="day-group">
               <div className="day-header">{group.label}</div>
 
@@ -845,7 +917,7 @@ export default function OrdersPage() {
           <div className="small">Belum ada log refund.</div>
         </div>
       ) : (
-        refundGrouped.map((group) => (
+        paginatedRefundGrouped.map((group) => (
           <div key={group.key} className="day-group">
             <div className="day-header">{group.label}</div>
 
@@ -895,6 +967,45 @@ export default function OrdersPage() {
             ))}
           </div>
         ))
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div
+          style={{
+            marginTop: 16,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            className="btn"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            style={{ opacity: currentPage <= 1 ? 0.4 : 1 }}
+          >
+            &larr; Sebelumnya
+          </button>
+
+          <span style={{ fontSize: 13, fontWeight: 700, padding: "0 12px" }}>
+            Hal {currentPage} / {totalPages}
+            <span style={{ marginLeft: 8, color: "var(--muted)", fontWeight: 400 }}>
+              ({totalItems} order)
+            </span>
+          </span>
+
+          <button
+            className="btn"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            style={{ opacity: currentPage >= totalPages ? 0.4 : 1 }}
+          >
+            Berikutnya &rarr;
+          </button>
+        </div>
       )}
 
       {payOpen && payOrder && (
