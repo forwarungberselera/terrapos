@@ -72,6 +72,17 @@ export default function LoginPage() {
         clearCredentials();
       }
 
+      // Developer langsung ke /dev, user biasa ke /setup
+      const { checkIsDeveloper } = await import("@/lib/developer");
+      const user = auth.currentUser;
+      if (user) {
+        const isDev = await checkIsDeveloper(user.uid, user.email || "");
+        if (isDev) {
+          r.push("/dev");
+          return;
+        }
+      }
+
       r.push("/setup");
     } catch (e: any) {
       setErr(mapFirebaseError(e?.message || "Gagal login"));

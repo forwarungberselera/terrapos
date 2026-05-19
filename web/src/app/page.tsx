@@ -40,7 +40,21 @@ export default function HomePage() {
           color:#1a1a1a;
           font-family:var(--font-primary, ui-sans-serif, system-ui, -apple-system, sans-serif);
           overflow-x:hidden;
+          position:relative;
         }
+        .lp::before{
+          content:"";
+          position:fixed;top:0;left:0;right:0;bottom:0;
+          pointer-events:none;z-index:0;
+          opacity:0.035;
+          background-image:
+            radial-gradient(ellipse 300px 300px at 10% 20%, #c8a882 0%, transparent 70%),
+            radial-gradient(ellipse 250px 250px at 85% 15%, #b8976e 0%, transparent 70%),
+            radial-gradient(ellipse 200px 200px at 70% 80%, #d4b896 0%, transparent 70%),
+            radial-gradient(ellipse 180px 180px at 20% 75%, #a08060 0%, transparent 70%),
+            url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5c2 0 4 3 3 6s-4 5-7 4-4-4-3-7 4-4 7-3zm15 20c1.5 0 3 2 2.5 4.5s-3 3.5-5 3-3-3-2.5-5.5 3-3 5-2zm-35 8c1 0 2.5 2 2 4s-2.5 3-4 2.5-2.5-2.5-2-4.5 2.5-2.5 4-2zm20 22c1.5 0 3.5 2.5 3 5.5s-3.5 4-5.5 3.5-3-3.5-2.5-6 3.5-3.5 5-3z' fill='%23a08060' fill-opacity='0.4'/%3E%3C/svg%3E");
+        }
+        .lp>*{position:relative;z-index:1;}
 
         /* NAV */
         .lp-nav{
@@ -75,6 +89,20 @@ export default function HomePage() {
           min-height:90vh;display:flex;flex-direction:column;
           align-items:center;justify-content:center;text-align:center;
           padding:120px 24px 80px;
+          position:relative;
+          overflow:hidden;
+        }
+        .lp-hero::before{
+          content:"";position:absolute;top:-100px;right:-100px;
+          width:500px;height:500px;border-radius:50%;
+          background:radial-gradient(circle,rgba(213,149,103,0.06) 0%,transparent 70%);
+          pointer-events:none;
+        }
+        .lp-hero::after{
+          content:"";position:absolute;bottom:-60px;left:-80px;
+          width:400px;height:400px;border-radius:50%;
+          background:radial-gradient(circle,rgba(180,140,100,0.04) 0%,transparent 70%);
+          pointer-events:none;
         }
         .lp-badge{
           display:inline-flex;align-items:center;gap:6px;
@@ -101,6 +129,7 @@ export default function HomePage() {
         /* FEATURES */
         .lp-section{
           padding:80px 24px;max-width:1000px;margin:0 auto;
+          position:relative;
         }
         .lp-section-title{
           text-align:center;font-size:30px;font-weight:900;
@@ -174,7 +203,13 @@ export default function HomePage() {
         .lp-cta{padding:60px 24px 80px;text-align:center;}
         .lp-cta-box{
           max-width:540px;margin:0 auto;padding:48px 32px;border-radius:24px;
-          background:#fafafa;border:1px solid #f0f0f0;
+          background:linear-gradient(135deg,#fdf8f4,#faf5f0);border:1px solid #f0e6dc;
+          position:relative;overflow:hidden;
+        }
+        .lp-cta-box::before{
+          content:"";position:absolute;top:-30px;right:-30px;
+          width:120px;height:120px;border-radius:50%;
+          background:rgba(213,149,103,0.06);pointer-events:none;
         }
         .lp-cta-box h2{font-size:26px;font-weight:900;letter-spacing:-0.02em;margin:0 0 10px;}
         .lp-cta-box p{color:#666;font-size:15px;line-height:1.6;margin:0 0 24px;}

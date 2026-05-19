@@ -277,13 +277,13 @@ export default function DevConsolePage() {
         <div className="card">
           <div className="h1">Akses Ditolak</div>
           <div className="small" style={{ marginTop: 8 }}>
-            Halaman ini hanya untuk Developer. Akun <b>{email}</b> bukan developer.
+            Halaman ini hanya untuk Developer. Akun Anda tidak memiliki akses.
           </div>
-          <div className="small" style={{ marginTop: 8, color: "var(--muted)" }}>
-            Developer yang terdaftar: {DEVELOPER_EMAILS.join(", ")}
-          </div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/login")}>
-            Kembali ke Login
+          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>
+            Kembali ke Dashboard
+          </button>
+          <button className="btn" style={{ marginTop: 8 }} onClick={() => r.push("/login")}>
+            Login dengan akun lain
           </button>
         </div>
       </TerraPage>
