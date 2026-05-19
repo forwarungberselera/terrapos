@@ -74,6 +74,7 @@ export default function POSPage() {
   const [activeCat, setActiveCat] = useState("Semua");
   const [tableNo, setTableNo] = useState("");
   const [discount, setDiscount] = useState<number>(0);
+  const [discountType, setDiscountType] = useState<"nominal" | "persen">("nominal");
   const [payOpen, setPayOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS">("CASH");
   const [paidAmount, setPaidAmount] = useState<number>(0);
@@ -250,7 +251,13 @@ export default function POSPage() {
   }, [products, search, activeCat]);
 
   const subtotal = useMemo(() => cart.reduce((a, i) => a + i.price * i.qty, 0), [cart]);
-  const total = useMemo(() => Math.max(0, subtotal - Number(discount || 0)), [subtotal, discount]);
+  const discountAmount = useMemo(() => {
+    if (discountType === "persen") {
+      return Math.round((subtotal * Number(discount || 0)) / 100);
+    }
+    return Number(discount || 0);
+  }, [subtotal, discount, discountType]);
+  const total = useMemo(() => Math.max(0, subtotal - discountAmount), [subtotal, discountAmount]);
 
   function addToCart(p: Product) {
     setCart((prev) => {
@@ -300,6 +307,7 @@ export default function POSPage() {
   function resetCart() {
     setCart([]);
     setDiscount(0);
+    setDiscountType("nominal");
     setPayOpen(false);
     setPaidAmount(0);
     setPaymentMethod("CASH");
@@ -324,7 +332,7 @@ export default function POSPage() {
       cashierEmail: receiptSettings.cashierName || email || "",
       paymentMethod: receiptPaymentMethod,
       subtotal,
-      discount: Number(discount || 0),
+      discount: discountAmount,
       total,
       paidAmount: receiptPaymentMethod === "CASH" ? paidAmount : null,
       items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price, notes: c.notes || "" })),
@@ -344,7 +352,7 @@ export default function POSPage() {
       cashierEmail: receiptSettings.cashierName || email || "",
       paymentMethod: receiptPaymentMethod,
       subtotal,
-      discount: Number(discount || 0),
+      discount: discountAmount,
       total,
       paidAmount: receiptPaymentMethod === "CASH" ? paidAmount : null,
       items: cart.map((c) => ({
@@ -424,7 +432,7 @@ export default function POSPage() {
           tableNo: tNo,
           items: cart,
           subtotal,
-          discount: Number(discount || 0),
+          discount: discountAmount,
           total,
           updatedAt: serverTimestamp(),
         });
@@ -439,7 +447,7 @@ export default function POSPage() {
             status: "OPEN" as OrderStatus,
             mode: "PAY_LATER" as OrderMode,
             tableNo: tNo,
-            discount: Number(discount || 0),
+            discount: discountAmount,
             subtotal,
             total,
             items: cart,
@@ -458,7 +466,7 @@ export default function POSPage() {
 
           const merged = [...oldItems, ...cart];
           const newSubtotal = merged.reduce((a, i) => a + i.price * i.qty, 0);
-          const newDiscount = Number(old.discount || 0) + Number(discount || 0);
+          const newDiscount = Number(old.discount || 0) + discountAmount;
           const newTotal = Math.max(0, newSubtotal - newDiscount);
 
           await updateDoc(refDoc, {
@@ -514,7 +522,7 @@ export default function POSPage() {
         tableNo: tableNo.trim() || null,
         paymentMethod,
         paidAmount: paymentMethod === "CASH" ? paidAmount : total,
-        discount: Number(discount || 0),
+        discount: discountAmount,
         subtotal,
         total,
         items: cart,
@@ -770,14 +778,35 @@ export default function POSPage() {
 
             <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}>
               <span className="small">Diskon</span>
-              <input
-                className="input"
-                style={{ width: 140, textAlign: "right" }}
-                type="number"
-                value={discount}
-                onChange={(e) => setDiscount(Number(e.target.value || 0))}
-              />
+              <div className="row" style={{ gap: 6 }}>
+                <button
+                  className={"btn " + (discountType === "nominal" ? "btn-primary" : "")}
+                  style={{ padding: "4px 8px", fontSize: 11 }}
+                  onClick={() => setDiscountType("nominal")}
+                >
+                  Rp
+                </button>
+                <button
+                  className={"btn " + (discountType === "persen" ? "btn-primary" : "")}
+                  style={{ padding: "4px 8px", fontSize: 11 }}
+                  onClick={() => setDiscountType("persen")}
+                >
+                  %
+                </button>
+                <input
+                  className="input"
+                  style={{ width: 90, textAlign: "right" }}
+                  type="number"
+                  value={discount}
+                  onChange={(e) => setDiscount(Number(e.target.value || 0))}
+                />
+              </div>
             </div>
+            {discountType === "persen" && discount > 0 && (
+              <div className="small" style={{ textAlign: "right", marginTop: 4 }}>
+                = Rp {rupiah(discountAmount)}
+              </div>
+            )}
 
             <div className="row" style={{ justifyContent: "space-between", marginTop: 10 }}>
               <b>Total</b>

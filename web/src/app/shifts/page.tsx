@@ -17,6 +17,9 @@ import {
   doc,
 } from "firebase/firestore";
 import { calculateShiftTotals, isShiftPermissionError, normalizeShift, ShiftRecord, toDateSafe } from "@/lib/shifts";
+import { getPrintMode, sendToRawBT } from "@/lib/rawbt";
+import { useToast } from "@/components/Toast";
+import { usePrinting } from "@/components/PrintingOverlay";
 
 type Order = {
   id: string;
@@ -45,6 +48,8 @@ export default function ShiftsPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const toast = useToast();
+  const { showPrinting, hidePrinting } = usePrinting();
 
   const canUse = ["owner", "admin", "developer"].includes((role || "").toString().toLowerCase());
 
@@ -180,11 +185,108 @@ export default function ShiftsPage() {
       setClosingCashActual("0");
       setClosingNote("");
       setMsg("Shift berhasil ditutup.");
+
+      // Auto-print laporan tutup shift
+      printShiftReport({
+        openedByEmail: activeShift.openedByEmail || "-",
+        openedAt: toDateSafe(activeShift.openedAt),
+        closedAt: new Date(),
+        openingCash: Number(activeShift.openingCash || 0),
+        cashSales: activeSummary.cashSales,
+        qrisSales: activeSummary.qrisSales,
+        totalSales: activeSummary.totalSales,
+        orderCount: activeSummary.orderCount,
+        expectedCash: expected,
+        actualCash: actual,
+        variance: actual - expected,
+        closingNote: closingNote.trim(),
+      });
     } catch (e: any) {
       setMsg(e?.message || "Gagal tutup shift.");
     } finally {
       setSaving(false);
     }
+  }
+
+  function printShiftReport(data: {
+    openedByEmail: string;
+    openedAt: Date | null;
+    closedAt: Date | null;
+    openingCash: number;
+    cashSales: number;
+    qrisSales: number;
+    totalSales: number;
+    orderCount: number;
+    expectedCash: number;
+    actualCash: number;
+    variance: number;
+    closingNote: string;
+  }) {
+    const lines: string[] = [];
+    lines.push("================================");
+    lines.push("     LAPORAN TUTUP SHIFT");
+    lines.push("================================");
+    lines.push("");
+    lines.push(`Kasir    : ${data.openedByEmail}`);
+    lines.push(`Buka     : ${data.openedAt ? data.openedAt.toLocaleString("id-ID") : "-"}`);
+    lines.push(`Tutup    : ${data.closedAt ? data.closedAt.toLocaleString("id-ID") : "-"}`);
+    lines.push("--------------------------------");
+    lines.push(`Kas Awal       : Rp ${rupiah(data.openingCash)}`);
+    lines.push(`Cash Sales     : Rp ${rupiah(data.cashSales)}`);
+    lines.push(`QRIS Sales     : Rp ${rupiah(data.qrisSales)}`);
+    lines.push(`Total Sales    : Rp ${rupiah(data.totalSales)}`);
+    lines.push(`Jumlah Order   : ${data.orderCount}`);
+    lines.push("--------------------------------");
+    lines.push(`Expected Kas   : Rp ${rupiah(data.expectedCash)}`);
+    lines.push(`Kas Aktual     : Rp ${rupiah(data.actualCash)}`);
+    lines.push(`Selisih        : Rp ${rupiah(data.variance)}`);
+    if (data.closingNote) {
+      lines.push("--------------------------------");
+      lines.push(`Catatan: ${data.closingNote}`);
+    }
+    lines.push("================================");
+    lines.push("");
+
+    const text = lines.join("\n");
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Laporan Tutup Shift</title>
+<style>@page{margin:10mm}body{font-family:ui-monospace,Menlo,Consolas,monospace;max-width:320px;margin:0 auto;white-space:pre-wrap;line-height:1.6;font-size:13px;}</style>
+</head><body>${text.replace(/\n/g, "<br>")}<script>window.onload=()=>{window.print()}</script></body></html>`;
+
+    const mode = getPrintMode();
+
+    if (mode === "bluetooth") {
+      (async () => {
+        try {
+          showPrinting("Mencetak laporan shift...");
+          const NativePrinter = await import("@/lib/native-printer");
+          if (NativePrinter.isNative()) {
+            const status = await NativePrinter.isConnected();
+            if (!status.connected) await NativePrinter.autoReconnect();
+            await NativePrinter.printText(text);
+            toast.success("Laporan shift berhasil dicetak!");
+          } else {
+            const WebBT = await import("@/lib/bluetooth-printer");
+            if (!WebBT.isPrinterConnected()) { toast.error("Printer belum terkonek."); hidePrinting(); return; }
+            await WebBT.printText(text);
+            toast.success("Laporan shift berhasil dicetak!");
+          }
+        } catch (e: any) { toast.error("Gagal print: " + (e?.message || "")); } finally { hidePrinting(); }
+      })();
+      return;
+    }
+
+    if (mode === "rawbt") {
+      sendToRawBT(text);
+      toast.success("Laporan shift dikirim ke RawBT.");
+      return;
+    }
+
+    const w = window.open("", "_blank", "width=420,height=600");
+    if (!w) { toast.error("Pop-up print diblokir browser."); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
   }
 
   if (loading || loadingRole) {

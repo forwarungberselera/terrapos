@@ -20,6 +20,7 @@ export type ReceiptData = {
   items: ReceiptItem[];
   footer?: string;
   title?: string;
+  isCopy?: boolean;
 };
 
 function rupiah(n: number) {
@@ -84,6 +85,7 @@ export function receiptHTML(d: ReceiptData) {
       <div style="font-weight:900;font-size:18px;">${escapeHtml(d.storeName || "TerraPOS")}</div>
       ${addressHtml}
       <div class="badge">${escapeHtml(title)}</div>
+      ${d.isCopy ? `<div style="margin-top:4px;font-weight:900;font-size:14px;color:#666;">*** COPY ***</div>` : ``}
       <div class="muted" style="margin-top:6px;">${escapeHtml(d.dateText)}</div>
       <div class="muted">Order: ${escapeHtml(d.orderNo)}</div>
       ${d.tableNo ? `<div class="muted">Meja: ${escapeHtml(String(d.tableNo))}</div>` : ``}

@@ -447,9 +447,12 @@ export default function OrdersPage() {
     o: Order,
     title: ReceiptTitle,
     payMethod: ReceiptPaymentMethod,
-    paidAmount?: number | null
+    paidAmount?: number | null,
+    options?: { isCopy?: boolean; originalDate?: Date | null }
   ) {
-    const dateText = new Date().toLocaleString("id-ID");
+    const dateText = options?.originalDate
+      ? options.originalDate.toLocaleString("id-ID")
+      : new Date().toLocaleString("id-ID");
     return receiptHTML({
       title,
       storeName: receiptSettings.storeName || "TerraPOS",
@@ -465,6 +468,7 @@ export default function OrdersPage() {
       total: o.total,
       paidAmount: payMethod === "CASH" ? Number(paidAmount || 0) : null,
       items: o.items.map((it) => ({ name: it.name, qty: it.qty, price: it.price, notes: it.notes || "" })),
+      isCopy: options?.isCopy,
     });
   }
 
@@ -472,15 +476,19 @@ export default function OrdersPage() {
     o: Order,
     title: ReceiptTitle,
     payMethod: ReceiptPaymentMethod,
-    paidAmount?: number | null
+    paidAmount?: number | null,
+    options?: { isCopy?: boolean; originalDate?: Date | null }
   ) {
+    const dateText = options?.originalDate
+      ? options.originalDate.toLocaleString("id-ID")
+      : new Date().toLocaleString("id-ID");
     return buildPlainReceipt({
       title,
       storeName: receiptSettings.storeName || "TerraPOS",
       address: receiptSettings.address || "",
       footer: receiptSettings.footer || "Terima kasih.",
       orderNo: o.orderNo,
-      dateText: new Date().toLocaleString("id-ID"),
+      dateText,
       tableNo: o.tableNo || null,
       cashierEmail: receiptSettings.cashierName || email || "",
       paymentMethod: payMethod,
@@ -493,6 +501,7 @@ export default function OrdersPage() {
         qty: it.qty,
         price: it.price,
       })),
+      isCopy: options?.isCopy,
     });
   }
 
@@ -647,9 +656,10 @@ export default function OrdersPage() {
   function reprintOrder(o: Order) {
     const payMethod = (o.paymentMethod || "CASH") as "CASH" | "QRIS";
     const paid = Number(o.paidAmount || o.total);
+    const originalDate = toDateSafe(o.paidAt) || toDateSafe(o.createdAt);
 
-    const html = buildReceiptHtml(o, "STRUK", payMethod, paid);
-    const text = buildReceiptText(o, "STRUK", payMethod, paid);
+    const html = buildReceiptHtml(o, "STRUK", payMethod, paid, { isCopy: true, originalDate });
+    const text = buildReceiptText(o, "STRUK", payMethod, paid, { isCopy: true, originalDate });
 
     localStorage.setItem("terrapos_last_receipt_html", html);
     void printBySelectedMode(html, text);

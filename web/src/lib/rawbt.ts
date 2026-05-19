@@ -19,6 +19,7 @@ export type RawBtReceiptData = {
   paidAmount?: number | null;
   items: RawBtReceiptItem[];
   title?: string;
+  isCopy?: boolean;
 };
 
 function rupiah(n: number) {
@@ -57,6 +58,7 @@ export function buildPlainReceipt(d: RawBtReceiptData) {
   rows.push(center(d.storeName || "TerraPOS"));
   if ((d.address || "").trim()) rows.push(center(d.address!.trim()));
   rows.push(center(title));
+  if (d.isCopy) rows.push(center("*** COPY ***"));
   rows.push(line());
   rows.push(`Waktu : ${d.dateText}`);
   rows.push(`Order : ${d.orderNo}`);
