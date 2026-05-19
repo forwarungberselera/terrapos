@@ -44,6 +44,36 @@ export default function HomePage() {
         }
         .lp>*{position:relative;z-index:1;}
 
+        /* FLOATING NATURE ELEMENTS */
+        @keyframes floatDrift{
+          0%{transform:translate(0,0) rotate(0deg);}
+          25%{transform:translate(15px,-20px) rotate(5deg);}
+          50%{transform:translate(-10px,-35px) rotate(-3deg);}
+          75%{transform:translate(20px,-15px) rotate(4deg);}
+          100%{transform:translate(0,0) rotate(0deg);}
+        }
+        @keyframes floatSlow{
+          0%{transform:translate(0,0) rotate(0deg);}
+          33%{transform:translate(-12px,18px) rotate(-4deg);}
+          66%{transform:translate(10px,-12px) rotate(3deg);}
+          100%{transform:translate(0,0) rotate(0deg);}
+        }
+        @keyframes floatRock{
+          0%{transform:translate(0,0);}
+          50%{transform:translate(5px,8px);}
+          100%{transform:translate(0,0);}
+        }
+        .lp-bg-elements{
+          position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+        }
+        .lp-float{
+          position:absolute;
+          will-change:transform;
+        }
+        .lp-float--leaf{animation:floatDrift var(--dur,20s) ease-in-out infinite;}
+        .lp-float--rock{animation:floatRock var(--dur,25s) ease-in-out infinite;}
+        .lp-float--tree{animation:floatSlow var(--dur,30s) ease-in-out infinite;}
+
         /* NAV */
         .lp-nav{
           position:fixed;top:0;left:0;right:0;z-index:50;
@@ -210,48 +240,47 @@ export default function HomePage() {
       `}</style>
 
       <div className="lp">
-        {/* DECORATIVE BACKGROUND ELEMENTS */}
-        <div aria-hidden="true" style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,overflow:'hidden'}}>
-          {/* Large rock - bottom right */}
-          <svg viewBox="0 0 120 80" style={{position:'absolute',bottom:'5%',right:'3%',width:140,opacity:0.08}}>
-            <path d="M10 70c5-20 20-55 50-65s50 10 55 35c3 15-5 25-20 28s-40 5-60 8c-10 1-20-2-25-6z" fill="#8b7355"/>
-            <path d="M30 65c3-15 15-40 35-48s35 5 40 22c2 8-2 15-12 18s-30 6-45 10c-6 1-15-1-18-2z" fill="#a08968"/>
-          </svg>
-          {/* Small rocks - left side */}
-          <svg viewBox="0 0 60 40" style={{position:'absolute',bottom:'12%',left:'5%',width:70,opacity:0.1}}>
-            <ellipse cx="30" cy="25" rx="25" ry="14" fill="#9e8b6e"/>
-            <ellipse cx="22" cy="22" rx="15" ry="10" fill="#b3a084"/>
-          </svg>
-          {/* Pebbles cluster - top left */}
-          <svg viewBox="0 0 80 50" style={{position:'absolute',top:'15%',left:'8%',width:90,opacity:0.07}}>
-            <ellipse cx="20" cy="30" rx="12" ry="8" fill="#a08968"/>
-            <ellipse cx="45" cy="25" rx="8" ry="6" fill="#8b7355"/>
-            <ellipse cx="60" cy="35" rx="10" ry="7" fill="#b3a084"/>
-          </svg>
-          {/* Leaf 1 - top right area */}
-          <svg viewBox="0 0 60 100" style={{position:'absolute',top:'8%',right:'10%',width:50,opacity:0.09,transform:'rotate(-15deg)'}}>
-            <path d="M30 5c-15 20-25 50-20 80 0 0 8-5 15-20s10-35 12-55c0-3-2-5-7-5z" fill="#7a9e5a"/>
-            <path d="M30 10c0 25-5 50-10 70" stroke="#5c7a42" strokeWidth="1.2" fill="none"/>
-          </svg>
-          {/* Leaf 2 - mid left */}
-          <svg viewBox="0 0 50 80" style={{position:'absolute',top:'45%',left:'3%',width:40,opacity:0.08,transform:'rotate(20deg)'}}>
-            <path d="M25 5c-12 15-20 40-15 65 0 0 6-4 12-16s8-28 9-44c0-3-2-5-6-5z" fill="#8aad6a"/>
-            <path d="M25 8c0 20-4 40-8 56" stroke="#5c7a42" strokeWidth="1" fill="none"/>
-          </svg>
-          {/* Tree silhouette - far right */}
-          <svg viewBox="0 0 80 160" style={{position:'absolute',top:'25%',right:'2%',width:70,opacity:0.05}}>
-            <rect x="36" y="90" width="8" height="65" rx="3" fill="#6b5840"/>
-            <ellipse cx="40" cy="55" rx="32" ry="45" fill="#6b8f4a"/>
-            <ellipse cx="35" cy="40" rx="22" ry="30" fill="#7da35a"/>
-          </svg>
-          {/* Small leaf - bottom left area */}
-          <svg viewBox="0 0 40 60" style={{position:'absolute',bottom:'30%',left:'12%',width:30,opacity:0.07,transform:'rotate(-30deg)'}}>
-            <path d="M20 5c-8 12-14 30-10 48 0 0 5-3 9-12s6-22 6-32c0-2-1-4-5-4z" fill="#8aad6a"/>
-          </svg>
-          {/* Big rock - top right */}
-          <svg viewBox="0 0 100 60" style={{position:'absolute',top:'60%',right:'8%',width:100,opacity:0.06}}>
-            <path d="M5 50c8-15 25-40 50-45s35 8 40 25c3 10-3 18-15 20s-35 4-55 6c-8 0-16-2-20-6z" fill="#8b7355"/>
-          </svg>
+        {/* ANIMATED FLOATING BACKGROUND ELEMENTS */}
+        <div className="lp-bg-elements" aria-hidden="true">
+          {/* Leaves */}
+          {[
+            {t:8,l:5,s:28,d:18,r:-20},{t:15,l:85,s:22,d:22,r:15},{t:35,l:3,s:24,d:25,r:30},
+            {t:55,l:90,s:20,d:19,r:-10},{t:72,l:8,s:26,d:23,r:45},{t:88,l:75,s:18,d:21,r:-35},
+            {t:25,l:92,s:16,d:27,r:20},{t:45,l:12,s:20,d:20,r:-25},{t:65,l:95,s:22,d:24,r:10},
+            {t:5,l:45,s:18,d:26,r:-15},{t:78,l:40,s:14,d:22,r:35},{t:92,l:20,s:20,d:19,r:-40},
+          ].map((p, i) => (
+            <svg key={`leaf-${i}`} className="lp-float lp-float--leaf" viewBox="0 0 40 60"
+              style={{top:`${p.t}%`,left:`${p.l}%`,width:p.s,opacity:0.09+(i%3)*0.02,
+                      ['--dur' as string]:`${p.d}s`,transform:`rotate(${p.r}deg)`,animationDelay:`${i*-1.5}s`}}>
+              <path d="M20 3c-10 12-16 32-12 50 0 0 5-3 10-14s7-24 7-32c0-2-1-4-5-4z" fill="#7a9e5a"/>
+              <path d="M20 6c0 18-3 35-7 48" stroke="#5c7a42" strokeWidth="0.8" fill="none"/>
+            </svg>
+          ))}
+          {/* Rocks / Pebbles */}
+          {[
+            {t:90,l:80,s:50,d:28},{t:85,l:10,s:40,d:32},{t:70,l:60,s:35,d:26},
+            {t:20,l:75,s:30,d:30},{t:50,l:2,s:45,d:24},{t:95,l:50,s:38,d:29},
+            {t:30,l:88,s:28,d:27},{t:60,l:15,s:32,d:31},{t:10,l:30,s:25,d:25},
+          ].map((p, i) => (
+            <svg key={`rock-${i}`} className="lp-float lp-float--rock" viewBox="0 0 60 40"
+              style={{top:`${p.t}%`,left:`${p.l}%`,width:p.s,opacity:0.06+(i%3)*0.015,
+                      ['--dur' as string]:`${p.d}s`,animationDelay:`${i*-2}s`}}>
+              <ellipse cx="30" cy="24" rx={22-i%5} ry={12-i%3} fill="#9e8b6e"/>
+              <ellipse cx={25+i%8} cy={22} rx={14-i%4} ry={8-i%2} fill="#b3a084"/>
+            </svg>
+          ))}
+          {/* Trees */}
+          {[
+            {t:20,l:96,s:55,d:35},{t:40,l:-1,s:48,d:32},{t:75,l:93,s:42,d:28},
+          ].map((p, i) => (
+            <svg key={`tree-${i}`} className="lp-float lp-float--tree" viewBox="0 0 60 120"
+              style={{top:`${p.t}%`,left:`${p.l}%`,width:p.s,opacity:0.04+i*0.01,
+                      ['--dur' as string]:`${p.d}s`,animationDelay:`${i*-4}s`}}>
+              <rect x="27" y="70" width="6" height="45" rx="2" fill="#6b5840"/>
+              <ellipse cx="30" cy="42" rx="24" ry="35" fill="#6b8f4a"/>
+              <ellipse cx="27" cy="32" rx="16" ry="24" fill="#7da35a"/>
+            </svg>
+          ))}
         </div>
 
         {/* NAV */}
