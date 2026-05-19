@@ -1,3 +1,7 @@
+@import url(https://db.onlinewebfonts.com/c/739571e5b3270dd49b19f413b1ef148e?family=F29LT+Bukra+Regular);
+@import url(https://db.onlinewebfonts.com/c/837ca9196b6625ec9766cc377acc8108?family=F29LT+Bukra+Md);
+@import url(https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap);
+
 :root{
   --bg:#ffffff;
   --panel:#ffffff;
@@ -10,6 +14,9 @@
   --brandSoft:#fdf0f4;
 
   --danger:#ef4444;
+
+  --font-primary: "F29LT Bukra Regular", "F29LT Bukra Md", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 *{ box-sizing:border-box; }
@@ -19,7 +26,7 @@ html, body{
   padding:0;
   background:var(--bg);
   color:var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  font-family: var(--font-primary);
 }
 
 a{ color:inherit; text-decoration:none; }

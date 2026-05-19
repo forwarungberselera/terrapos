@@ -10,6 +10,10 @@ export const metadata = {
   title: "TerraPOS",
   description: "POS warkop multi-tenant",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/icon-192.png",
+  },
 };
 
 export const viewport: Viewport = {

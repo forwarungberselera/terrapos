@@ -7,9 +7,10 @@ import {
 } from "firebase/auth";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import {
-  enableIndexedDbPersistence,
   getFirestore,
   initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
 } from "firebase/firestore";
 
 /**
@@ -77,17 +78,18 @@ if (typeof window !== "undefined") {
 export const functions = getFunctions(app);
 
 // Firestore init (client/server aman)
+// Menggunakan persistentLocalCache (pengganti enableIndexedDbPersistence yang deprecated)
 export const db =
   typeof window === "undefined"
     ? getFirestore(app)
-    : initializeFirestore(app, {});
+    : initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      });
 
-// Offline cache (client only)
+// Emulator (client only)
 if (typeof window !== "undefined") {
-  enableIndexedDbPersistence(db).catch(() => {
-    // kalau multiple tab, bisa gagal. itu normal.
-  });
-
   const isLocalhost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
