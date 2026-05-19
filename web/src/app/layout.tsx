@@ -1,14 +1,11 @@
 import type { Viewport } from "next";
 import { Suspense } from "react";
-import dynamic from "next/dynamic";
 import "./globals.css";
+import PWARegister from "@/components/PWARegister";
+import OfflineBanner from "@/components/OfflineBanner";
 import { ToastProvider } from "@/components/Toast";
 import { PrintingOverlayProvider } from "@/components/PrintingOverlay";
 import MaintenanceGuard from "@/components/MaintenanceGuard";
-
-// Lazy load non-critical UI components (not needed for first paint)
-const PWARegister = dynamic(() => import("@/components/PWARegister"), { ssr: false });
-const OfflineBanner = dynamic(() => import("@/components/OfflineBanner"), { ssr: false });
 
 export const metadata = {
   title: "TerraPOS",
