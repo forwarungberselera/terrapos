@@ -19,6 +19,8 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shifts";
+import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
 
 type OrderItem = {
   name: string;
@@ -428,7 +430,8 @@ export default function DashboardPage() {
   if (loading || loadingRole) {
     return (
       <TerraPage maxWidth={1440}>
-        <div className="card">Loading...</div>
+        <SkeletonStyles />
+        <PageSkeleton cards={4} />
       </TerraPage>
     );
   }

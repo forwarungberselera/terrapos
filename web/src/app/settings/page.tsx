@@ -8,11 +8,14 @@ import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { useToast } from "@/components/Toast";
+import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 
 export default function SettingsPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const toast = useToast();
 
   const [storeName, setStoreName] = useState("TerraPOS");
   const [address, setAddress] = useState("");
@@ -47,15 +50,16 @@ export default function SettingsPage() {
         footer: footer.trim(),
         updatedAt: serverTimestamp(),
       }, { merge: true });
-      alert("Tersimpan.");
+      toast.success("Settings tersimpan!");
     } catch (e: any) {
       setErr(e?.message || "Gagal simpan");
+      toast.error(e?.message || "Gagal simpan");
     } finally {
       setBusy(false);
     }
   }
 
-  if (loading || loadingRole) return <TerraPage><div className="card">Loading...</div></TerraPage>;
+  if (loading || loadingRole) return <TerraPage><SkeletonStyles /><PageSkeleton cards={2} /></TerraPage>;
 
   if (role !== "owner") {
     return (

@@ -11,6 +11,9 @@ import { receiptHTML } from "@/lib/receipt";
 import { buildPlainReceipt, getPrintMode, sendToRawBT, setPrintMode } from "@/lib/rawbt";
 import * as NativePrinter from "@/lib/native-printer";
 import * as WebBluetooth from "@/lib/bluetooth-printer";
+import { useToast } from "@/components/Toast";
+import { usePrinting } from "@/components/PrintingOverlay";
+import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 
 type ReceiptSettings = { storeName: string; address: string; footer: string; cashierName: string };
 type PairedDevice = { name: string; address: string };
@@ -19,6 +22,8 @@ export default function PrinterPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const toast = useToast();
+  const { showPrinting, hidePrinting } = usePrinting();
   const canEdit = ["owner", "admin"].includes((role || "").toString().toLowerCase());
 
   const [settings, setSettings] = useState<ReceiptSettings>({ storeName: "TerraPOS", address: "", footer: "Terima kasih.", cashierName: "Kasir TerraPOS" });
@@ -154,38 +159,46 @@ export default function PrinterPage() {
     try {
       if (printMode === "bluetooth") {
         if (!btConnected) { setMsg("Printer belum terkonek."); return; }
+        showPrinting("Test print via Bluetooth...");
         if (isNative) await NativePrinter.printReceipt(testData);
         else await WebBluetooth.printReceipt(testData);
+        hidePrinting();
         setMsg("Test print berhasil!");
+        toast.success("Test print berhasil!");
       } else if (printMode === "rawbt") {
         sendToRawBT(buildPlainReceipt(testData));
+        toast.success("Dikirim ke RawBT.");
       } else {
         const html = receiptHTML(testData);
         localStorage.setItem("terrapos_last_receipt_html", html);
         const w = window.open("", "_blank", "width=420,height=800");
         if (w) { w.document.open(); w.document.write(html); w.document.close(); }
       }
-    } catch (e: any) { setMsg(e?.message || "Gagal print."); }
+    } catch (e: any) { hidePrinting(); setMsg(e?.message || "Gagal print."); toast.error(e?.message || "Gagal print."); }
   }
 
   async function printCustom() {
     const safe = (customText || "").trim();
-    if (!safe) { alert("Teks kosong."); return; }
+    if (!safe) { toast.warning("Teks kosong."); return; }
     setMsg(null);
     try {
       if (printMode === "bluetooth") {
         if (!btConnected) { setMsg("Printer belum terkonek."); return; }
+        showPrinting("Mencetak via Bluetooth...");
         if (isNative) await NativePrinter.printText(safe);
         else await WebBluetooth.printText(safe);
+        hidePrinting();
         setMsg("Print berhasil!");
+        toast.success("Print berhasil!");
       } else if (printMode === "rawbt") {
         sendToRawBT(safe);
+        toast.success("Dikirim ke RawBT.");
       } else {
         const html = `<!doctype html><html><head><meta charset="utf-8"/><style>@page{margin:10mm}body{font-family:monospace;white-space:pre-wrap;max-width:320px;margin:0 auto}</style></head><body>${escapeHtml(safe)}<script>window.onload=()=>window.print()</script></body></html>`;
         const w = window.open("", "_blank", "width=420,height=800");
         if (w) { w.document.open(); w.document.write(html); w.document.close(); }
       }
-    } catch (e: any) { setMsg(e?.message || "Gagal print."); }
+    } catch (e: any) { hidePrinting(); setMsg(e?.message || "Gagal print."); toast.error(e?.message || "Gagal print."); }
   }
 
   function changeMode(mode: "browser" | "rawbt" | "bluetooth") {
@@ -194,7 +207,7 @@ export default function PrinterPage() {
     setMsg(`Mode: ${mode === "bluetooth" ? "Bluetooth" : mode === "rawbt" ? "RawBT" : "Browser"}`);
   }
 
-  if (loading || loadingRole) return <TerraPage><div className="card">Loading...</div></TerraPage>;
+  if (loading || loadingRole) return <TerraPage><SkeletonStyles /><PageSkeleton cards={3} /></TerraPage>;
 
   return (
     <TerraPage>
