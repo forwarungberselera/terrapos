@@ -52,42 +52,42 @@ export type BrandColorConfig = {
 // ============ DEFAULTS ============
 
 export const DEFAULT_BRAND_COLORS: BrandColorConfig = {
-  // Primary brand (pink TerraPOS)
-  brand: "#e6739d",
-  brand2: "#f0a0be",
-  brandSoft: "#fdf0f4",
-  brandHover: "#d4607e",
+  // Primary brand (brown/coffee TerraPOS)
+  brand: "#d59567",
+  brand2: "#e4b896",
+  brandSoft: "#fdf5ef",
+  brandHover: "#b87a4f",
 
   // Light mode backgrounds
-  bgLight: "#f8f9fb",
+  bgLight: "#faf8f6",
   panelLight: "#ffffff",
 
   // Dark mode backgrounds
-  bgDark: "#0c0e14",
-  panelDark: "#161920",
+  bgDark: "#110e0b",
+  panelDark: "#1c1814",
 
   // Light borders
-  borderLight: "#e5e7eb",
+  borderLight: "#e8e0d8",
 
   // Dark borders
-  borderDark: "#252836",
+  borderDark: "#302820",
 
   // Light text
-  textLight: "#111827",
-  mutedLight: "#6b7280",
+  textLight: "#1f1710",
+  mutedLight: "#7a6b5e",
 
   // Dark text
-  textDark: "#f1f3f5",
-  mutedDark: "#8b92a5",
+  textDark: "#f5f0eb",
+  mutedDark: "#a89888",
 
   // Semantic colors
-  danger: "#ef4444",
-  success: "#10b981",
-  warning: "#f59e0b",
+  danger: "#dc4444",
+  success: "#2d9b6a",
+  warning: "#d4880a",
 
   // Input backgrounds
-  inputBgLight: "#f9fafb",
-  inputBgDark: "#1c1f2a",
+  inputBgLight: "#faf7f4",
+  inputBgDark: "#221e19",
 };
 
 // ============ COLOR PRESETS / TEMPLATES ============
@@ -101,35 +101,35 @@ export type ColorPreset = {
 
 export const COLOR_PRESETS: ColorPreset[] = [
   {
-    id: "terra-pink",
-    name: "Terra Pink (Default)",
-    description: "Warna pink khas TerraPOS original",
+    id: "terra-brown",
+    name: "Terra Brown / Coffee (Default)",
+    description: "Nuansa cokelat hangat untuk cafe & coffee shop",
     colors: { ...DEFAULT_BRAND_COLORS },
   },
   {
-    id: "terra-brown",
-    name: "Terra Brown / Coffee",
-    description: "Nuansa cokelat hangat untuk cafe & coffee shop",
+    id: "terra-pink",
+    name: "Terra Pink",
+    description: "Warna pink klasik TerraPOS",
     colors: {
-      brand: "#d59567",
-      brand2: "#e4b896",
-      brandSoft: "#fdf5ef",
-      brandHover: "#b87a4f",
-      bgLight: "#faf8f6",
+      brand: "#e6739d",
+      brand2: "#f0a0be",
+      brandSoft: "#fdf0f4",
+      brandHover: "#d4607e",
+      bgLight: "#f8f9fb",
       panelLight: "#ffffff",
-      bgDark: "#110e0b",
-      panelDark: "#1c1814",
-      borderLight: "#e8e0d8",
-      borderDark: "#302820",
-      textLight: "#1f1710",
-      mutedLight: "#7a6b5e",
-      textDark: "#f5f0eb",
-      mutedDark: "#a89888",
-      danger: "#dc4444",
-      success: "#2d9b6a",
-      warning: "#d4880a",
-      inputBgLight: "#faf7f4",
-      inputBgDark: "#221e19",
+      bgDark: "#0c0e14",
+      panelDark: "#161920",
+      borderLight: "#e5e7eb",
+      borderDark: "#252836",
+      textLight: "#111827",
+      mutedLight: "#6b7280",
+      textDark: "#f1f3f5",
+      mutedDark: "#8b92a5",
+      danger: "#ef4444",
+      success: "#10b981",
+      warning: "#f59e0b",
+      inputBgLight: "#f9fafb",
+      inputBgDark: "#1c1f2a",
     },
   },
   {
