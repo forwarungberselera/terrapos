@@ -24,7 +24,7 @@ export function useRole() {
         }
 
         // 0. Cek apakah user adalah developer (global, bukan per-tenant)
-        const devStatus = await checkIsDeveloper(user.uid);
+        const devStatus = await checkIsDeveloper(user.uid, user.email || "");
         setIsDeveloper(devStatus);
         setDevModeLocal(devStatus);
 

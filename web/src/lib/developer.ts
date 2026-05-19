@@ -41,17 +41,38 @@ export const BUILD_ENV: DevSystemInfo["environment"] =
     ? "development"
     : "production";
 
+/**
+ * Email developer yang di-hardcode.
+ * Akun ini otomatis jadi developer tanpa perlu setup apapun di Firestore.
+ */
+export const DEVELOPER_EMAILS: string[] = [
+  "lovinbeneran@gmail.com",
+];
+
 // ============ DEVELOPER CHECK ============
 
 /**
- * Cek apakah user adalah developer dari Firestore
- * Field: users/{uid}.isDeveloper === true
+ * Cek apakah user adalah developer.
+ * 1. Cek hardcoded email dulu (paling prioritas)
+ * 2. Fallback ke Firestore field isDeveloper: true
  */
-export async function checkIsDeveloper(uid: string): Promise<boolean> {
+export async function checkIsDeveloper(uid: string, email?: string): Promise<boolean> {
+  // 1. Cek hardcoded email
+  if (email && DEVELOPER_EMAILS.includes(email.toLowerCase())) {
+    return true;
+  }
+
+  // 2. Fallback: cek Firestore field
   try {
     const snap = await getDoc(doc(db, `users/${uid}`));
     if (!snap.exists()) return false;
     const data = snap.data() as any;
+
+    // Cek email dari Firestore juga
+    if (data.email && DEVELOPER_EMAILS.includes(data.email.toLowerCase())) {
+      return true;
+    }
+
     return data.isDeveloper === true;
   } catch {
     return false;
