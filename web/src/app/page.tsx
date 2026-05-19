@@ -51,7 +51,7 @@ export default function HomePage() {
           font-size:24px;
           font-weight:900;
           letter-spacing:-0.02em;
-          color:#ea6a00;
+          color:#c9376e;
         }
 
         .navlinks{
@@ -72,7 +72,7 @@ export default function HomePage() {
         }
 
         .btn:hover{
-          background:#fff3e8;
+          background:#fdf0f4;
         }
 
         .btn-primary{
@@ -114,9 +114,9 @@ export default function HomePage() {
           display:inline-flex;
           align-items:center;
           gap:8px;
-          background:#fff3e8;
-          color:#ea6a00;
-          border:1px solid #ffd5b5;
+          background:#fdf0f4;
+          color:#c9376e;
+          border:1px solid #f5c2d4;
           padding:8px 12px;
           border-radius:999px;
           font-size:12px;
@@ -265,7 +265,7 @@ export default function HomePage() {
 
         .menu-price{
           margin-top:6px;
-          color:#ea6a00;
+          color:#c9376e;
           font-weight:900;
           font-size:13px;
         }
@@ -353,9 +353,9 @@ export default function HomePage() {
           width:36px;
           height:36px;
           border-radius:999px;
-          background:#fff3e8;
-          border:1px solid #ffd5b5;
-          color:#ea6a00;
+          background:#fdf0f4;
+          border:1px solid #f5c2d4;
+          color:#c9376e;
           display:grid;
           place-items:center;
           font-weight:900;
@@ -569,7 +569,7 @@ export default function HomePage() {
 
                   <div style={{ marginTop: 14 }}>
                     <div className="screen-sub">Total</div>
-                    <div style={{ fontSize: 24, fontWeight: 900, color: "#ea6a00", marginTop: 4 }}>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: "#c9376e", marginTop: 4 }}>
                       Rp 40.000
                     </div>
                   </div>

@@ -5,9 +5,9 @@
   --text:#111827;
   --muted:#6b7280;
 
-  --brand:#d59567;
-  --brand2:#f0a773;
-  --brandSoft:#fff3e8;
+  --brand:#e6739d;
+  --brand2:#f0a0be;
+  --brandSoft:#fdf0f4;
 
   --danger:#ef4444;
 }
@@ -95,8 +95,8 @@ input, select, button{
   padding:6px 10px;
   border-radius:999px;
   background:var(--brandSoft);
-  border:1px solid #ffd7b5;
-  color:#8a3d00;
+  border:1px solid #f5c2d4;
+  color:#8a1d4a;
   font-weight:800;
   font-size:12px;
 }

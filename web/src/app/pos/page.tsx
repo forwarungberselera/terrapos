@@ -567,7 +567,7 @@ export default function POSPage() {
         @media (max-width: 980px){ .pos-grid{ grid-template-columns: 1fr !important; } }
         .product-grid{ margin-top:12px; display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
         .product-btn{ text-align:left; padding:14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; }
-        .product-btn:hover{ background: var(--brandSoft); border-color: #ffd7b5; }
+        .product-btn:hover{ background: var(--brandSoft); border-color: #f5c2d4; }
         .product-name{ font-weight:900; font-size:16px; line-height:1.2; }
         .product-meta{ font-size:12px; color: var(--muted); margin-top:4px; }
         .product-price{ margin-top:10px; font-weight:900; color: var(--brand); font-size:16px; }

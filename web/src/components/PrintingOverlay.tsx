@@ -56,7 +56,7 @@ export function PrintingOverlayProvider({ children }: { children: React.ReactNod
                 height: 48,
                 margin: "0 auto 16px",
                 border: "4px solid #e5e7eb",
-                borderTopColor: "var(--brand, #d59567)",
+                borderTopColor: "var(--brand, #e6739d)",
                 borderRadius: "50%",
                 animation: "print-spin 0.8s linear infinite",
               }}

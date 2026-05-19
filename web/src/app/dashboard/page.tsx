@@ -506,7 +506,7 @@ export default function DashboardPage() {
         }
         .sidebtn:hover{
           background:var(--brandSoft);
-          border-color:#ffd7b5;
+          border-color:#f5c2d4;
         }
         .maincol{
           display:grid;
@@ -642,7 +642,7 @@ export default function DashboardPage() {
         }
         .quickbtn:hover{
           background:var(--brandSoft);
-          border-color:#ffd7b5;
+          border-color:#f5c2d4;
         }
         .quicktitle{
           font-weight:900;
@@ -737,7 +737,7 @@ export default function DashboardPage() {
           width:100%;
           max-width:54px;
           border-radius:14px 14px 8px 8px;
-          background: linear-gradient(180deg, #ff9a3d 0%, #ff7a00 100%);
+          background: linear-gradient(180deg, #f0a0be 0%, #e6739d 100%);
           box-shadow: inset 0 -10px 18px rgba(255,255,255,0.15);
         }
         .bar-value{
@@ -766,7 +766,7 @@ export default function DashboardPage() {
         }
         .progress-inner{
           height:100%;
-          background: linear-gradient(90deg, #ff9a3d 0%, #ff7a00 100%);
+          background: linear-gradient(90deg, #f0a0be 0%, #e6739d 100%);
         }
         .legend{
           display:flex;
