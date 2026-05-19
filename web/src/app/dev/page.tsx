@@ -3,10 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
-import { useTenant } from "@/hooks/useTenant";
-import { useRole } from "@/hooks/useRole";
 import { auth, db } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
   collection,
   doc,
@@ -16,16 +14,16 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "@/lib/firebase";
 import {
   APP_VERSION,
   BUILD_ENV,
+  checkIsDeveloper,
+  DEVELOPER_EMAILS,
   getSystemInfo,
   MaintenanceStatus,
   subscribeMaintenanceStatus,
 } from "@/lib/developer";
-import { setStoredTenantId } from "@/lib/tenant";
+import { setStoredTenantId, getStoredTenantId } from "@/lib/tenant";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 
@@ -39,9 +37,13 @@ type TenantItem = {
 
 export default function DevConsolePage() {
   const r = useRouter();
-  const { tenantId, loading, email } = useTenant();
-  const { role, loadingRole, isDeveloper } = useRole();
   const toast = useToast();
+
+  const [loading, setLoading] = useState(true);
+  const [isDeveloper, setIsDeveloper] = useState(false);
+  const [email, setEmail] = useState("");
+  const [uid, setUid] = useState("");
+  const [tenantId, setTenantId] = useState("");
 
   const [maintenance, setMaintenance] = useState<MaintenanceStatus>({
     enabled: false,
@@ -60,14 +62,36 @@ export default function DevConsolePage() {
 
   const systemInfo = getSystemInfo();
 
+  // Auth check - TANPA redirect ke /setup
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setLoading(false);
+        r.push("/login");
+        return;
+      }
+
+      setEmail(user.email || "");
+      setUid(user.uid);
+      setTenantId(getStoredTenantId() || "");
+
+      // Cek developer langsung dari email
+      const devStatus = await checkIsDeveloper(user.uid, user.email || "");
+      setIsDeveloper(devStatus);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [r]);
+
   // Subscribe maintenance status
   useEffect(() => {
+    if (!isDeveloper) return;
     const unsub = subscribeMaintenanceStatus((status) => {
       setMaintenance(status);
       setMaintenanceMsg(status.message);
     });
     return () => unsub();
-  }, []);
+  }, [isDeveloper]);
 
   // Load all tenants (developer only)
   useEffect(() => {
@@ -153,13 +177,14 @@ export default function DevConsolePage() {
 
   function switchToTenant(tid: string) {
     setStoredTenantId(tid);
+    setTenantId(tid);
     toast.success(`Switched ke tenant: ${tid}`);
     setTimeout(() => {
       window.location.href = "/pos";
     }, 500);
   }
 
-  if (loading || loadingRole) {
+  if (loading) {
     return (
       <TerraPage maxWidth={1200}>
         <SkeletonStyles />
@@ -174,10 +199,13 @@ export default function DevConsolePage() {
         <div className="card">
           <div className="h1">Akses Ditolak</div>
           <div className="small" style={{ marginTop: 8 }}>
-            Halaman ini hanya untuk Developer. Akun kamu bukan developer.
+            Halaman ini hanya untuk Developer. Akun <b>{email}</b> bukan developer.
           </div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/pos")}>
-            Kembali ke POS
+          <div className="small" style={{ marginTop: 8, color: "var(--muted)" }}>
+            Developer yang terdaftar: {DEVELOPER_EMAILS.join(", ")}
+          </div>
+          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/login")}>
+            Kembali ke Login
           </button>
         </div>
       </TerraPage>
@@ -250,12 +278,13 @@ export default function DevConsolePage() {
               <span className="dev-badge">DEV MODE</span>
             </div>
             <div className="small" style={{ marginTop: 6 }}>
-              {email} • Tenant aktif: <b>{tenantId || "Tidak ada"}</b>
+              {email} • Tenant aktif: <b>{tenantId || "Belum dipilih"}</b>
             </div>
           </div>
           <div className="spacer" />
           <button className="btn" onClick={() => r.push("/pos")}>POS</button>
           <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+          <button className="btn" onClick={() => r.push("/setup")}>Setup Tenant</button>
           <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>
             Logout
           </button>
@@ -282,10 +311,16 @@ export default function DevConsolePage() {
             <div>{systemInfo.firebaseProject}</div>
 
             <div className="info-label">User UID</div>
-            <div style={{ fontSize: 11, wordBreak: "break-all" }}>{auth.currentUser?.uid || "-"}</div>
+            <div style={{ fontSize: 11, wordBreak: "break-all" }}>{uid || "-"}</div>
+
+            <div className="info-label">Email</div>
+            <div><b>{email}</b></div>
 
             <div className="info-label">Role</div>
-            <div><b style={{ color: "var(--brand)" }}>{role}</b></div>
+            <div><b style={{ color: "var(--brand)" }}>developer</b></div>
+
+            <div className="info-label">Tenant Aktif</div>
+            <div>{tenantId || "Belum dipilih"}</div>
 
             <div className="info-label">Timestamp</div>
             <div>{new Date().toLocaleString("id-ID")}</div>
@@ -309,7 +344,6 @@ export default function DevConsolePage() {
             {maintenance.enabled && maintenance.enabledBy && (
               <div className="small" style={{ marginTop: 6 }}>
                 Diaktifkan oleh: {maintenance.enabledBy}
-                {maintenance.enabledAt ? ` • ${maintenance.enabledAt.toLocaleString("id-ID")}` : ""}
               </div>
             )}
           </div>
@@ -378,8 +412,11 @@ export default function DevConsolePage() {
           <div className="small" style={{ marginTop: 4 }}>Shortcut developer.</div>
 
           <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+            <button className="btn" onClick={() => r.push("/setup")}>
+              Setup / Pilih Tenant
+            </button>
             <button className="btn" onClick={() => r.push("/pos")}>
-              Buka POS (Tenant: {tenantId || "-"})
+              Buka POS
             </button>
             <button className="btn" onClick={() => r.push("/dashboard")}>
               Buka Dashboard
@@ -389,9 +426,6 @@ export default function DevConsolePage() {
             </button>
             <button className="btn" onClick={() => r.push("/products")}>
               Buka Products
-            </button>
-            <button className="btn" onClick={() => r.push("/setup")}>
-              Ganti Tenant
             </button>
             <button className="btn" onClick={() => {
               if (typeof window !== "undefined") {
@@ -405,7 +439,7 @@ export default function DevConsolePage() {
                 caches.keys().then((names) => {
                   names.forEach((name) => caches.delete(name));
                 });
-                toast.success("Cache cleared! Reload manual untuk efek penuh.");
+                toast.success("Cache cleared! Reload untuk efek penuh.");
               }
             }}>
               Clear All Caches
@@ -429,7 +463,7 @@ export default function DevConsolePage() {
           {loadingTenants ? (
             <div className="small">Memuat tenants...</div>
           ) : tenants.length === 0 ? (
-            <div className="small">Tidak ada tenant.</div>
+            <div className="small">Tidak ada tenant atau belum bisa load (cek Firestore Rules).</div>
           ) : (
             tenants.map((t) => (
               <div key={t.id} className="tenant-row">
