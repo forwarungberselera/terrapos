@@ -109,6 +109,17 @@ export default function DashboardPage() {
 
   const [printMode, setPrintMode] = useState<"browser" | "rawbt" | "bluetooth">("browser");
 
+  const [sideOpen, setSideOpen] = useState<Record<string, boolean>>({
+    operasional: true,
+    management: true,
+    laporan: false,
+    settings: false,
+  });
+
+  function toggleSide(key: string) {
+    setSideOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const mode = localStorage.getItem("terrapos_print_mode");
@@ -528,26 +539,27 @@ export default function DashboardPage() {
           border-radius: var(--radius-lg);
           background:var(--panel);
           padding:16px;
-          height: fit-content;
           position: sticky;
           top: 16px;
           box-shadow: var(--shadow-card);
+          max-height: calc(100vh - 32px);
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: var(--border) transparent;
         }
+        .sidebar::-webkit-scrollbar{ width:4px; }
+        .sidebar::-webkit-scrollbar-track{ background:transparent; }
+        .sidebar::-webkit-scrollbar-thumb{ background:var(--border); border-radius:999px; }
+        .sidebar::-webkit-scrollbar-thumb:hover{ background:var(--muted); }
         @media (max-width: 1100px){
           .sidebar{
             position:static;
-            display:grid;
-            grid-template-columns: 1fr 1fr;
-            gap:12px;
+            max-height:none;
+            overflow:visible;
           }
-          .sidebar .brandbox{ grid-column: 1 / -1; }
-          .sidebar .sidegroup{ grid-column: 1 / -1; display:flex; flex-wrap:wrap; gap:8px; }
-          .sidebar .sidebtn{ width:auto; flex:1; min-width:100px; text-align:center; padding:10px 12px; font-size:12px; }
-        }
-        @media (max-width: 640px){
-          .sidebar .sidegroup{ overflow-x:auto; flex-wrap:nowrap; padding-bottom:4px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
-          .sidebar .sidegroup::-webkit-scrollbar{ display:none; }
-          .sidebar .sidebtn{ flex-shrink:0; }
+          .sidebar .brandbox{ margin-bottom:8px; }
+          .sidebar .sidegroup{ display:grid; gap:8px; }
+          .sidebar .sidebtn{ width:100%; }
         }
         .brandbox{
           padding:14px;
@@ -595,13 +607,46 @@ export default function DashboardPage() {
           text-transform:uppercase;
           letter-spacing:0.5px;
           color:var(--muted);
-          padding:12px 0 4px;
+          padding:10px 0 4px;
           border-top:1px solid var(--border);
           margin-top:6px;
+          cursor:pointer;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          user-select:none;
+          transition: color 0.15s ease;
         }
         .sidelabel:first-of-type{
           border-top:none;
           margin-top:0;
+        }
+        .sidelabel:hover{ color:var(--text); }
+        .sidelabel .chevron{
+          font-size:12px;
+          transition: transform 0.2s ease;
+          color:var(--muted);
+        }
+        .sidelabel .chevron.closed{
+          transform: rotate(-90deg);
+        }
+        .sidecategory{
+          display:grid;
+          gap:6px;
+          overflow:hidden;
+          transition: grid-template-rows 0.25s ease, opacity 0.2s ease;
+          grid-template-rows: 1fr;
+          opacity:1;
+        }
+        .sidecategory.collapsed{
+          grid-template-rows: 0fr;
+          opacity:0;
+        }
+        .sidecategory-inner{
+          min-height:0;
+          overflow:hidden;
+          display:grid;
+          gap:6px;
         }
         .maincol{
           display:grid;
@@ -874,27 +919,55 @@ export default function DashboardPage() {
           <div className="sidegroup">
             <button className="sidebtn" onClick={() => r.push("/pos")}>Buka POS</button>
 
-            <div className="sidelabel">Operasional</div>
-            <button className="sidebtn" onClick={() => r.push("/orders")}>Orders</button>
-            <button className="sidebtn" onClick={() => r.push("/shifts")}>Shift</button>
-            <button className="sidebtn" onClick={() => r.push("/qr")}>QR Meja</button>
+            <div className="sidelabel" onClick={() => toggleSide("operasional")}>
+              <span>Operasional</span>
+              <span className={`chevron ${!sideOpen.operasional ? "closed" : ""}`}>&#9662;</span>
+            </div>
+            <div className={`sidecategory ${!sideOpen.operasional ? "collapsed" : ""}`}>
+              <div className="sidecategory-inner">
+                <button className="sidebtn" onClick={() => r.push("/orders")}>Orders</button>
+                <button className="sidebtn" onClick={() => r.push("/shifts")}>Shift</button>
+                <button className="sidebtn" onClick={() => r.push("/qr")}>QR Meja</button>
+              </div>
+            </div>
 
-            <div className="sidelabel">Management</div>
-            <button className="sidebtn" onClick={() => r.push("/products")}>Products</button>
-            <button className="sidebtn" onClick={() => r.push("/members")}>Members</button>
-            <button className="sidebtn" onClick={() => r.push("/staff")}>Staff</button>
-            <button className="sidebtn" onClick={() => r.push("/promos")}>Promo</button>
+            <div className="sidelabel" onClick={() => toggleSide("management")}>
+              <span>Management</span>
+              <span className={`chevron ${!sideOpen.management ? "closed" : ""}`}>&#9662;</span>
+            </div>
+            <div className={`sidecategory ${!sideOpen.management ? "collapsed" : ""}`}>
+              <div className="sidecategory-inner">
+                <button className="sidebtn" onClick={() => r.push("/products")}>Products</button>
+                <button className="sidebtn" onClick={() => r.push("/members")}>Members</button>
+                <button className="sidebtn" onClick={() => r.push("/staff")}>Staff</button>
+                <button className="sidebtn" onClick={() => r.push("/promos")}>Promo</button>
+              </div>
+            </div>
 
-            <div className="sidelabel">Laporan</div>
-            <button className="sidebtn" onClick={() => r.push("/reports")}>Reports</button>
-            <button className="sidebtn" onClick={() => r.push("/audit")}>Audit Log</button>
+            <div className="sidelabel" onClick={() => toggleSide("laporan")}>
+              <span>Laporan</span>
+              <span className={`chevron ${!sideOpen.laporan ? "closed" : ""}`}>&#9662;</span>
+            </div>
+            <div className={`sidecategory ${!sideOpen.laporan ? "collapsed" : ""}`}>
+              <div className="sidecategory-inner">
+                <button className="sidebtn" onClick={() => r.push("/reports")}>Reports</button>
+                <button className="sidebtn" onClick={() => r.push("/audit")}>Audit Log</button>
+              </div>
+            </div>
 
-            <div className="sidelabel">Settings</div>
-            <button className="sidebtn" onClick={() => r.push("/printer")}>Printer</button>
-            <button className="sidebtn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
-            <button className="sidebtn" onClick={() => signOut(auth).then(() => r.push("/login"))}>
-              Logout
-            </button>
+            <div className="sidelabel" onClick={() => toggleSide("settings")}>
+              <span>Settings</span>
+              <span className={`chevron ${!sideOpen.settings ? "closed" : ""}`}>&#9662;</span>
+            </div>
+            <div className={`sidecategory ${!sideOpen.settings ? "collapsed" : ""}`}>
+              <div className="sidecategory-inner">
+                <button className="sidebtn" onClick={() => r.push("/printer")}>Printer</button>
+                <button className="sidebtn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
+                <button className="sidebtn" onClick={() => signOut(auth).then(() => r.push("/login"))}>
+                  Logout
+                </button>
+              </div>
+            </div>
           </div>
         </aside>
 
