@@ -90,6 +90,7 @@ export default function DashboardPage() {
   const canView = roleLower === "owner" || roleLower === "admin" || roleLower === "developer";
 
   const [orders, setOrders] = useState<Order[]>([]);
+  const [refunds, setRefunds] = useState<{ id: string; total: number; createdAt?: any }[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [activeShift, setActiveShift] = useState<ShiftRecord | null>(null);
   const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
@@ -146,6 +147,34 @@ export default function DashboardPage() {
         setOrders(arr);
       },
       (e) => setErr(e.message)
+    );
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+
+    const refundsRef = collection(db, `tenants/${tenantId}/refunds`);
+    const refundsQuery = query(refundsRef, orderBy("createdAt", "desc"));
+
+    return onSnapshot(
+      refundsQuery,
+      (snap) => {
+        const arr = snap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            total: Number(data.total || 0),
+            createdAt: data.createdAt,
+          };
+        });
+        setRefunds(arr);
+      },
+      (e) => {
+        // Silently ignore permission errors for refunds (staff may not have access)
+        if (e.code !== "permission-denied") {
+          console.warn("Refunds subscribe error:", e.message);
+        }
+      }
     );
   }, [tenantId]);
 
@@ -240,6 +269,34 @@ export default function DashboardPage() {
       qrisRevenue,
     };
   }, [paidOrders]);
+
+  const refundStats = useMemo(() => {
+    const now = new Date();
+    const sod = startOfDay(now);
+    const som = startOfMonth(now);
+
+    let refundToday = 0;
+    let refundMonth = 0;
+
+    for (const ref of refunds) {
+      const d: Date | null = ref.createdAt?.toDate?.() ?? null;
+      if (!d) continue;
+
+      if (d >= sod) {
+        refundToday += ref.total;
+      }
+      if (d >= som) {
+        refundMonth += ref.total;
+      }
+    }
+
+    return {
+      refundToday,
+      refundMonth,
+      netRevenueToday: stats.todayRevenue - refundToday,
+      netRevenueMonth: stats.monthRevenue - refundMonth,
+    };
+  }, [refunds, stats.todayRevenue, stats.monthRevenue]);
 
   const topSellingStats = useMemo(() => {
     const now = new Date();
@@ -587,6 +644,9 @@ export default function DashboardPage() {
         @media (max-width: 640px){
           .stats-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap:8px; }
         }
+        @media (max-width: 380px){
+          .stats-grid{ grid-template-columns: 1fr; }
+        }
         .stat-card{
           border:1px solid var(--border);
           border-radius: var(--radius);
@@ -857,6 +917,38 @@ export default function DashboardPage() {
                 Rp {rupiah(stats.monthRevenue)}
               </div>
               <div className="stat-note">Transaksi bulan ini: {stats.monthCount}</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-label">Net Revenue Hari Ini</div>
+              <div className="stat-value" style={{ color: refundStats.netRevenueToday >= 0 ? "var(--brand)" : "var(--danger)" }}>
+                Rp {rupiah(refundStats.netRevenueToday)}
+              </div>
+              <div className="stat-note">Omzet − Refund hari ini</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-label">Net Revenue Bulan Ini</div>
+              <div className="stat-value" style={{ color: refundStats.netRevenueMonth >= 0 ? "var(--brand)" : "var(--danger)" }}>
+                Rp {rupiah(refundStats.netRevenueMonth)}
+              </div>
+              <div className="stat-note">Omzet − Refund bulan ini</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-label">Refund Hari Ini</div>
+              <div className="stat-value" style={{ color: "var(--danger)" }}>
+                Rp {rupiah(refundStats.refundToday)}
+              </div>
+              <div className="stat-note">Total refund hari ini</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-label">Refund Bulan Ini</div>
+              <div className="stat-value" style={{ color: "var(--danger)" }}>
+                Rp {rupiah(refundStats.refundMonth)}
+              </div>
+              <div className="stat-note">Total refund bulan berjalan</div>
             </div>
 
             <div className="stat-card">
