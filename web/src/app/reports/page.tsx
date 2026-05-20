@@ -23,7 +23,16 @@ type Order = {
   paidAt: any;
 };
 
-type PeriodType = "daily" | "weekly" | "monthly";
+type Refund = {
+  id: string;
+  orderNo: string;
+  total: number;
+  reason: string;
+  refundedBy: string;
+  createdAt: any;
+};
+
+type TabType = "ringkasan" | "harian" | "refund" | "export";
 
 function rupiah(n: number) {
   return "Rp " + new Intl.NumberFormat("id-ID").format(n);
@@ -40,224 +49,135 @@ function formatDate(d: Date) {
   return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function getStartOfDay(d: Date) {
-  const r = new Date(d);
-  r.setHours(0, 0, 0, 0);
-  return r;
+
+function formatDateTime(d: Date) {
+  return d.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function getStartOfWeek(d: Date) {
-  const r = new Date(d);
-  const day = r.getDay();
-  const diff = r.getDate() - day + (day === 0 ? -6 : 1);
-  r.setDate(diff);
-  r.setHours(0, 0, 0, 0);
-  return r;
-}
-
-function getStartOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
-}
-
-function getEndOfDay(d: Date) {
-  const r = new Date(d);
-  r.setHours(23, 59, 59, 999);
-  return r;
-}
-
-function getEndOfWeek(d: Date) {
-  const start = getStartOfWeek(d);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-  return end;
-}
-
-function getEndOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-}
+function getStartOfDay(d: Date) { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; }
+function getEndOfDay(d: Date) { const r = new Date(d); r.setHours(23, 59, 59, 999); return r; }
+function getStartOfWeek(d: Date) { const r = new Date(d); const day = r.getDay(); r.setDate(r.getDate() - day + (day === 0 ? -6 : 1)); r.setHours(0, 0, 0, 0); return r; }
+function getEndOfWeek(d: Date) { const s = getStartOfWeek(d); const e = new Date(s); e.setDate(e.getDate() + 6); e.setHours(23, 59, 59, 999); return e; }
+function getStartOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0); }
+function getEndOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999); }
 
 export default function ReportsPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
-
   const canAccess = ["owner", "developer"].includes((role || "").toString().toLowerCase());
 
-  const [period, setPeriod] = useState<PeriodType>("daily");
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const now = new Date();
-    return now.toISOString().split("T")[0];
-  });
+  const [tab, setTab] = useState<TabType>("ringkasan");
+  const [rangeMode, setRangeMode] = useState<"preset" | "custom">("preset");
+  const [preset, setPreset] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [customStart, setCustomStart] = useState(() => new Date().toISOString().split("T")[0]);
+  const [customEnd, setCustomEnd] = useState(() => new Date().toISOString().split("T")[0]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [refunds, setRefunds] = useState<Refund[]>([]);
   const [fetching, setFetching] = useState(false);
 
-  const dateRange = useMemo(() => {
-    const d = new Date(selectedDate + "T00:00:00");
-    if (period === "daily") return { start: getStartOfDay(d), end: getEndOfDay(d) };
-    if (period === "weekly") return { start: getStartOfWeek(d), end: getEndOfWeek(d) };
-    return { start: getStartOfMonth(d), end: getEndOfMonth(d) };
-  }, [period, selectedDate]);
 
+  const dateRange = useMemo(() => {
+    if (rangeMode === "custom") {
+      return { start: getStartOfDay(new Date(customStart + "T00:00:00")), end: getEndOfDay(new Date(customEnd + "T00:00:00")) };
+    }
+    const d = new Date(selectedDate + "T00:00:00");
+    if (preset === "daily") return { start: getStartOfDay(d), end: getEndOfDay(d) };
+    if (preset === "weekly") return { start: getStartOfWeek(d), end: getEndOfWeek(d) };
+    return { start: getStartOfMonth(d), end: getEndOfMonth(d) };
+  }, [rangeMode, preset, selectedDate, customStart, customEnd]);
+
+  // Fetch orders
   useEffect(() => {
     if (!tenantId) return;
     let cancelled = false;
-
     (async () => {
       setFetching(true);
       try {
         const ref = collection(db, `tenants/${tenantId}/orders`);
-        const qy = query(
-          ref,
-          where("createdAt", ">=", Timestamp.fromDate(dateRange.start)),
-          where("createdAt", "<=", Timestamp.fromDate(dateRange.end)),
-          orderBy("createdAt", "desc")
-        );
+        const qy = query(ref, where("createdAt", ">=", Timestamp.fromDate(dateRange.start)), where("createdAt", "<=", Timestamp.fromDate(dateRange.end)), orderBy("createdAt", "desc"));
         const snap = await getDocs(qy);
         if (cancelled) return;
-
-        const arr: Order[] = snap.docs.map((d) => {
-          const data = d.data() as any;
-          return {
-            id: d.id,
-            orderNo: data.orderNo || "",
-            status: data.status || "",
-            mode: data.mode || "",
-            paymentMethod: data.paymentMethod || null,
-            subtotal: Number(data.subtotal || 0),
-            discount: Number(data.discount || 0),
-            total: Number(data.total || 0),
-            items: Array.isArray(data.items) ? data.items : [],
-            createdAt: data.createdAt,
-            paidAt: data.paidAt,
-          };
-        });
-        setOrders(arr);
-      } catch (e: any) {
-        console.error("Reports fetch error:", e);
-      } finally {
-        if (!cancelled) setFetching(false);
-      }
+        setOrders(snap.docs.map((d) => { const data = d.data() as any; return { id: d.id, orderNo: data.orderNo || "", status: data.status || "", mode: data.mode || "", paymentMethod: data.paymentMethod || null, subtotal: Number(data.subtotal || 0), discount: Number(data.discount || 0), total: Number(data.total || 0), items: Array.isArray(data.items) ? data.items : [], createdAt: data.createdAt, paidAt: data.paidAt }; }));
+      } catch {} finally { if (!cancelled) setFetching(false); }
     })();
-
     return () => { cancelled = true; };
   }, [tenantId, dateRange]);
+
+  // Fetch refunds
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const ref = collection(db, `tenants/${tenantId}/refunds`);
+        const qy = query(ref, where("createdAt", ">=", Timestamp.fromDate(dateRange.start)), where("createdAt", "<=", Timestamp.fromDate(dateRange.end)), orderBy("createdAt", "desc"));
+        const snap = await getDocs(qy);
+        if (cancelled) return;
+        setRefunds(snap.docs.map((d) => { const data = d.data() as any; return { id: d.id, orderNo: data.orderNo || "", total: Number(data.total || 0), reason: data.reason || data.description || "", refundedBy: data.refundedBy || data.userEmail || "", createdAt: data.createdAt }; }));
+      } catch { if (!cancelled) setRefunds([]); }
+    })();
+    return () => { cancelled = true; };
+  }, [tenantId, dateRange]);
+
 
   const stats = useMemo(() => {
     const paid = orders.filter((o) => o.status === "PAID");
     const cancelled = orders.filter((o) => o.status === "CANCELLED");
-    const open = orders.filter((o) => o.status === "OPEN");
-
     const totalOmzet = paid.reduce((a, o) => a + o.total, 0);
     const totalDiscount = paid.reduce((a, o) => a + o.discount, 0);
-    const totalSubtotal = paid.reduce((a, o) => a + o.subtotal, 0);
-
     const cashOrders = paid.filter((o) => o.paymentMethod === "CASH");
     const qrisOrders = paid.filter((o) => o.paymentMethod === "QRIS");
     const cashTotal = cashOrders.reduce((a, o) => a + o.total, 0);
     const qrisTotal = qrisOrders.reduce((a, o) => a + o.total, 0);
+    const totalRefund = refunds.reduce((a, r) => a + r.total, 0);
+    const netRevenue = totalOmzet - totalRefund;
 
-    // Top products
     const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
-    paid.forEach((o) => {
-      o.items.forEach((item: any) => {
-        const key = (item.name || "").toString();
-        if (!productMap[key]) productMap[key] = { name: key, qty: 0, revenue: 0 };
-        productMap[key].qty += Number(item.qty || 0);
-        productMap[key].revenue += Number(item.price || 0) * Number(item.qty || 0);
-      });
-    });
-    const topProducts = Object.values(productMap)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10);
+    paid.forEach((o) => { o.items.forEach((item: any) => { const key = (item.name || "").toString(); if (!productMap[key]) productMap[key] = { name: key, qty: 0, revenue: 0 }; productMap[key].qty += Number(item.qty || 0); productMap[key].revenue += Number(item.price || 0) * Number(item.qty || 0); }); });
+    const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
 
-    // Per-day breakdown (for weekly/monthly)
-    const dailyMap: Record<string, { date: string; total: number; count: number }> = {};
-    paid.forEach((o) => {
-      const d = toDate(o.paidAt || o.createdAt);
-      if (!d) return;
-      const key = d.toISOString().split("T")[0];
-      if (!dailyMap[key]) dailyMap[key] = { date: key, total: 0, count: 0 };
-      dailyMap[key].total += o.total;
-      dailyMap[key].count += 1;
-    });
+    const dailyMap: Record<string, { date: string; total: number; count: number; cash: number; qris: number }> = {};
+    paid.forEach((o) => { const d = toDate(o.paidAt || o.createdAt); if (!d) return; const key = d.toISOString().split("T")[0]; if (!dailyMap[key]) dailyMap[key] = { date: key, total: 0, count: 0, cash: 0, qris: 0 }; dailyMap[key].total += o.total; dailyMap[key].count += 1; if (o.paymentMethod === "CASH") dailyMap[key].cash += o.total; if (o.paymentMethod === "QRIS") dailyMap[key].qris += o.total; });
     const dailyBreakdown = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
 
-    return {
-      totalOrders: orders.length,
-      paidCount: paid.length,
-      cancelledCount: cancelled.length,
-      openCount: open.length,
-      totalOmzet,
-      totalDiscount,
-      totalSubtotal,
-      cashCount: cashOrders.length,
-      cashTotal,
-      qrisCount: qrisOrders.length,
-      qrisTotal,
-      topProducts,
-      dailyBreakdown,
-      avgTransaction: paid.length > 0 ? Math.round(totalOmzet / paid.length) : 0,
-    };
-  }, [orders]);
+    return { totalOrders: orders.length, paidCount: paid.length, cancelledCount: cancelled.length, totalOmzet, totalDiscount, cashCount: cashOrders.length, cashTotal, qrisCount: qrisOrders.length, qrisTotal, topProducts, dailyBreakdown, avgTransaction: paid.length > 0 ? Math.round(totalOmzet / paid.length) : 0, totalRefund, refundCount: refunds.length, netRevenue };
+  }, [orders, refunds]);
 
-  function exportExcel() {
+
+  function exportCSV() {
     const paid = orders.filter((o) => o.status === "PAID");
-    let csv = "No,Order No,Tanggal,Metode Bayar,Subtotal,Diskon,Total,Items\n";
-    paid.forEach((o, i) => {
-      const d = toDate(o.paidAt || o.createdAt);
-      const dateStr = d ? d.toLocaleString("id-ID") : "-";
-      const items = o.items.map((it: any) => `${it.name}x${it.qty}`).join("; ");
-      csv += `${i + 1},"${o.orderNo}","${dateStr}","${o.paymentMethod || "-"}",${o.subtotal},${o.discount},${o.total},"${items}"\n`;
-    });
-
-    // Summary
-    csv += "\n\nRINGKASAN\n";
-    csv += `Total Transaksi,${stats.paidCount}\n`;
-    csv += `Total Omzet,${stats.totalOmzet}\n`;
-    csv += `Total Diskon,${stats.totalDiscount}\n`;
-    csv += `CASH,${stats.cashCount} transaksi,${stats.cashTotal}\n`;
-    csv += `QRIS,${stats.qrisCount} transaksi,${stats.qrisTotal}\n`;
-    csv += `Rata-rata/Transaksi,${stats.avgTransaction}\n`;
-
+    let csv = "No,Order No,Tanggal,Metode,Subtotal,Diskon,Total,Items\n";
+    paid.forEach((o, i) => { const d = toDate(o.paidAt || o.createdAt); csv += `${i + 1},"${o.orderNo}","${d ? formatDateTime(d) : "-"}","${o.paymentMethod || "-"}",${o.subtotal},${o.discount},${o.total},"${o.items.map((it: any) => `${it.name}x${it.qty}`).join("; ")}"\n`; });
+    csv += `\n\nRINGKASAN\nTotal Transaksi,${stats.paidCount}\nTotal Omzet,${stats.totalOmzet}\nTotal Diskon,${stats.totalDiscount}\nTotal Refund,${stats.totalRefund}\nNet Revenue,${stats.netRevenue}\nCASH,${stats.cashCount} trx,${stats.cashTotal}\nQRIS,${stats.qrisCount} trx,${stats.qrisTotal}\n`;
+    if (refunds.length > 0) { csv += `\n\nLAPORAN REFUND\nNo,Order No,Tanggal,Total,Alasan,Oleh\n`; refunds.forEach((rf, i) => { const d = toDate(rf.createdAt); csv += `${i + 1},"${rf.orderNo}","${d ? formatDateTime(d) : "-"}",${rf.total},"${rf.reason}","${rf.refundedBy}"\n`; }); }
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `laporan-${period}-${selectedDate}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `laporan-${rangeMode === "custom" ? customStart + "_" + customEnd : preset + "-" + selectedDate}.csv`; a.click(); URL.revokeObjectURL(url);
   }
 
-  if (loading || loadingRole) {
-    return <TerraPage><SkeletonStyles /><PageSkeleton cards={3} /></TerraPage>;
-  }
-
-  if (!canAccess) {
-    return (
-      <TerraPage>
-        <div className="card">
-          <div className="h1">Akses ditolak</div>
-          <div className="small">Halaman laporan hanya untuk owner.</div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/pos")}>Kembali</button>
-        </div>
-      </TerraPage>
-    );
-  }
+  if (loading || loadingRole) return <TerraPage><SkeletonStyles /><PageSkeleton cards={3} /></TerraPage>;
+  if (!canAccess) return (<TerraPage><div className="card"><div className="h1">Akses ditolak</div><div className="small">Halaman laporan hanya untuk owner.</div><button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/pos")}>Kembali</button></div></TerraPage>);
 
   return (
     <TerraPage>
       <style>{`
-        .report-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:12px; margin-top:14px; }
-        .stat-card{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; }
-        .stat-value{ font-size:20px; font-weight:900; margin-top:6px; }
-        .stat-label{ font-size:12px; color:var(--muted); }
-        .breakdown-table{ width:100%; border-collapse:collapse; margin-top:12px; font-size:13px; }
-        .breakdown-table th, .breakdown-table td{ padding:8px 10px; text-align:left; border-bottom:1px solid var(--border); }
-        .breakdown-table th{ font-weight:700; color:var(--muted); font-size:11px; text-transform:uppercase; }
-        .bar{ height:8px; border-radius:4px; background:var(--brand); margin-top:4px; }
+        .rp-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;}
+        .rp-tab{padding:9px 16px;border-radius:8px;font-weight:700;font-size:13px;border:1px solid var(--border);background:var(--panel);cursor:pointer;transition:all 0.15s;}
+        .rp-tab.active{background:var(--brand);color:#fff;border-color:var(--brand);}
+        .rp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:14px;}
+        .rp-stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;}
+        .rp-stat-val{font-size:20px;font-weight:900;margin-top:6px;}
+        .rp-stat-label{font-size:11px;color:var(--muted);font-weight:700;}
+        .rp-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px;}
+        .rp-table th,.rp-table td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+        .rp-table th{font-weight:700;color:var(--muted);font-size:11px;text-transform:uppercase;}
+        .rp-bar{height:8px;border-radius:4px;background:var(--brand);margin-top:4px;}
+        .rp-refund-card{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--panel);margin-top:10px;}
       `}</style>
 
+
+      {/* HEADER */}
       <div className="card">
         <div className="row">
           <div>
@@ -269,111 +189,129 @@ export default function ReportsPage() {
           <button className="btn" onClick={() => r.push("/pos")}>POS</button>
         </div>
 
-        <div className="row" style={{ marginTop: 14 }}>
-          <button className={"btn " + (period === "daily" ? "btn-primary" : "")} onClick={() => setPeriod("daily")}>Harian</button>
-          <button className={"btn " + (period === "weekly" ? "btn-primary" : "")} onClick={() => setPeriod("weekly")}>Mingguan</button>
-          <button className={"btn " + (period === "monthly" ? "btn-primary" : "")} onClick={() => setPeriod("monthly")}>Bulanan</button>
-          <input
-            type="date"
-            className="input"
-            style={{ width: 170 }}
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-          <button className="btn btn-primary" onClick={exportExcel} disabled={fetching}>Export CSV</button>
+        {/* RANGE SELECTOR */}
+        <div className="row" style={{ marginTop: 14, flexWrap: "wrap", gap: 8 }}>
+          <button className={"rp-tab " + (rangeMode === "preset" ? "active" : "")} onClick={() => setRangeMode("preset")}>Preset</button>
+          <button className={"rp-tab " + (rangeMode === "custom" ? "active" : "")} onClick={() => setRangeMode("custom")}>Custom Range</button>
+        </div>
+
+        {rangeMode === "preset" ? (
+          <div className="row" style={{ marginTop: 10, gap: 8 }}>
+            <button className={"rp-tab " + (preset === "daily" ? "active" : "")} onClick={() => setPreset("daily")}>Harian</button>
+            <button className={"rp-tab " + (preset === "weekly" ? "active" : "")} onClick={() => setPreset("weekly")}>Mingguan</button>
+            <button className={"rp-tab " + (preset === "monthly" ? "active" : "")} onClick={() => setPreset("monthly")}>Bulanan</button>
+            <input type="date" className="input" style={{ width: 160 }} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+          </div>
+        ) : (
+          <div className="row" style={{ marginTop: 10, gap: 8 }}>
+            <div><div className="small">Dari</div><input type="date" className="input" value={customStart} onChange={(e) => setCustomStart(e.target.value)} /></div>
+            <div><div className="small">Sampai</div><input type="date" className="input" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} /></div>
+          </div>
+        )}
+
+        {/* TABS */}
+        <div className="rp-tabs">
+          <button className={"rp-tab " + (tab === "ringkasan" ? "active" : "")} onClick={() => setTab("ringkasan")}>Ringkasan</button>
+          <button className={"rp-tab " + (tab === "harian" ? "active" : "")} onClick={() => setTab("harian")}>Breakdown Harian</button>
+          <button className={"rp-tab " + (tab === "refund" ? "active" : "")} onClick={() => setTab("refund")}>Refund ({stats.refundCount})</button>
+          <button className={"rp-tab " + (tab === "export" ? "active" : "")} onClick={() => setTab("export")}>Export</button>
         </div>
       </div>
 
-      {fetching ? (
-        <div style={{ marginTop: 14 }}><SkeletonStyles /><PageSkeleton cards={2} /></div>
-      ) : (
-        <>
-          <div className="report-grid">
-            <div className="stat-card">
-              <div className="stat-label">Total Omzet</div>
-              <div className="stat-value" style={{ color: "var(--brand)" }}>{rupiah(stats.totalOmzet)}</div>
+
+      {fetching ? <div style={{ marginTop: 14 }}><SkeletonStyles /><PageSkeleton cards={2} /></div> : (<>
+
+      {/* TAB: RINGKASAN */}
+      {tab === "ringkasan" && (<>
+        <div className="rp-grid">
+          <div className="rp-stat"><div className="rp-stat-label">Total Omzet (Bruto)</div><div className="rp-stat-val" style={{ color: "var(--brand)" }}>{rupiah(stats.totalOmzet)}</div></div>
+          <div className="rp-stat"><div className="rp-stat-label">Total Refund</div><div className="rp-stat-val" style={{ color: "var(--danger)" }}>{rupiah(stats.totalRefund)}</div><div className="rp-stat-label">{stats.refundCount} refund</div></div>
+          <div className="rp-stat"><div className="rp-stat-label">Net Revenue</div><div className="rp-stat-val" style={{ color: "var(--success)" }}>{rupiah(stats.netRevenue)}</div></div>
+          <div className="rp-stat"><div className="rp-stat-label">Transaksi Lunas</div><div className="rp-stat-val">{stats.paidCount}</div></div>
+          <div className="rp-stat"><div className="rp-stat-label">Rata-rata / Transaksi</div><div className="rp-stat-val">{rupiah(stats.avgTransaction)}</div></div>
+          <div className="rp-stat"><div className="rp-stat-label">Total Diskon</div><div className="rp-stat-val">{rupiah(stats.totalDiscount)}</div></div>
+          <div className="rp-stat"><div className="rp-stat-label">CASH</div><div className="rp-stat-val">{rupiah(stats.cashTotal)}</div><div className="rp-stat-label">{stats.cashCount} trx</div></div>
+          <div className="rp-stat"><div className="rp-stat-label">QRIS</div><div className="rp-stat-val">{rupiah(stats.qrisTotal)}</div><div className="rp-stat-label">{stats.qrisCount} trx</div></div>
+          <div className="rp-stat"><div className="rp-stat-label">Dibatalkan</div><div className="rp-stat-val" style={{ color: "var(--danger)" }}>{stats.cancelledCount}</div></div>
+        </div>
+
+        {stats.topProducts.length > 0 && (
+          <div className="card" style={{ marginTop: 14 }}>
+            <div className="h1">Top 10 Produk</div>
+            <table className="rp-table"><thead><tr><th>#</th><th>Produk</th><th>Qty</th><th>Revenue</th></tr></thead><tbody>
+              {stats.topProducts.map((p, i) => (<tr key={p.name}><td>{i + 1}</td><td><b>{p.name}</b></td><td>{p.qty}</td><td>{rupiah(p.revenue)}</td></tr>))}
+            </tbody></table>
+          </div>
+        )}
+      </>)}
+
+
+      {/* TAB: BREAKDOWN HARIAN */}
+      {tab === "harian" && (<>
+        {stats.dailyBreakdown.length > 0 ? (
+          <div className="card" style={{ marginTop: 14 }}>
+            <div className="h1">Breakdown per Hari</div>
+            <div className="small" style={{ marginTop: 4 }}>Merge semua transaksi dalam range yang dipilih, dikelompokkan per hari.</div>
+            <table className="rp-table"><thead><tr><th>Tanggal</th><th>Trx</th><th>Cash</th><th>QRIS</th><th>Total</th><th>Grafik</th></tr></thead><tbody>
+              {stats.dailyBreakdown.map((d) => { const max = Math.max(...stats.dailyBreakdown.map((x) => x.total), 1); return (
+                <tr key={d.date}><td>{formatDate(new Date(d.date + "T00:00:00"))}</td><td>{d.count}</td><td>{rupiah(d.cash)}</td><td>{rupiah(d.qris)}</td><td><b>{rupiah(d.total)}</b></td><td><div className="rp-bar" style={{ width: `${Math.round((d.total / max) * 100)}%` }} /></td></tr>
+              ); })}
+              <tr style={{ fontWeight: 900 }}><td>TOTAL</td><td>{stats.dailyBreakdown.reduce((a, d) => a + d.count, 0)}</td><td>{rupiah(stats.dailyBreakdown.reduce((a, d) => a + d.cash, 0))}</td><td>{rupiah(stats.dailyBreakdown.reduce((a, d) => a + d.qris, 0))}</td><td>{rupiah(stats.totalOmzet)}</td><td></td></tr>
+            </tbody></table>
+          </div>
+        ) : <div className="card" style={{ marginTop: 14 }}><div className="small">Tidak ada data di periode ini.</div></div>}
+      </>)}
+
+      {/* TAB: REFUND */}
+      {tab === "refund" && (<>
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="row">
+            <div>
+              <div className="h1">Laporan Refund</div>
+              <div className="small">Riwayat refund dalam periode yang dipilih.</div>
             </div>
-            <div className="stat-card">
-              <div className="stat-label">Transaksi Lunas</div>
-              <div className="stat-value">{stats.paidCount}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Rata-rata / Transaksi</div>
-              <div className="stat-value">{rupiah(stats.avgTransaction)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Total Diskon Diberikan</div>
-              <div className="stat-value">{rupiah(stats.totalDiscount)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">CASH</div>
-              <div className="stat-value">{rupiah(stats.cashTotal)}</div>
-              <div className="stat-label">{stats.cashCount} transaksi</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">QRIS</div>
-              <div className="stat-value">{rupiah(stats.qrisTotal)}</div>
-              <div className="stat-label">{stats.qrisCount} transaksi</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Order Dibatalkan</div>
-              <div className="stat-value" style={{ color: "var(--danger)" }}>{stats.cancelledCount}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Order Masih Open</div>
-              <div className="stat-value">{stats.openCount}</div>
+            <div className="spacer" />
+            <div className="rp-stat" style={{ padding: "10px 16px" }}>
+              <div className="rp-stat-label">Total Refund</div>
+              <div className="rp-stat-val" style={{ color: "var(--danger)", fontSize: 18 }}>{rupiah(stats.totalRefund)}</div>
+              <div className="rp-stat-label">{stats.refundCount} transaksi</div>
             </div>
           </div>
 
-          {/* Daily Breakdown for weekly/monthly */}
-          {period !== "daily" && stats.dailyBreakdown.length > 0 && (
-            <div className="card" style={{ marginTop: 14 }}>
-              <div className="h1">Breakdown per Hari</div>
-              <table className="breakdown-table">
-                <thead>
-                  <tr><th>Tanggal</th><th>Transaksi</th><th>Omzet</th><th>Grafik</th></tr>
-                </thead>
-                <tbody>
-                  {stats.dailyBreakdown.map((d) => {
-                    const maxTotal = Math.max(...stats.dailyBreakdown.map((x) => x.total), 1);
-                    const pct = Math.round((d.total / maxTotal) * 100);
-                    return (
-                      <tr key={d.date}>
-                        <td>{formatDate(new Date(d.date + "T00:00:00"))}</td>
-                        <td>{d.count}</td>
-                        <td><b>{rupiah(d.total)}</b></td>
-                        <td><div className="bar" style={{ width: `${pct}%` }} /></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {refunds.length > 0 ? (
+            <table className="rp-table"><thead><tr><th>#</th><th>Order</th><th>Tanggal</th><th>Total</th><th>Alasan</th><th>Oleh</th></tr></thead><tbody>
+              {refunds.map((rf, i) => { const d = toDate(rf.createdAt); return (
+                <tr key={rf.id}><td>{i + 1}</td><td><b>{rf.orderNo}</b></td><td>{d ? formatDateTime(d) : "-"}</td><td style={{ color: "var(--danger)", fontWeight: 800 }}>{rupiah(rf.total)}</td><td>{rf.reason || "-"}</td><td>{rf.refundedBy || "-"}</td></tr>
+              ); })}
+            </tbody></table>
+          ) : <div className="small" style={{ marginTop: 14 }}>Tidak ada refund di periode ini.</div>}
+        </div>
+      </>)}
 
-          {/* Top Products */}
-          {stats.topProducts.length > 0 && (
-            <div className="card" style={{ marginTop: 14 }}>
-              <div className="h1">Top 10 Produk</div>
-              <table className="breakdown-table">
-                <thead>
-                  <tr><th>#</th><th>Produk</th><th>Qty Terjual</th><th>Revenue</th></tr>
-                </thead>
-                <tbody>
-                  {stats.topProducts.map((p, i) => (
-                    <tr key={p.name}>
-                      <td>{i + 1}</td>
-                      <td><b>{p.name}</b></td>
-                      <td>{p.qty}</td>
-                      <td>{rupiah(p.revenue)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      )}
+
+      {/* TAB: EXPORT */}
+      {tab === "export" && (<>
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="h1">Export Laporan</div>
+          <div className="small" style={{ marginTop: 6 }}>Download laporan lengkap dalam format CSV (bisa dibuka di Excel/Google Sheets).</div>
+          <div className="small" style={{ marginTop: 4 }}>Periode: <b>{formatDate(dateRange.start)} — {formatDate(dateRange.end)}</b></div>
+
+          <div style={{ marginTop: 16, padding: 16, border: "1px solid var(--border)", borderRadius: 12, background: "var(--brandSoft)" }}>
+            <div style={{ fontWeight: 800 }}>Isi Export:</div>
+            <ul style={{ margin: "8px 0 0 16px", fontSize: 13, lineHeight: 1.8, color: "var(--muted)" }}>
+              <li>Daftar semua transaksi lunas (detail items)</li>
+              <li>Ringkasan: omzet, diskon, CASH/QRIS, net revenue</li>
+              <li>Laporan refund (jika ada)</li>
+            </ul>
+          </div>
+
+          <button className="btn btn-primary" style={{ marginTop: 16, width: "100%" }} onClick={exportCSV}>
+            Download CSV ({stats.paidCount} transaksi + {stats.refundCount} refund)
+          </button>
+        </div>
+      </>)}
+
+      </>)}
     </TerraPage>
   );
 }
