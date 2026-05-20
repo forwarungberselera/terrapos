@@ -7,17 +7,17 @@ import { auth } from "@/lib/firebase";
 import { useDevAuth } from "./AuthGuard";
 
 const NAV_ITEMS = [
-  { href: "/dev-panel", label: "Dashboard", icon: "H" },
-  { href: "/dev-panel/tenants", label: "Tenants", icon: "T" },
-  { href: "/dev-panel/usage", label: "Firestore Usage", icon: "U" },
-  { href: "/dev-panel/monitor", label: "Realtime Monitor", icon: "M" },
-  { href: "/dev-panel/audit", label: "Audit Log", icon: "A" },
-  { href: "/dev-panel/users", label: "User Manager", icon: "P" },
-  { href: "/dev-panel/revenue", label: "Revenue", icon: "R" },
-  { href: "/dev-panel/maintenance", label: "Maintenance", icon: "X" },
-  { href: "/dev-panel/brand", label: "Brand Colors", icon: "B" },
-  { href: "/dev-panel/landing", label: "Landing Editor", icon: "L" },
-  { href: "/dev-panel/health", label: "System Health", icon: "S" },
+  { href: "/", label: "Dashboard", icon: "H" },
+  { href: "/tenants", label: "Tenants", icon: "T" },
+  { href: "/usage", label: "Firestore Usage", icon: "U" },
+  { href: "/monitor", label: "Realtime Monitor", icon: "M" },
+  { href: "/audit", label: "Audit Log", icon: "A" },
+  { href: "/users", label: "User Manager", icon: "P" },
+  { href: "/revenue", label: "Revenue", icon: "R" },
+  { href: "/maintenance", label: "Maintenance", icon: "X" },
+  { href: "/brand", label: "Brand Colors", icon: "B" },
+  { href: "/landing", label: "Landing Editor", icon: "L" },
+  { href: "/health", label: "System Health", icon: "S" },
 ];
 
 export default function Sidebar() {
@@ -33,7 +33,7 @@ export default function Sidebar() {
 
       <nav className="sidebar-nav">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/dev-panel" && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           return (
             <Link key={item.href} href={item.href} className={`sidebar-link ${isActive ? "active" : ""}`}>
               <span className="sidebar-icon">{item.icon}</span>
