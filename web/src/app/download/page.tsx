@@ -11,8 +11,8 @@ export default function DownloadPage() {
       <style>{`
         .dl{
           min-height:100vh;
-          background:#ffffff;
-          color:#1a1a1a;
+          background:var(--bg);
+          color:var(--text);
           font-family:var(--font-primary, ui-sans-serif, system-ui, -apple-system, sans-serif);
           overflow-x:hidden;
           position:relative;
@@ -36,10 +36,10 @@ export default function DownloadPage() {
           padding:16px 24px;
           display:flex;align-items:center;justify-content:space-between;
           backdrop-filter:blur(16px);
-          background:rgba(255,255,255,0.85);
-          border-bottom:1px solid #f0f0f0;
+          background:color-mix(in srgb, var(--panel) 85%, transparent);
+          border-bottom:1px solid var(--border);
         }
-        .dl-logo{font-size:22px;font-weight:900;letter-spacing:-0.03em;}
+        .dl-logo{font-size:22px;font-weight:900;letter-spacing:-0.03em;color:var(--text);}
         .dl-logo span{color:var(--brand,#d59567);}
 
         .dl-content{
@@ -51,7 +51,7 @@ export default function DownloadPage() {
         .dl-badge{
           display:inline-flex;align-items:center;gap:6px;
           padding:7px 16px;border-radius:999px;
-          background:#fdf5ef;border:1px solid #f0ddd0;
+          background:var(--brandSoft);border:1px solid var(--brand2);
           color:var(--brand,#d59567);font-size:13px;font-weight:700;
           margin-bottom:24px;
         }
@@ -59,6 +59,7 @@ export default function DownloadPage() {
         .dl-content h1{
           font-size:clamp(32px,6vw,52px);font-weight:900;
           line-height:1.1;letter-spacing:-0.03em;margin:0;
+          color:var(--text);
         }
         .dl-content h1 em{
           font-style:normal;color:var(--brand,#d59567);
@@ -66,7 +67,7 @@ export default function DownloadPage() {
 
         .dl-sub{
           margin-top:16px;font-size:16px;line-height:1.7;
-          color:#666;max-width:500px;margin-left:auto;margin-right:auto;
+          color:var(--muted);max-width:500px;margin-left:auto;margin-right:auto;
         }
 
         .dl-cards{
@@ -79,21 +80,21 @@ export default function DownloadPage() {
 
         .dl-card{
           padding:28px 24px;border-radius:18px;
-          border:1px solid #f0f0f0;background:#fafafa;
+          border:1px solid var(--border);background:var(--panel);
           transition:all 0.2s ease;
         }
         .dl-card:hover{
-          border-color:#e0d5cc;background:#fdf8f4;
+          border-color:var(--brand2);background:var(--brandSoft);
           box-shadow:0 8px 24px rgba(0,0,0,0.04);transform:translateY(-2px);
         }
 
         .dl-card-icon{
           width:48px;height:48px;border-radius:12px;
-          background:#fdf5ef;display:grid;place-items:center;
+          background:var(--brandSoft);display:grid;place-items:center;
           font-size:24px;margin-bottom:16px;
         }
-        .dl-card h3{font-size:18px;font-weight:800;margin:0 0 6px;}
-        .dl-card p{font-size:13px;line-height:1.6;color:#777;margin:0 0 16px;}
+        .dl-card h3{font-size:18px;font-weight:800;margin:0 0 6px;color:var(--text);}
+        .dl-card p{font-size:13px;line-height:1.6;color:var(--muted);margin:0 0 16px;}
 
         .dl-btn{
           display:inline-flex;align-items:center;gap:8px;
@@ -104,16 +105,16 @@ export default function DownloadPage() {
         }
         .dl-btn:hover{opacity:0.9;transform:translateY(-1px);}
         .dl-btn-ghost{
-          background:transparent;color:#555;border:1px solid #e5e5e5;
+          background:transparent;color:var(--muted);border:1px solid var(--border);
         }
-        .dl-btn-ghost:hover{background:#f9f9f9;border-color:#d0d0d0;}
+        .dl-btn-ghost:hover{background:var(--brandSoft);border-color:var(--brand2);}
 
         .dl-features{
           margin-top:48px;padding:32px 24px;border-radius:20px;
-          background:linear-gradient(135deg,#fdf8f4,#faf5f0);
-          border:1px solid #f0e6dc;text-align:left;
+          background:var(--brandSoft);
+          border:1px solid var(--brand2);text-align:left;
         }
-        .dl-features h3{font-size:18px;font-weight:800;margin:0 0 16px;text-align:center;}
+        .dl-features h3{font-size:18px;font-weight:800;margin:0 0 16px;text-align:center;color:var(--text);}
         .dl-feat-grid{
           display:grid;grid-template-columns:1fr 1fr;gap:12px;
         }
@@ -122,7 +123,7 @@ export default function DownloadPage() {
         }
         .dl-feat{
           display:flex;align-items:center;gap:10px;
-          font-size:14px;color:#555;font-weight:600;
+          font-size:14px;color:var(--text);font-weight:600;
         }
         .dl-feat::before{
           content:"✓";color:var(--brand,#d59567);font-weight:900;font-size:16px;
@@ -130,8 +131,8 @@ export default function DownloadPage() {
         }
 
         .dl-footer{
-          padding:24px;text-align:center;color:#aaa;font-size:12px;
-          border-top:1px solid #f5f5f5;margin-top:60px;
+          padding:24px;text-align:center;color:var(--muted);font-size:12px;
+          border-top:1px solid var(--border);margin-top:60px;
         }
 
         @media(max-width:640px){
@@ -211,9 +212,9 @@ export default function DownloadPage() {
           </div>
 
           {/* INSTALL GUIDE */}
-          <div style={{ marginTop: 40, textAlign: "left", padding: "24px", borderRadius: 16, border: "1px solid #f0f0f0", background: "#fafafa" }}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 12px" }}>Cara Install APK</h3>
-            <ol style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 8, fontSize: 14, color: "#555", lineHeight: 1.6 }}>
+          <div style={{ marginTop: 40, textAlign: "left", padding: "24px", borderRadius: 16, border: "1px solid var(--border)", background: "var(--panel)" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 12px", color: "var(--text)" }}>Cara Install APK</h3>
+            <ol style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 8, fontSize: 14, color: "var(--muted)", lineHeight: 1.6 }}>
               <li>Download file APK di atas</li>
               <li>Buka file yang ter-download</li>
               <li>Jika diminta izin &quot;Install dari sumber tidak dikenal&quot;, aktifkan</li>

@@ -358,7 +358,7 @@ export default function ShiftsPage() {
           <button className="btn" onClick={() => r.push("/pos")}>POS</button>
         </div>
         {shiftAccessBlocked && (
-          <div style={{ marginTop: 12, color: "#b45309", fontWeight: 800 }}>
+          <div style={{ marginTop: 12, color: "var(--warning)", fontWeight: 800 }}>
             Fitur shift belum bisa dipakai karena akses Firestore untuk koleksi shift belum diizinkan di project Firebase ini.
           </div>
         )}
@@ -484,7 +484,7 @@ export default function ShiftsPage() {
                 <div className="row">
                   <div style={{ fontWeight: 900 }}>{shift.openedByEmail || "-"}</div>
                   <div className="spacer" />
-                  <span className="badge" style={{ background: shift.status === "OPEN" ? "#ecfdf5" : "#f3f4f6" }}>
+                  <span className="badge" style={{ background: shift.status === "OPEN" ? "var(--brandSoft)" : "var(--input-bg)" }}>
                     {shift.status}
                   </span>
                 </div>

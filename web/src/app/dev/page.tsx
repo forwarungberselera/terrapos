@@ -435,10 +435,10 @@ export default function DevConsolePage() {
             Block akses user biasa. Developer tetap bisa akses.
           </div>
 
-          <div style={{ marginTop: 14, padding: 14, borderRadius: 14, border: "1px solid var(--border)", background: maintenance.enabled ? "#fef2f2" : "#f0fdf4" }}>
+          <div style={{ marginTop: 14, padding: 14, borderRadius: 14, border: "1px solid var(--border)", background: "var(--panel)" }}>
             <div className="row">
               <span className={`status-dot ${maintenance.enabled ? "on" : "off"}`} style={{ background: maintenance.enabled ? "#ef4444" : "#22c55e" }} />
-              <b style={{ color: maintenance.enabled ? "#dc2626" : "#16a34a" }}>
+              <b style={{ color: maintenance.enabled ? "var(--danger)" : "var(--success)" }}>
                 {maintenance.enabled ? "MAINTENANCE AKTIF" : "SISTEM NORMAL"}
               </b>
             </div>

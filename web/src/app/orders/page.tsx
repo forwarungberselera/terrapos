@@ -1302,7 +1302,7 @@ export default function OrdersPage() {
                 padding: 12,
                 borderRadius: 14,
                 border: "1px solid var(--border)",
-                background: "#fffaf5",
+                background: "var(--brandSoft)",
                 fontSize: 13,
                 lineHeight: 1.6,
               }}

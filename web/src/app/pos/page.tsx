@@ -993,9 +993,9 @@ export default function POSPage() {
             )}
 
             {appliedPromo && promoDiscountAmount > 0 && (
-              <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, background: "var(--brandSoft)", border: "1px solid #f5c2d4" }}>
+              <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
                 <div className="row" style={{ justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#8a1d4a" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}>
                     Promo: {appliedPromo.name} {appliedPromo.code && `(${appliedPromo.code})`}
                   </span>
                   <b style={{ fontSize: 13, color: "var(--brand)" }}>- Rp {rupiah(promoDiscountAmount)}</b>
@@ -1146,7 +1146,7 @@ export default function POSPage() {
                 padding: 12,
                 borderRadius: 14,
                 border: "1px solid var(--border)",
-                background: "#fffaf5",
+                background: "var(--brandSoft)",
                 fontSize: 13,
                 lineHeight: 1.6,
               }}
