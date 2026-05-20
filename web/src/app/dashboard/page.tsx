@@ -90,7 +90,7 @@ export default function DashboardPage() {
   const canView = roleLower === "owner" || roleLower === "admin" || roleLower === "developer";
 
   const [orders, setOrders] = useState<Order[]>([]);
-  const [refunds, setRefunds] = useState<{ id: string; total: number; createdAt?: any }[]>([]);
+  const [refunds, setRefunds] = useState<{ id: string; total: number; refundedAt?: any }[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [activeShift, setActiveShift] = useState<ShiftRecord | null>(null);
   const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
@@ -154,7 +154,7 @@ export default function DashboardPage() {
     if (!tenantId) return;
 
     const refundsRef = collection(db, `tenants/${tenantId}/refunds`);
-    const refundsQuery = query(refundsRef, orderBy("createdAt", "desc"));
+    const refundsQuery = query(refundsRef, orderBy("refundedAt", "desc"));
 
     return onSnapshot(
       refundsQuery,
@@ -164,7 +164,7 @@ export default function DashboardPage() {
           return {
             id: d.id,
             total: Number(data.total || 0),
-            createdAt: data.createdAt,
+            refundedAt: data.refundedAt,
           };
         });
         setRefunds(arr);
@@ -279,7 +279,7 @@ export default function DashboardPage() {
     let refundMonth = 0;
 
     for (const ref of refunds) {
-      const d: Date | null = ref.createdAt?.toDate?.() ?? null;
+      const d: Date | null = ref.refundedAt?.toDate?.() ?? null;
       if (!d) continue;
 
       if (d >= sod) {
