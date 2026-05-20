@@ -355,6 +355,7 @@ export default function ShiftsPage() {
           </div>
           <div className="spacer" />
           <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+          <button className="btn" onClick={() => r.push("/pos")}>POS</button>
         </div>
         {shiftAccessBlocked && (
           <div style={{ marginTop: 12, color: "var(--warning)", fontWeight: 800 }}>

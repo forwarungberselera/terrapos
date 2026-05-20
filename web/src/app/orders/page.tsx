@@ -827,6 +827,7 @@ export default function OrdersPage() {
 
           <div className="topnav">
             <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+            <button className="btn" onClick={() => r.push("/pos")}>POS</button>
           </div>
         </div>
 
