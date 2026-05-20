@@ -27,6 +27,12 @@ interface TenantDoc {
   name: string;
 }
 
+interface MembershipDoc {
+  tenantId: string;
+  tenantName: string;
+  role: string;
+}
+
 const LEVEL_OPTIONS = ["free", "basic", "premium", "owner"] as const;
 const ROLE_OPTIONS = ["staff", "admin", "owner"] as const;
 
@@ -51,12 +57,15 @@ export default function UsersPage() {
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState("");
 
-  // Assign tenant modal
+  // Assign/Unassign tenant modal
   const [assignUser, setAssignUser] = useState<UserDoc | null>(null);
   const [assignTenantId, setAssignTenantId] = useState("");
   const [assignRole, setAssignRole] = useState<string>("staff");
   const [assigning, setAssigning] = useState(false);
   const [assignMsg, setAssignMsg] = useState("");
+  const [userMemberships, setUserMemberships] = useState<MembershipDoc[]>([]);
+  const [loadingMemberships, setLoadingMemberships] = useState(false);
+  const [unassigning, setUnassigning] = useState<string | null>(null);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -92,6 +101,27 @@ export default function UsersPage() {
       setTenants(list);
     } catch (e) {
       console.error("Failed to load tenants:", e);
+    }
+  };
+
+  const loadUserMemberships = async (uid: string) => {
+    setLoadingMemberships(true);
+    try {
+      const snap = await getDocs(collection(db, `users/${uid}/tenantMemberships`));
+      const list: MembershipDoc[] = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          tenantId: d.id,
+          tenantName: data.name || d.id,
+          role: data.role || "staff",
+        };
+      });
+      setUserMemberships(list);
+    } catch (e) {
+      console.error("Failed to load memberships:", e);
+      setUserMemberships([]);
+    } finally {
+      setLoadingMemberships(false);
     }
   };
 
@@ -185,6 +215,14 @@ export default function UsersPage() {
     }
   };
 
+  const openAssignModal = async (user: UserDoc) => {
+    setAssignUser(user);
+    setAssignMsg("");
+    setAssignTenantId("");
+    setAssignRole("staff");
+    await loadUserMemberships(user.uid);
+  };
+
   const handleAssignTenant = async () => {
     if (!assignUser || !assignTenantId) {
       setAssignMsg("Pilih tenant terlebih dahulu.");
@@ -226,13 +264,43 @@ export default function UsersPage() {
         updatedAt: serverTimestamp(),
       });
 
-      setAssignMsg(`Berhasil assign "${assignUser.email}" ke tenant "${tenantName}" sebagai ${role}!`);
+      setAssignMsg(`Berhasil assign ke "${tenantName}" sebagai ${role}!`);
       setAssignTenantId("");
       setAssignRole("staff");
+
+      // Refresh memberships
+      await loadUserMemberships(uid);
     } catch (e: any) {
       setAssignMsg("Gagal: " + (e?.message || ""));
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const handleUnassignTenant = async (tenantId: string, tenantName: string) => {
+    if (!assignUser) return;
+    if (!confirm(`Unassign user "${assignUser.email}" dari tenant "${tenantName}"?\n\nUser tidak akan bisa akses tenant ini lagi.`)) {
+      return;
+    }
+
+    setUnassigning(tenantId);
+    try {
+      const uid = assignUser.uid;
+
+      // Hapus membership di users/{uid}/tenantMemberships/{tenantId}
+      await deleteDoc(doc(db, `users/${uid}/tenantMemberships/${tenantId}`));
+
+      // Hapus staff di tenants/{tenantId}/staff/{uid}
+      await deleteDoc(doc(db, `tenants/${tenantId}/staff/${uid}`));
+
+      setAssignMsg(`Berhasil unassign dari "${tenantName}".`);
+
+      // Refresh memberships
+      setUserMemberships((prev) => prev.filter((m) => m.tenantId !== tenantId));
+    } catch (e: any) {
+      setAssignMsg("Gagal unassign: " + (e?.message || ""));
+    } finally {
+      setUnassigning(null);
     }
   };
 
@@ -249,15 +317,6 @@ export default function UsersPage() {
           font-weight:600;
           cursor:pointer;
         }
-        .level-badge{
-          display:inline-block;
-          padding:2px 8px;
-          border-radius:4px;
-          font-size:11px;
-          font-weight:700;
-          text-transform:uppercase;
-          color:#fff;
-        }
         .modal-overlay{
           position:fixed;
           inset:0;
@@ -266,13 +325,14 @@ export default function UsersPage() {
           place-items:center;
           z-index:9999;
           padding:16px;
+          overflow-y:auto;
         }
         .modal-card{
           background:var(--panel);
           border:1px solid var(--border);
           border-radius:16px;
           padding:24px;
-          max-width:480px;
+          max-width:540px;
           width:100%;
           box-shadow: 0 20px 60px rgba(0,0,0,0.4);
         }
@@ -310,10 +370,56 @@ export default function UsersPage() {
           gap:8px;
           margin-top:16px;
         }
+        .membership-item{
+          display:flex;
+          align-items:center;
+          gap:10px;
+          padding:10px 12px;
+          background:var(--bg);
+          border:1px solid var(--border);
+          border-radius:10px;
+          margin-bottom:8px;
+        }
+        .membership-item .info{
+          flex:1;
+        }
+        .membership-item .info .name{
+          font-weight:700;
+          font-size:13px;
+        }
+        .membership-item .info .meta{
+          font-size:11px;
+          color:var(--muted);
+          margin-top:2px;
+        }
+        .role-pill{
+          display:inline-block;
+          padding:2px 8px;
+          border-radius:4px;
+          font-size:10px;
+          font-weight:700;
+          text-transform:uppercase;
+          background:var(--panel);
+          border:1px solid var(--border);
+        }
+        .role-pill.owner{ color:#10b981; border-color:#10b981; }
+        .role-pill.admin{ color:#3b82f6; border-color:#3b82f6; }
+        .role-pill.staff{ color:#6b7280; border-color:#6b7280; }
+        .section-divider{
+          border:none;
+          border-top:1px solid var(--border);
+          margin:16px 0;
+        }
+        .section-label{
+          font-size:13px;
+          font-weight:700;
+          color:var(--text);
+          margin-bottom:10px;
+        }
       `}</style>
 
       <h1 className="page-title">User Manager</h1>
-      <p className="page-sub">Buat akun, set level, dan assign tenant ke user.</p>
+      <p className="page-sub">Buat akun, set level, assign/unassign tenant ke user.</p>
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -394,7 +500,7 @@ export default function UsersPage() {
           <button className="btn" onClick={() => { loadUsers(); loadTenants(); }}>Refresh</button>
         </div>
         <div className="card-sub">
-          Set level user dan assign tenant. Delete hanya hapus Firestore doc.
+          Set level, assign/unassign tenant. Delete hanya hapus Firestore doc.
         </div>
 
         {loading ? (
@@ -436,14 +542,9 @@ export default function UsersPage() {
                       <div style={{ display: "flex", gap: 6 }}>
                         <button
                           className="btn"
-                          onClick={() => {
-                            setAssignUser(u);
-                            setAssignMsg("");
-                            setAssignTenantId("");
-                            setAssignRole("staff");
-                          }}
+                          onClick={() => openAssignModal(u)}
                         >
-                          Assign
+                          Tenants
                         </button>
                         <button
                           className="btn btn-danger"
@@ -462,14 +563,50 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* ASSIGN TENANT MODAL */}
+      {/* ASSIGN/UNASSIGN TENANT MODAL */}
       {assignUser && (
         <div className="modal-overlay" onClick={() => setAssignUser(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">Assign Tenant</div>
+            <div className="modal-title">Kelola Tenant</div>
             <div className="modal-sub">
-              Assign tenant ke user <b>{assignUser.email}</b> ({assignUser.name})
+              User: <b>{assignUser.email}</b> ({assignUser.name})
             </div>
+
+            {/* CURRENT MEMBERSHIPS */}
+            <div className="section-label">Tenant Saat Ini</div>
+            {loadingMemberships ? (
+              <p className="small">Loading...</p>
+            ) : userMemberships.length === 0 ? (
+              <p className="small" style={{ color: "var(--muted)", fontStyle: "italic" }}>
+                Belum ada tenant yang di-assign.
+              </p>
+            ) : (
+              <div>
+                {userMemberships.map((m) => (
+                  <div key={m.tenantId} className="membership-item">
+                    <div className="info">
+                      <div className="name">{m.tenantName}</div>
+                      <div className="meta">
+                        ID: {m.tenantId} &middot; <span className={`role-pill ${m.role}`}>{m.role}</span>
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn-danger"
+                      style={{ fontSize: 11, padding: "4px 10px" }}
+                      onClick={() => handleUnassignTenant(m.tenantId, m.tenantName)}
+                      disabled={unassigning === m.tenantId}
+                    >
+                      {unassigning === m.tenantId ? "..." : "Unassign"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <hr className="section-divider" />
+
+            {/* ASSIGN NEW */}
+            <div className="section-label">Assign Tenant Baru</div>
 
             <div className="modal-field">
               <label>Pilih Tenant</label>
@@ -478,9 +615,11 @@ export default function UsersPage() {
                 onChange={(e) => setAssignTenantId(e.target.value)}
               >
                 <option value="">-- Pilih Tenant --</option>
-                {tenants.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
-                ))}
+                {tenants
+                  .filter((t) => !userMemberships.some((m) => m.tenantId === t.id))
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
+                  ))}
               </select>
             </div>
 

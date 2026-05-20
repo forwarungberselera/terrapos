@@ -10,8 +10,6 @@ import {
   getDoc,
   getDocs,
   query,
-  serverTimestamp,
-  setDoc,
 } from "firebase/firestore";
 import TerraPage from "@/components/TerraPage";
 import { auth, db } from "@/lib/firebase";
@@ -29,10 +27,8 @@ export default function SetupPage() {
   const [uid, setUid] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  const [tenantName, setTenantName] = useState("");
   const [tenants, setTenants] = useState<TenantRow[]>([]);
 
   useEffect(() => {
@@ -102,62 +98,10 @@ export default function SetupPage() {
     }
 
     setTenants(arr);
-  }
 
-  async function createTenant() {
-    setSaving(true);
-    setErr("");
-
-    try {
-      if (!uid) throw new Error("User belum login.");
-      if (!tenantName.trim()) throw new Error("Nama tenant wajib diisi.");
-
-      const cleanName = tenantName.trim();
-
-      const tenantRef = doc(collection(db, "tenants"));
-      const tenantId = tenantRef.id;
-
-      await setDoc(tenantRef, {
-        name: cleanName,
-        ownerUid: uid,
-        createdBy: uid,
-        createdByEmail: email || "",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      await setDoc(doc(db, `tenants/${tenantId}/staff/${uid}`), {
-        uid,
-        email: email || "",
-        role: "owner",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      await setDoc(doc(db, `users/${uid}/tenantMemberships/${tenantId}`), {
-        tenantId,
-        name: cleanName,
-        role: "owner",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      await setDoc(doc(db, `tenants/${tenantId}/settings/main`), {
-        storeName: cleanName,
-        address: "",
-        footer: "Terima kasih.",
-        cashierName: "Kasir TerraPOS",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      await setActiveTenantId(uid, tenantId);
-      await loadMyTenants(uid);
-      r.push("/dashboard");
-    } catch (e: any) {
-      setErr(e?.message || "Gagal buat tenant");
-    } finally {
-      setSaving(false);
+    // Jika tidak punya tenant sama sekali, redirect ke waiting
+    if (arr.length === 0) {
+      r.push("/waiting");
     }
   }
 
@@ -190,110 +134,95 @@ export default function SetupPage() {
   }
 
   return (
-    <TerraPage maxWidth={840}>
+    <TerraPage maxWidth={600}>
       <style>{`
-        .grid{
-          margin-top:14px;
+        .setup-wrap{
+          min-height:80vh;
+          min-height:80dvh;
           display:grid;
-          grid-template-columns: 1fr 1fr;
-          gap:14px;
-        }
-        @media (max-width: 860px){
-          .grid{ grid-template-columns: 1fr; }
+          place-items:center;
+          padding:16px 0;
         }
         .tenant-item{
           border:1px solid var(--border);
           border-radius:16px;
           padding:14px;
+          background:var(--bg);
+          transition: border-color 0.2s;
+        }
+        .tenant-item:hover{
+          border-color: var(--brand);
+        }
+        .role-badge{
+          display:inline-block;
+          padding:2px 8px;
+          border-radius:4px;
+          font-size:11px;
+          font-weight:700;
+          text-transform:uppercase;
           background:var(--panel);
+          color:var(--brand);
         }
       `}</style>
 
-      <div className="card">
-        <div className="row">
-          <div>
-            <div className="h1">Setup Tenant</div>
-            <div className="small">Pilih tenant yang ada atau buat tenant baru.</div>
-            <div className="small" style={{ marginTop: 4 }}>
-              Login sebagai: <b>{email || "-"}</b>
+      <div className="setup-wrap">
+        <div style={{ width: "100%" }}>
+          <div className="card">
+            <div className="row">
+              <div>
+                <div className="h1">Pilih Outlet</div>
+                <div className="small" style={{ marginTop: 4 }}>
+                  Login sebagai: <b>{email || "-"}</b>
+                </div>
+              </div>
+
+              <div className="spacer" />
+
+              <button
+                className="btn btn-danger"
+                onClick={() => signOut(auth).then(() => r.push("/login"))}
+              >
+                Logout
+              </button>
             </div>
           </div>
 
-          <div className="spacer" />
+          {err && (
+            <div className="card" style={{ marginTop: 14 }}>
+              <div style={{ color: "var(--danger)", fontWeight: 800 }}>{err}</div>
+            </div>
+          )}
 
-          <button
-            className="btn btn-danger"
-            onClick={() => signOut(auth).then(() => r.push("/login"))}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+          <div className="card" style={{ marginTop: 14 }}>
+            <div className="card-title">Tenant Saya</div>
+            <div className="card-sub">Pilih outlet untuk masuk.</div>
 
-      {err && (
-        <div className="card" style={{ marginTop: 14 }}>
-          <div style={{ color: "var(--danger)", fontWeight: 800 }}>{err}</div>
-        </div>
-      )}
-
-      <div className="grid">
-        <div className="card">
-          <div className="h1">Buat Tenant Baru</div>
-          <div className="small" style={{ marginTop: 6 }}>
-            Pembuat tenant otomatis menjadi <b>owner</b>.
-          </div>
-
-          <div style={{ marginTop: 14 }}>
-            <div className="small">Nama Tenant / Outlet</div>
-            <input
-              className="input"
-              value={tenantName}
-              onChange={(e) => setTenantName(e.target.value)}
-              placeholder="Contoh: Terra Coffee"
-            />
-          </div>
-
-          <button
-            className="btn btn-primary"
-            style={{ width: "100%", marginTop: 14 }}
-            onClick={createTenant}
-            disabled={saving}
-          >
-            {saving ? "Membuat Tenant..." : "Buat Tenant"}
-          </button>
-
-          <div className="small" style={{ marginTop: 10 }}>
-            PIN refund default tenant baru: <b>123456</b>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="h1">Tenant Saya</div>
-          <div className="small" style={{ marginTop: 6 }}>
-            Klik tenant untuk masuk.
-          </div>
-
-          <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-            {tenants.map((t) => (
-              <div key={t.id} className="tenant-item">
-                <div style={{ fontWeight: 900 }}>{t.name}</div>
-                <div className="small" style={{ marginTop: 4 }}>ID: {t.id}</div>
-                <div className="small" style={{ marginTop: 4 }}>
-                  Role: <b>{t.role || "-"}</b>
+            <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
+              {tenants.map((t) => (
+                <div key={t.id} className="tenant-item">
+                  <div className="row" style={{ alignItems: "center" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 900 }}>{t.name}</div>
+                      <div className="small" style={{ marginTop: 4 }}>
+                        <span className="role-badge">{t.role || "member"}</span>
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => openTenant(t)}
+                    >
+                      Masuk
+                    </button>
+                  </div>
                 </div>
-                <button
-                  className="btn"
-                  style={{ marginTop: 10 }}
-                  onClick={() => openTenant(t)}
-                >
-                  Masuk Tenant
-                </button>
-              </div>
-            ))}
+              ))}
 
-            {tenants.length === 0 && (
-              <div className="small">Belum ada tenant. Buat tenant baru di sebelah kiri.</div>
-            )}
+              {tenants.length === 0 && (
+                <div className="small" style={{ textAlign: "center", padding: 20 }}>
+                  Belum ada outlet yang di-assign. Hubungi admin.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

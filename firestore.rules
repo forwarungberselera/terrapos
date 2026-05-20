@@ -96,13 +96,14 @@ service cloud.firestore {
         hasTenantMembership(tenantId) ||
         hasTenantStaffRole(tenantId)
       );
-      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      // Hanya developer yang bisa buat tenant baru
+      allow create: if isDeveloper();
       allow update: if isTenantOwnerByDoc(tenantId);
       allow delete: if isDeveloper();
 
       match /staff/{staffUserId} {
         allow read: if isTenantMember(tenantId);
-        allow create, update: if isTenantOwnerByDoc(tenantId);
+        allow create, update: if isTenantOwnerByDoc(tenantId) || isDeveloper();
         allow delete: if isTenantOwnerByDoc(tenantId) || isDeveloper();
       }
 
