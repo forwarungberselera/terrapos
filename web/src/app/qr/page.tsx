@@ -50,8 +50,8 @@ export default function QRPage() {
         <div className="card">
           <div className="h1">Akses ditolak</div>
           <div className="small">QR hanya untuk owner/admin.</div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={() => router.push("/pos")}>
-            Kembali ke POS
+          <button className="btn" style={{ marginTop: 12 }} onClick={() => router.push("/dashboard")}>
+            Kembali ke Dashboard
           </button>
         </div>
       </TerraPage>
@@ -76,9 +76,6 @@ export default function QRPage() {
           <div className="spacer" />
 
           <button className="btn" onClick={() => router.push("/dashboard")}>Dashboard</button>
-          <button className="btn" onClick={() => router.push("/pos")}>POS</button>
-          <button className="btn" onClick={() => router.push("/orders")}>Orders</button>
-          <button className="btn" onClick={() => router.push("/reports")}>Reports</button>
         </div>
       </div>
 

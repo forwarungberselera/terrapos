@@ -826,18 +826,7 @@ export default function OrdersPage() {
           <div className="spacer" />
 
           <div className="topnav">
-            <button className="btn" onClick={() => r.push("/pos")}>POS</button>
-            <button className="btn hide-mobile" onClick={() => r.push("/shifts")}>Shift</button>
-            <button className="btn hide-mobile" onClick={() => r.push("/printer")}>Printer</button>
-            {isOwner && (
-              <button className="btn btn-primary" onClick={() => r.push("/dashboard")}>
-                Dashboard
-              </button>
-            )}
-            <button className="btn hide-mobile" onClick={() => r.push("/setup")}>Ganti Tenant</button>
-            <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>
-              Logout
-            </button>
+            <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
           </div>
         </div>
 

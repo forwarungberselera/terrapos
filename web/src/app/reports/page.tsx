@@ -157,7 +157,7 @@ export default function ReportsPage() {
   }
 
   if (loading || loadingRole) return <TerraPage><SkeletonStyles /><PageSkeleton cards={3} /></TerraPage>;
-  if (!canAccess) return (<TerraPage><div className="card"><div className="h1">Akses ditolak</div><div className="small">Halaman laporan hanya untuk owner.</div><button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/pos")}>Kembali</button></div></TerraPage>);
+  if (!canAccess) return (<TerraPage><div className="card"><div className="h1">Akses ditolak</div><div className="small">Halaman laporan hanya untuk owner.</div><button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>Kembali ke Dashboard</button></div></TerraPage>);
 
   return (
     <TerraPage>
@@ -186,7 +186,6 @@ export default function ReportsPage() {
           </div>
           <div className="spacer" />
           <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-          <button className="btn" onClick={() => r.push("/pos")}>POS</button>
         </div>
 
         {/* RANGE SELECTOR */}

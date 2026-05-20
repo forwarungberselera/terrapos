@@ -145,7 +145,7 @@ export default function ProductsPage() {
         <div className="card">
           <div className="h1">Akses ditolak</div>
           <div className="small">Halaman Products hanya untuk owner.</div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/pos")}>Kembali ke POS</button>
+          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>Kembali ke Dashboard</button>
         </div>
       </TerraPage>
     );
@@ -215,11 +215,7 @@ export default function ProductsPage() {
             <div className="small">User: {email} | Role: <b>{role}</b></div>
           </div>
           <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/pos")}>POS</button>
-          <button className="btn" onClick={() => r.push("/orders")}>Orders</button>
-          <button className="btn" onClick={() => r.push("/staff")}>Staff</button>
-          <button className="btn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
-          <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>Logout</button>
+          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
         </div>
       </div>
 

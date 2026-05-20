@@ -227,8 +227,6 @@ export default function PrinterPage() {
             <div className="small">Bluetooth printer & pengaturan struk</div>
           </div>
           <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/pos")}>POS</button>
-          <button className="btn" onClick={() => r.push("/orders")}>Orders</button>
           <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
         </div>
       </div>

@@ -128,7 +128,7 @@ export default function AuditPage() {
         <div className="card">
           <div className="h1">Akses ditolak</div>
           <div className="small">Halaman audit hanya untuk owner.</div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/pos")}>Kembali</button>
+          <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>Kembali ke Dashboard</button>
         </div>
       </TerraPage>
     );
@@ -165,7 +165,6 @@ export default function AuditPage() {
           </div>
           <div className="spacer" />
           <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-          <button className="btn" onClick={() => r.push("/pos")}>POS</button>
         </div>
 
         <div className="row" style={{ marginTop: 14 }}>
