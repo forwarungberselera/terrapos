@@ -29,74 +29,119 @@ export default function DashboardPage() {
     })();
   }, []);
 
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return "Selamat pagi";
+    if (h < 17) return "Selamat siang";
+    return "Selamat malam";
+  };
+
   return (
     <div>
-      <h1 className="page-title">Developer Dashboard</h1>
-      <p className="page-sub">Selamat datang, <b>{email}</b>. Overview sistem TerraPOS.</p>
+      <div style={{ marginBottom: 32 }}>
+        <h1 className="page-title">{greeting()}</h1>
+        <p className="page-sub">Overview sistem TerraPOS. Logged in as <b>{email}</b></p>
+      </div>
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-label">Total Tenants</div>
-          <div className="stat-value" style={{ color: "var(--brand)" }}>
-            {loadingStats ? "..." : stats.tenants}
+          <div className="stat-label">Tenants</div>
+          <div className="stat-value" style={{ color: "var(--brand2)" }}>
+            {loadingStats ? <span className="animate-pulse">--</span> : stats.tenants}
           </div>
           <div className="stat-note">Outlet terdaftar</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Total Users</div>
-          <div className="stat-value" style={{ color: "var(--brand)" }}>
-            {loadingStats ? "..." : stats.users}
+          <div className="stat-label">Users</div>
+          <div className="stat-value" style={{ color: "var(--brand2)" }}>
+            {loadingStats ? <span className="animate-pulse">--</span> : stats.users}
           </div>
           <div className="stat-note">Akun terdaftar</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Firebase Plan</div>
-          <div className="stat-value" style={{ fontSize: 18 }}>Spark (Free)</div>
-          <div className="stat-note">50K reads, 20K writes/day</div>
+          <div className="stat-label">Plan</div>
+          <div className="stat-value" style={{ fontSize: 20, color: "var(--warning)" }}>Spark</div>
+          <div className="stat-note">Free tier Firebase</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Server</div>
-          <div className="stat-value" style={{ fontSize: 16 }}>npos.gtomodachi.fun</div>
-          <div className="stat-note">VPS + PM2 + Nginx</div>
+          <div className="stat-label">Status</div>
+          <div className="stat-value" style={{ fontSize: 20, color: "var(--success)" }}>Online</div>
+          <div className="stat-note">npos.gtomodachi.fun</div>
         </div>
       </div>
 
+      {/* Environment Info */}
       <div className="card">
-        <div className="card-title">Quick Info</div>
-        <div className="card-sub">Informasi environment dan status.</div>
-        <table>
-          <tbody>
-            <tr><th>App</th><td>TerraPOS (POS SaaS multi-tenant)</td></tr>
-            <tr><th>Frontend</th><td>Next.js 16 + React 19 + TypeScript</td></tr>
-            <tr><th>Backend</th><td>Firebase Firestore + Auth</td></tr>
-            <tr><th>Deploy</th><td>VPS, PM2 "terrapos" port 3000, Dev Panel port 3001</td></tr>
-            <tr><th>Domain</th><td>npos.gtomodachi.fun</td></tr>
-            <tr><th>Dev Panel</th><td>/dev-panel (this app)</td></tr>
-            <tr><th>Developer</th><td>{email}</td></tr>
-            <tr><th>Timestamp</th><td>{new Date().toLocaleString("id-ID")}</td></tr>
-          </tbody>
-        </table>
+        <div className="card-title">Environment</div>
+        <div className="card-sub">Stack dan konfigurasi sistem.</div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <InfoRow label="Frontend" value="Next.js 16 + React 19" />
+          <InfoRow label="Backend" value="Firebase Firestore + Auth" />
+          <InfoRow label="Deploy" value="VPS + PM2 + Nginx" />
+          <InfoRow label="Domain" value="npos.gtomodachi.fun" />
+          <InfoRow label="Web Port" value="3000" />
+          <InfoRow label="Dev Panel Port" value="3001" />
+          <InfoRow label="Mobile" value="Capacitor 6 (Server Mode)" />
+          <InfoRow label="Developer" value={email} />
+        </div>
       </div>
 
+      {/* Quota */}
       <div className="card">
-        <div className="card-title">Firestore Limits (Spark Plan)</div>
-        <div className="card-sub">Daily quota resets at midnight Pacific Time (~14:00 WIB).</div>
-        <table>
-          <thead>
-            <tr><th>Resource</th><th>Limit</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Document Reads</td><td><b>50,000 / hari</b></td></tr>
-            <tr><td>Document Writes</td><td><b>20,000 / hari</b></td></tr>
-            <tr><td>Document Deletes</td><td><b>20,000 / hari</b></td></tr>
-            <tr><td>Stored Data</td><td><b>1 GiB</b></td></tr>
-            <tr><td>Outbound Transfer</td><td><b>10 GiB / bulan</b></td></tr>
-            <tr><td>Cloud Functions</td><td style={{ color: "var(--danger)" }}>Tidak tersedia (butuh Blaze)</td></tr>
-          </tbody>
-        </table>
+        <div className="card-title">Firestore Quota (Spark)</div>
+        <div className="card-sub">Daily limits — resets at ~14:00 WIB.</div>
+
+        <div style={{ display: "grid", gap: 14 }}>
+          <QuotaBar label="Document Reads" limit="50,000 / hari" percent={0} color="var(--brand)" />
+          <QuotaBar label="Document Writes" limit="20,000 / hari" percent={0} color="var(--success)" />
+          <QuotaBar label="Document Deletes" limit="20,000 / hari" percent={0} color="var(--warning)" />
+          <QuotaBar label="Storage" limit="1 GiB" percent={0} color="var(--brand2)" />
+        </div>
+
+        <div style={{ marginTop: 16, padding: "10px 14px", background: "var(--dangerSoft)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(239,68,68,0.15)" }}>
+          <span style={{ fontSize: 12, color: "var(--danger)", fontWeight: 600 }}>
+            Cloud Functions tidak tersedia (butuh Blaze plan)
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: "10px 14px",
+      background: "rgba(255,255,255,0.02)",
+      borderRadius: "var(--radius-sm)",
+      border: "1px solid var(--border)",
+    }}>
+      <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.3px", minWidth: 90 }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function QuotaBar({ label, limit, percent, color }: { label: string; limit: string; percent: number; color: string }) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{label}</span>
+        <span style={{ fontSize: 11, color: "var(--muted)" }}>{limit}</span>
+      </div>
+      <div className="progress">
+        <div className="progress-bar" style={{ width: `${Math.max(percent, 2)}%`, background: color }} />
       </div>
     </div>
   );
