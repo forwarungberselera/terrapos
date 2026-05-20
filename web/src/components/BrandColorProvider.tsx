@@ -74,25 +74,9 @@ export default function BrandColorProvider() {
       }
     });
 
-    // 4. Watch theme changes (MutationObserver pada data-theme attribute)
-    const observer = new MutationObserver(() => {
-      try {
-        const cached = getCachedBrandColors();
-        applyBrandColorsToCSS(cached || DEFAULT_BRAND_COLORS);
-      } catch {
-        applyBrandColorsToCSS(DEFAULT_BRAND_COLORS);
-      }
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-
     return () => {
       unsubColors();
       unsubReload();
-      observer.disconnect();
     };
   }, []);
 

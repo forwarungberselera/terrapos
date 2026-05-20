@@ -33,18 +33,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id">
       <head>
         {/* Preconnect to font CDNs for faster loading */}
         <link rel="preconnect" href="https://db.onlinewebfonts.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Inline script to prevent dark mode flash (FOUC) */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("terrapos_theme");if(t==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})()`,
-          }}
-        />
       </head>
       <body>
         <ErrorBoundary>

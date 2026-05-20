@@ -427,24 +427,13 @@ export function applyBrandColorsToCSS(colors: BrandColorConfig) {
   root.style.setProperty("--success", colors.success);
   root.style.setProperty("--warning", colors.warning);
 
-  // Mode-specific: check current theme
-  const isDark = root.getAttribute("data-theme") === "dark";
-
-  if (isDark) {
-    root.style.setProperty("--bg", colors.bgDark);
-    root.style.setProperty("--panel", colors.panelDark);
-    root.style.setProperty("--border", colors.borderDark);
-    root.style.setProperty("--text", colors.textDark);
-    root.style.setProperty("--muted", colors.mutedDark);
-    root.style.setProperty("--input-bg", colors.inputBgDark);
-  } else {
-    root.style.setProperty("--bg", colors.bgLight);
-    root.style.setProperty("--panel", colors.panelLight);
-    root.style.setProperty("--border", colors.borderLight);
-    root.style.setProperty("--text", colors.textLight);
-    root.style.setProperty("--muted", colors.mutedLight);
-    root.style.setProperty("--input-bg", colors.inputBgLight);
-  }
+  // Mode-specific: always light mode
+  root.style.setProperty("--bg", colors.bgLight);
+  root.style.setProperty("--panel", colors.panelLight);
+  root.style.setProperty("--border", colors.borderLight);
+  root.style.setProperty("--text", colors.textLight);
+  root.style.setProperty("--muted", colors.mutedLight);
+  root.style.setProperty("--input-bg", colors.inputBgLight);
 }
 
 // ============ FORCE RELOAD ============

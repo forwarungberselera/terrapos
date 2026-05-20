@@ -28,7 +28,6 @@ import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
 import { logAudit } from "@/lib/audit";
-import ThemeToggle from "@/components/ThemeToggle";
 
 type Product = { id: string; name: string; category: string; price: number; isActive?: boolean };
 type CartItem = {
@@ -819,7 +818,6 @@ export default function POSPage() {
           <div className="spacer" />
 
           <div className="topnav">
-            <ThemeToggle />
             <button className="btn" onClick={() => r.push("/orders")}>Orders</button>
             <button className="btn hide-mobile" onClick={() => r.push("/shifts")}>Shift</button>
             <button className="btn hide-mobile" onClick={() => r.push("/printer")}>Printer</button>
