@@ -938,7 +938,6 @@ export default function DashboardPage() {
             <div className={`sidecategory ${!sideOpen.management ? "collapsed" : ""}`}>
               <div className="sidecategory-inner">
                 <button className="sidebtn" onClick={() => r.push("/products")}>Products</button>
-                <button className="sidebtn" onClick={() => r.push("/members")}>Members</button>
                 <button className="sidebtn" onClick={() => r.push("/staff")}>Staff</button>
                 <button className="sidebtn" onClick={() => r.push("/promos")}>Promo</button>
               </div>
@@ -962,6 +961,7 @@ export default function DashboardPage() {
             <div className={`sidecategory ${!sideOpen.settings ? "collapsed" : ""}`}>
               <div className="sidecategory-inner">
                 <button className="sidebtn" onClick={() => r.push("/printer")}>Printer</button>
+                <button className="sidebtn" onClick={() => r.push("/refund-pin")}>PIN Refund</button>
                 <button className="sidebtn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
                 <button className="sidebtn" onClick={() => signOut(auth).then(() => r.push("/login"))}>
                   Logout
@@ -1060,54 +1060,6 @@ export default function DashboardPage() {
 
           <section className="content-grid">
             <div style={{ display: "grid", gap: 16 }}>
-              <div className="panel">
-                <div className="panel-title">Quick Actions</div>
-                <div className="panel-sub">Shortcut untuk kerja admin yang lebih cepat.</div>
-
-                <div className="quick-grid">
-                  <button className="quickbtn" onClick={() => r.push("/orders")}>
-                    <div className="quicktitle">Orders</div>
-                    <div className="quickdesc">Pantau order OPEN dan PAID.</div>
-                  </button>
-                  <button className="quickbtn" onClick={() => r.push("/shifts")}>
-                    <div className="quicktitle">Shift</div>
-                    <div className="quickdesc">Buka shift, tutup shift, dan cek kas sesi aktif.</div>
-                  </button>
-                  <button className="quickbtn" onClick={() => r.push("/products")}>
-                    <div className="quicktitle">Products</div>
-                    <div className="quickdesc">Kelola menu, harga, dan kategori.</div>
-                  </button>
-                  <button className="quickbtn" onClick={() => r.push("/members")}>
-                    <div className="quicktitle">Members</div>
-                    <div className="quickdesc">Kelola pelanggan dan loyalty.</div>
-                  </button>
-                  <button className="quickbtn" onClick={() => r.push("/staff")}>
-                    <div className="quicktitle">Staff</div>
-                    <div className="quickdesc">Kelola role dan user outlet.</div>
-                  </button>
-                  <button className="quickbtn" onClick={() => r.push("/printer")}>
-                    <div className="quicktitle">Printer</div>
-                    <div className="quickdesc">Tes print dan mode RawBT.</div>
-                  </button>
-                  <button className="quickbtn" onClick={() => r.push("/reports")}>
-                    <div className="quicktitle">Reports</div>
-                    <div className="quickdesc">Export Excel dan rekap penjualan.</div>
-                  </button>
-                  <button className="quickbtn" onClick={() => r.push("/qr")}>
-                    <div className="quicktitle">QR Meja</div>
-                    <div className="quickdesc">Generate QR untuk meja resto.</div>
-                  </button>
-                  <button className="quickbtn" onClick={() => r.push("/setup")}>
-                    <div className="quicktitle">Ganti Tenant</div>
-                    <div className="quickdesc">Pindah outlet / tenant aktif.</div>
-                  </button>
-                  <button className="quickbtn" onClick={() => r.push("/pos")}>
-                    <div className="quicktitle">Buka POS</div>
-                    <div className="quickdesc">Masuk ke mode kasir.</div>
-                  </button>
-                </div>
-              </div>
-
               <div className="two-col">
                 <div className="panel">
                   <div className="panel-title">Grafik Omzet 7 Hari</div>
@@ -1293,34 +1245,6 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                <div style={{ marginTop: 12 }}>
-                  <div className="small">PIN Refund Baru</div>
-                  <input
-                    className="input"
-                    type="password"
-                    value={refundPinInput}
-                    onChange={(e) => setRefundPinInput(e.target.value)}
-                    disabled={!isOwner}
-                    placeholder="Contoh: 123456"
-                  />
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <div className="small">Konfirmasi PIN Refund Baru</div>
-                  <input
-                    className="input"
-                    type="password"
-                    value={confirmRefundPinInput}
-                    onChange={(e) => setConfirmRefundPinInput(e.target.value)}
-                    disabled={!isOwner}
-                    placeholder="Ulangi PIN refund"
-                  />
-                </div>
-
-                <div className="small" style={{ marginTop: 8 }}>
-                  PIN refund tidak ditampilkan lagi di client setelah disimpan.
-                </div>
-
                 {saveMsg && <div style={{ marginTop: 12, fontWeight: 900 }}>{saveMsg}</div>}
 
                 <button
@@ -1330,15 +1254,6 @@ export default function DashboardPage() {
                   disabled={!isOwner || saving}
                 >
                   {saving ? "Menyimpan..." : "Simpan Kustomisasi"}
-                </button>
-
-                <button
-                  className="btn"
-                  style={{ width: "100%", marginTop: 10 }}
-                  onClick={saveRefundPin}
-                  disabled={!isOwner || savingPin}
-                >
-                  {savingPin ? "Menyimpan PIN Refund..." : "Simpan PIN Refund Baru"}
                 </button>
 
                 {!isOwner && (
@@ -1392,11 +1307,6 @@ ${footer || "Terima kasih."}`}
                   <div className="mini-box">
                     <div className="mini-label">Mode Print</div>
                     <div className="mini-value">{printMode === "rawbt" ? "RawBT" : "Browser"}</div>
-                  </div>
-
-                  <div className="mini-box">
-                    <div className="mini-label">PIN Refund</div>
-                    <div className="mini-value">Dikelola Server</div>
                   </div>
                 </div>
               </div>
