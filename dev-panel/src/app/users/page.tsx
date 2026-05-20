@@ -1,8 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db, auth } from "@/lib/firebase";
-import { collection, getDocs, doc, deleteDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  getDocs,
+  doc,
+  deleteDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  getDoc,
+} from "firebase/firestore";
 import { createUserWithEmailAndPassword, updateProfile, getAuth } from "firebase/auth";
 import { initializeApp, getApps } from "firebase/app";
 
@@ -10,12 +19,30 @@ interface UserDoc {
   uid: string;
   email: string;
   name: string;
+  level: string;
 }
+
+interface TenantDoc {
+  id: string;
+  name: string;
+}
+
+const LEVEL_OPTIONS = ["free", "basic", "premium", "owner"] as const;
+const ROLE_OPTIONS = ["staff", "admin", "owner"] as const;
+
+const LEVEL_COLORS: Record<string, string> = {
+  free: "#6b7280",
+  basic: "#3b82f6",
+  premium: "#f59e0b",
+  owner: "#10b981",
+};
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserDoc[]>([]);
+  const [tenants, setTenants] = useState<TenantDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [updatingLevel, setUpdatingLevel] = useState<string | null>(null);
 
   // Create user form
   const [newName, setNewName] = useState("");
@@ -23,6 +50,13 @@ export default function UsersPage() {
   const [newPass, setNewPass] = useState("");
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState("");
+
+  // Assign tenant modal
+  const [assignUser, setAssignUser] = useState<UserDoc | null>(null);
+  const [assignTenantId, setAssignTenantId] = useState("");
+  const [assignRole, setAssignRole] = useState<string>("staff");
+  const [assigning, setAssigning] = useState(false);
+  const [assignMsg, setAssignMsg] = useState("");
 
   const loadUsers = async () => {
     setLoading(true);
@@ -32,8 +66,9 @@ export default function UsersPage() {
         const data = d.data();
         return {
           uid: d.id,
-          email: data.email || "—",
-          name: data.name || data.displayName || "—",
+          email: data.email || "\u2014",
+          name: data.name || data.displayName || "\u2014",
+          level: data.level || "free",
         };
       });
       setUsers(list);
@@ -44,8 +79,25 @@ export default function UsersPage() {
     }
   };
 
+  const loadTenants = async () => {
+    try {
+      const snap = await getDocs(collection(db, "tenants"));
+      const list: TenantDoc[] = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name || data.storeName || d.id,
+        };
+      });
+      setTenants(list);
+    } catch (e) {
+      console.error("Failed to load tenants:", e);
+    }
+  };
+
   useEffect(() => {
     loadUsers();
+    loadTenants();
   }, []);
 
   const handleDelete = async (uid: string, email: string) => {
@@ -61,6 +113,23 @@ export default function UsersPage() {
       alert("Gagal hapus: " + (e?.message || ""));
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleSetLevel = async (uid: string, newLevel: string) => {
+    setUpdatingLevel(uid);
+    try {
+      await updateDoc(doc(db, "users", uid), {
+        level: newLevel,
+        updatedAt: serverTimestamp(),
+      });
+      setUsers((prev) =>
+        prev.map((u) => (u.uid === uid ? { ...u, level: newLevel } : u))
+      );
+    } catch (e: any) {
+      alert("Gagal update level: " + (e?.message || ""));
+    } finally {
+      setUpdatingLevel(null);
     }
   };
 
@@ -82,7 +151,6 @@ export default function UsersPage() {
     setCreateMsg("");
 
     try {
-      // Use secondary app to avoid logging out current developer
       let secondaryApp = getApps().find((a) => a.name === "secondary");
       if (!secondaryApp) {
         const primaryApp = getApps()[0];
@@ -93,11 +161,11 @@ export default function UsersPage() {
       const cred = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
       await updateProfile(cred.user, { displayName: name });
 
-      // Save to Firestore
       await setDoc(doc(db, `users/${cred.user.uid}`), {
         uid: cred.user.uid,
         name,
         email,
+        level: "free",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         createdBy: "dev-panel",
@@ -117,10 +185,135 @@ export default function UsersPage() {
     }
   };
 
+  const handleAssignTenant = async () => {
+    if (!assignUser || !assignTenantId) {
+      setAssignMsg("Pilih tenant terlebih dahulu.");
+      return;
+    }
+
+    setAssigning(true);
+    setAssignMsg("");
+
+    try {
+      const uid = assignUser.uid;
+      const tenantId = assignTenantId;
+      const role = assignRole;
+
+      // Get tenant name
+      const tenantSnap = await getDoc(doc(db, `tenants/${tenantId}`));
+      const tenantName = tenantSnap.exists()
+        ? (tenantSnap.data().name || tenantSnap.data().storeName || tenantId)
+        : tenantId;
+
+      // Create tenantMemberships/{tenantId} di users/{uid}
+      await setDoc(doc(db, `users/${uid}/tenantMemberships/${tenantId}`), {
+        tenantId,
+        name: tenantName,
+        role,
+        assignedBy: "dev-panel",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      // Create staff/{uid} di tenants/{tenantId}
+      await setDoc(doc(db, `tenants/${tenantId}/staff/${uid}`), {
+        uid,
+        email: assignUser.email,
+        name: assignUser.name,
+        role,
+        assignedBy: "dev-panel",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      setAssignMsg(`Berhasil assign "${assignUser.email}" ke tenant "${tenantName}" sebagai ${role}!`);
+      setAssignTenantId("");
+      setAssignRole("staff");
+    } catch (e: any) {
+      setAssignMsg("Gagal: " + (e?.message || ""));
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   return (
     <div>
+      <style>{`
+        .level-select{
+          padding:4px 8px;
+          border-radius:6px;
+          border:1px solid var(--border);
+          background:var(--bg);
+          color:var(--text);
+          font-size:12px;
+          font-weight:600;
+          cursor:pointer;
+        }
+        .level-badge{
+          display:inline-block;
+          padding:2px 8px;
+          border-radius:4px;
+          font-size:11px;
+          font-weight:700;
+          text-transform:uppercase;
+          color:#fff;
+        }
+        .modal-overlay{
+          position:fixed;
+          inset:0;
+          background:rgba(0,0,0,0.6);
+          display:grid;
+          place-items:center;
+          z-index:9999;
+          padding:16px;
+        }
+        .modal-card{
+          background:var(--panel);
+          border:1px solid var(--border);
+          border-radius:16px;
+          padding:24px;
+          max-width:480px;
+          width:100%;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .modal-title{
+          font-size:18px;
+          font-weight:800;
+          margin-bottom:4px;
+        }
+        .modal-sub{
+          font-size:13px;
+          color:var(--muted);
+          margin-bottom:16px;
+        }
+        .modal-field{
+          margin-bottom:12px;
+        }
+        .modal-field label{
+          display:block;
+          font-size:12px;
+          font-weight:600;
+          margin-bottom:4px;
+          color:var(--muted);
+        }
+        .modal-field select{
+          width:100%;
+          padding:10px 12px;
+          border-radius:8px;
+          border:1px solid var(--border);
+          background:var(--bg);
+          color:var(--text);
+          font-size:14px;
+        }
+        .modal-actions{
+          display:flex;
+          gap:8px;
+          margin-top:16px;
+        }
+      `}</style>
+
       <h1 className="page-title">User Manager</h1>
-      <p className="page-sub">Buat akun baru dan kelola user Firestore.</p>
+      <p className="page-sub">Buat akun, set level, dan assign tenant ke user.</p>
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -129,6 +322,13 @@ export default function UsersPage() {
             {loading ? "..." : users.length}
           </div>
           <div className="stat-note">Firestore user docs</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Total Tenants</div>
+          <div className="stat-value" style={{ color: "var(--success)" }}>
+            {tenants.length}
+          </div>
+          <div className="stat-note">Available for assignment</div>
         </div>
       </div>
 
@@ -191,10 +391,10 @@ export default function UsersPage() {
         <div className="row" style={{ marginBottom: 12 }}>
           <div className="card-title">User List</div>
           <div className="spacer" />
-          <button className="btn" onClick={loadUsers}>Refresh</button>
+          <button className="btn" onClick={() => { loadUsers(); loadTenants(); }}>Refresh</button>
         </div>
         <div className="card-sub">
-          Delete hanya hapus Firestore doc, bukan Firebase Auth account.
+          Set level user dan assign tenant. Delete hanya hapus Firestore doc.
         </div>
 
         {loading ? (
@@ -208,8 +408,9 @@ export default function UsersPage() {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
+                  <th>Level</th>
                   <th>UID</th>
-                  <th>Action</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -217,15 +418,41 @@ export default function UsersPage() {
                   <tr key={u.uid}>
                     <td><b>{u.name}</b></td>
                     <td>{u.email}</td>
-                    <td className="mono small">{u.uid.slice(0, 12)}...</td>
                     <td>
-                      <button
-                        className="btn btn-danger"
-                        onClick={() => handleDelete(u.uid, u.email)}
-                        disabled={deleting === u.uid}
+                      <select
+                        className="level-select"
+                        value={u.level}
+                        onChange={(e) => handleSetLevel(u.uid, e.target.value)}
+                        disabled={updatingLevel === u.uid}
+                        style={{ borderColor: LEVEL_COLORS[u.level] || "#6b7280" }}
                       >
-                        {deleting === u.uid ? "..." : "Delete"}
-                      </button>
+                        {LEVEL_OPTIONS.map((lv) => (
+                          <option key={lv} value={lv}>{lv.toUpperCase()}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="mono small">{u.uid.slice(0, 10)}...</td>
+                    <td>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          className="btn"
+                          onClick={() => {
+                            setAssignUser(u);
+                            setAssignMsg("");
+                            setAssignTenantId("");
+                            setAssignRole("staff");
+                          }}
+                        >
+                          Assign
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          onClick={() => handleDelete(u.uid, u.email)}
+                          disabled={deleting === u.uid}
+                        >
+                          {deleting === u.uid ? "..." : "Del"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -234,6 +461,67 @@ export default function UsersPage() {
           </div>
         )}
       </div>
+
+      {/* ASSIGN TENANT MODAL */}
+      {assignUser && (
+        <div className="modal-overlay" onClick={() => setAssignUser(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Assign Tenant</div>
+            <div className="modal-sub">
+              Assign tenant ke user <b>{assignUser.email}</b> ({assignUser.name})
+            </div>
+
+            <div className="modal-field">
+              <label>Pilih Tenant</label>
+              <select
+                value={assignTenantId}
+                onChange={(e) => setAssignTenantId(e.target.value)}
+              >
+                <option value="">-- Pilih Tenant --</option>
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="modal-field">
+              <label>Role di Tenant</label>
+              <select
+                value={assignRole}
+                onChange={(e) => setAssignRole(e.target.value)}
+              >
+                {ROLE_OPTIONS.map((role) => (
+                  <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+
+            {assignMsg && (
+              <p className="small" style={{ color: assignMsg.includes("Berhasil") ? "var(--success)" : "var(--danger)" }}>
+                {assignMsg}
+              </p>
+            )}
+
+            <div className="modal-actions">
+              <button
+                className="btn btn-primary"
+                onClick={handleAssignTenant}
+                disabled={assigning}
+                style={{ flex: 1 }}
+              >
+                {assigning ? "Assigning..." : "Assign Tenant"}
+              </button>
+              <button
+                className="btn"
+                onClick={() => setAssignUser(null)}
+                style={{ flex: 1 }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

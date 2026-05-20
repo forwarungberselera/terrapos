@@ -7,7 +7,7 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, doc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
 import TerraPage from "@/components/TerraPage";
 import { auth, db } from "@/lib/firebase";
 import {
@@ -72,13 +72,28 @@ export default function LoginPage() {
         clearCredentials();
       }
 
-      // Developer langsung ke /dev, user biasa ke /setup
+      // Developer langsung ke /dev, user biasa cek tenant membership
       const { checkIsDeveloper } = await import("@/lib/developer");
       const user = auth.currentUser;
       if (user) {
         const isDev = await checkIsDeveloper(user.uid, user.email || "");
         if (isDev) {
           r.push("/dev");
+          return;
+        }
+
+        // Cek apakah user punya tenant membership
+        try {
+          const membershipsSnap = await getDocs(
+            collection(db, `users/${user.uid}/tenantMemberships`)
+          );
+          if (membershipsSnap.empty) {
+            r.push("/waiting");
+            return;
+          }
+        } catch {
+          // Jika gagal cek, arahkan ke waiting (safe default)
+          r.push("/waiting");
           return;
         }
       }
@@ -124,13 +139,14 @@ export default function LoginPage() {
           uid: user.uid,
           name: name.trim(),
           email: user.email || email.trim(),
+          level: "free",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
 
-      r.push("/setup");
+      r.push("/waiting");
     } catch (e: any) {
       setErr(mapFirebaseError(e?.message || "Gagal daftar akun"));
     } finally {

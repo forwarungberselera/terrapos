@@ -72,7 +72,12 @@ service cloud.firestore {
     // ============ USERS ============
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      // User bisa update doc sendiri KECUALI field 'level' (hanya developer)
+      allow update: if isSignedIn() && (
+        request.auth.uid == userId && !("level" in request.resource.data && request.resource.data.level != resource.data.level)
+        || isDeveloper()
+      );
       allow delete: if isDeveloper();
 
       match /tenantMemberships/{tenantId} {
