@@ -589,6 +589,20 @@ export default function DashboardPage() {
           border-color:var(--brand2);
         }
         .sidebtn:active{ transform:scale(0.97); }
+        .sidelabel{
+          font-size:10px;
+          font-weight:800;
+          text-transform:uppercase;
+          letter-spacing:0.5px;
+          color:var(--muted);
+          padding:12px 0 4px;
+          border-top:1px solid var(--border);
+          margin-top:6px;
+        }
+        .sidelabel:first-of-type{
+          border-top:none;
+          margin-top:0;
+        }
         .maincol{
           display:grid;
           gap:14px;
@@ -858,17 +872,25 @@ export default function DashboardPage() {
           </div>
 
           <div className="sidegroup">
-            <button className="sidebtn" onClick={() => r.push("/pos")}>POS</button>
+            <button className="sidebtn" onClick={() => r.push("/pos")}>Buka POS</button>
+
+            <div className="sidelabel">Operasional</div>
             <button className="sidebtn" onClick={() => r.push("/orders")}>Orders</button>
             <button className="sidebtn" onClick={() => r.push("/shifts")}>Shift</button>
-            <button className="sidebtn" onClick={() => r.push("/reports")}>Reports</button>
+            <button className="sidebtn" onClick={() => r.push("/qr")}>QR Meja</button>
+
+            <div className="sidelabel">Management</div>
             <button className="sidebtn" onClick={() => r.push("/products")}>Products</button>
             <button className="sidebtn" onClick={() => r.push("/members")}>Members</button>
             <button className="sidebtn" onClick={() => r.push("/staff")}>Staff</button>
             <button className="sidebtn" onClick={() => r.push("/promos")}>Promo</button>
+
+            <div className="sidelabel">Laporan</div>
+            <button className="sidebtn" onClick={() => r.push("/reports")}>Reports</button>
             <button className="sidebtn" onClick={() => r.push("/audit")}>Audit Log</button>
+
+            <div className="sidelabel">Settings</div>
             <button className="sidebtn" onClick={() => r.push("/printer")}>Printer</button>
-            <button className="sidebtn" onClick={() => r.push("/qr")}>QR Meja</button>
             <button className="sidebtn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
             <button className="sidebtn" onClick={() => signOut(auth).then(() => r.push("/login"))}>
               Logout
