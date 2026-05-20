@@ -222,7 +222,7 @@ export default function POSPage() {
 
   useEffect(() => {
     if (!tenantId) return;
-    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"));
+    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"), limit(5));
     return onSnapshot(
       qy,
       (snap) => {
@@ -251,7 +251,7 @@ export default function POSPage() {
   useEffect(() => {
     if (!tenantId) return;
     const ref = collection(db, `tenants/${tenantId}/promos`);
-    const qy = query(ref, orderBy("createdAt", "desc"));
+    const qy = query(ref, where("isActive", "==", true), orderBy("createdAt", "desc"), limit(20));
     return onSnapshot(qy, (snap) => {
       const arr: ActivePromo[] = snap.docs
         .map((d) => {

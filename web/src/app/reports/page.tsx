@@ -112,10 +112,10 @@ export default function ReportsPage() {
     (async () => {
       try {
         const ref = collection(db, `tenants/${tenantId}/refunds`);
-        const qy = query(ref, where("createdAt", ">=", Timestamp.fromDate(dateRange.start)), where("createdAt", "<=", Timestamp.fromDate(dateRange.end)), orderBy("createdAt", "desc"));
+        const qy = query(ref, where("refundedAt", ">=", Timestamp.fromDate(dateRange.start)), where("refundedAt", "<=", Timestamp.fromDate(dateRange.end)), orderBy("refundedAt", "desc"));
         const snap = await getDocs(qy);
         if (cancelled) return;
-        setRefunds(snap.docs.map((d) => { const data = d.data() as any; return { id: d.id, orderNo: data.orderNo || "", total: Number(data.total || 0), reason: data.reason || data.description || "", refundedBy: data.refundedBy || data.userEmail || "", createdAt: data.createdAt }; }));
+        setRefunds(snap.docs.map((d) => { const data = d.data() as any; return { id: d.id, orderNo: data.orderNo || "", total: Number(data.total || 0), reason: data.reason || data.description || "", refundedBy: data.refundedByEmail || data.refundedBy || data.userEmail || "", createdAt: data.refundedAt }; }));
       } catch { if (!cancelled) setRefunds([]); }
     })();
     return () => { cancelled = true; };

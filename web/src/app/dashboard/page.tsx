@@ -11,6 +11,7 @@ import {
   collection,
   doc,
   getDoc,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -122,7 +123,7 @@ export default function DashboardPage() {
     if (!tenantId) return;
 
     const ref = collection(db, `tenants/${tenantId}/orders`);
-    const qy = query(ref, orderBy("createdAt", "desc"));
+    const qy = query(ref, orderBy("createdAt", "desc"), limit(500));
 
     return onSnapshot(
       qy,
@@ -154,7 +155,7 @@ export default function DashboardPage() {
     if (!tenantId) return;
 
     const refundsRef = collection(db, `tenants/${tenantId}/refunds`);
-    const refundsQuery = query(refundsRef, orderBy("refundedAt", "desc"));
+    const refundsQuery = query(refundsRef, orderBy("refundedAt", "desc"), limit(200));
 
     return onSnapshot(
       refundsQuery,
@@ -180,7 +181,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!tenantId) return;
-    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"));
+    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"), limit(20));
     return onSnapshot(
       qy,
       (snap) => {

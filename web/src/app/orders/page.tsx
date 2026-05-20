@@ -13,6 +13,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -185,7 +186,7 @@ export default function OrdersPage() {
   useEffect(() => {
     if (!tenantId) return;
     const ref = collection(db, `tenants/${tenantId}/orders`);
-    const qy = query(ref, orderBy("createdAt", "desc"));
+    const qy = query(ref, orderBy("createdAt", "desc"), limit(300));
     return onSnapshot(
       qy,
       (snap) => {
@@ -217,7 +218,7 @@ export default function OrdersPage() {
   useEffect(() => {
     if (!tenantId) return;
     const ref = collection(db, `tenants/${tenantId}/refunds`);
-    const qy = query(ref, orderBy("refundedAt", "desc"));
+    const qy = query(ref, orderBy("refundedAt", "desc"), limit(200));
     return onSnapshot(
       qy,
       (snap) => {
@@ -242,7 +243,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (!tenantId) return;
-    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"));
+    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"), limit(5));
     return onSnapshot(
       qy,
       (snap) => {

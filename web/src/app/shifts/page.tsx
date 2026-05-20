@@ -9,6 +9,7 @@ import { auth, db } from "@/lib/firebase";
 import {
   addDoc,
   collection,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -68,7 +69,7 @@ export default function ShiftsPage() {
 
   useEffect(() => {
     if (!tenantId) return;
-    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"));
+    const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"), limit(20));
     return onSnapshot(
       qy,
       (snap) => {
@@ -88,7 +89,7 @@ export default function ShiftsPage() {
 
   useEffect(() => {
     if (!tenantId) return;
-    const qy = query(collection(db, `tenants/${tenantId}/orders`), orderBy("createdAt", "desc"));
+    const qy = query(collection(db, `tenants/${tenantId}/orders`), orderBy("createdAt", "desc"), limit(300));
     return onSnapshot(
       qy,
       (snap) => {
