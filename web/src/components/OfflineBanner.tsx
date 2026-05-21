@@ -24,17 +24,18 @@ export default function OfflineBanner() {
     <div
       style={{
         position: "fixed",
-        top: 10,
-        left: "50%",
-        transform: "translateX(-50%)",
+        top: "calc(10px + var(--safe-top, 0px))",
+        left: 12,
+        right: 12,
         zIndex: 9999,
         background: "#111",
         color: "#fff",
-        padding: "10px 12px",
+        padding: "12px 14px",
         borderRadius: 12,
         fontWeight: 800,
         fontSize: 13,
         boxShadow: "0 10px 30px rgba(0,0,0,.2)",
+        textAlign: "center",
       }}
     >
       Offline. Transaksi tetap bisa dibuat, nanti otomatis sync saat online.

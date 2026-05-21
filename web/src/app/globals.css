@@ -306,6 +306,17 @@ input, select, button, textarea{
   .grid2{ gap: 12px; }
 }
 
+/* ===== MOBILE BOTTOM SHEET GLOBAL HELPERS ===== */
+@media (max-width: 768px) {
+  .mobile-stack .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mobile-stack .row .btn {
+    width: 100%;
+  }
+}
+
 
 
 /* ===== SCROLLBAR (subtle) ===== */
@@ -363,6 +374,45 @@ select:focus-visible {
 
 @media (min-width: 641px) {
   .show-mobile-only { display: none !important; }
+}
+
+/* ===== MOBILE NAVIGATION & TOUCH ENHANCEMENTS ===== */
+@media (max-width: 768px) {
+  /* Top nav becomes scrollable row */
+  .topnav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .topnav::-webkit-scrollbar { display: none; }
+  .topnav .btn { flex-shrink: 0; }
+
+  /* Card headers stack better on mobile */
+  .card > .row:first-child {
+    gap: 8px;
+  }
+
+  /* Ensure fixed bottom elements respect safe area */
+  [style*="position: fixed"][style*="bottom"] {
+    padding-bottom: var(--safe-bottom) !important;
+  }
+}
+
+/* ===== MOBILE THUMB-FRIENDLY TOUCH ZONES ===== */
+@media (max-width: 768px) {
+  /* Larger touch targets for interactive elements */
+  .badge {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  /* Better spacing for form sections */
+  .card .small + .input,
+  .card .small + textarea {
+    margin-top: 6px;
+  }
 }
 
 /* ===== PERFORMANCE: reduce motion ===== */

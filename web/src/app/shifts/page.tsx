@@ -599,29 +599,40 @@ export default function ShiftsPage() {
 
       {/* Modal: Konfirmasi Buka Shift */}
       {showOpenConfirm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div className="card" style={{ maxWidth: 400, width: "90%", padding: 24 }}>
-            <div className="h1">Konfirmasi Buka Shift</div>
-            <div style={{ marginTop: 12, fontSize: 14 }}>
-              <div><b>Kas Awal:</b> Rp {rupiah(Number(openingCash || 0))}</div>
-              {openingNote.trim() && <div style={{ marginTop: 6 }}><b>Catatan:</b> {openingNote.trim()}</div>}
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { setShowOpenConfirm(false); openShift(); }} disabled={saving}>
-                Konfirmasi
-              </button>
-              <button className="btn" style={{ flex: 1 }} onClick={() => setShowOpenConfirm(false)}>
-                Batal
-              </button>
+        <>
+          <style>{`
+            .shift-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;animation:fadeIn 0.2s ease;}
+            .shift-modal-panel{max-width:400px;width:90%;padding:24px;}
+            @media(max-width:768px){
+              .shift-modal-overlay{align-items:flex-end;}
+              .shift-modal-panel{max-width:100%;width:100%;border-radius:20px 20px 0 0 !important;padding:20px 16px calc(20px + var(--safe-bottom,0px)) !important;animation:slideUp 0.25s ease;}
+              .shift-modal-panel::before{content:'';display:block;width:36px;height:4px;border-radius:999px;background:var(--border);margin:0 auto 12px;}
+            }
+          `}</style>
+          <div className="shift-modal-overlay">
+            <div className="card shift-modal-panel">
+              <div className="h1">Konfirmasi Buka Shift</div>
+              <div style={{ marginTop: 12, fontSize: 14 }}>
+                <div><b>Kas Awal:</b> Rp {rupiah(Number(openingCash || 0))}</div>
+                {openingNote.trim() && <div style={{ marginTop: 6 }}><b>Catatan:</b> {openingNote.trim()}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { setShowOpenConfirm(false); openShift(); }} disabled={saving}>
+                  Konfirmasi
+                </button>
+                <button className="btn" style={{ flex: 1 }} onClick={() => setShowOpenConfirm(false)}>
+                  Batal
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Modal: Shift Berhasil Ditutup */}
       {closeSuccessDialog && pendingPrintData && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div className="card" style={{ maxWidth: 420, width: "90%", padding: 24 }}>
+        <div className="shift-modal-overlay">
+          <div className="card shift-modal-panel" style={{ maxWidth: 420 }}>
             <div style={{ textAlign: "center", marginBottom: 12 }}>
               <span style={{ fontSize: 40 }}>✓</span>
             </div>

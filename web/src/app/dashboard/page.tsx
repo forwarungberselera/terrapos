@@ -565,6 +565,17 @@ export default function DashboardPage() {
           .sidebar .sidegroup{ display:grid; gap:8px; }
           .sidebar .sidebtn{ width:100%; }
         }
+        @media (max-width: 640px){
+          .sidebar{
+            padding:12px;
+            border-radius:var(--radius);
+          }
+          .sidebar .brandbox{ padding:10px; }
+          .brandtitle{ font-size:16px; }
+          .brandsub{ font-size:10px; }
+          .sidebtn{ padding:10px 12px; font-size:12px; }
+          .sidelabel{ font-size:9px; padding:8px 0 3px; }
+        }
         .brandbox{
           padding:14px;
           border-radius: var(--radius);
@@ -676,7 +687,7 @@ export default function DashboardPage() {
           line-height:1.1;
           color:var(--text);
         }
-        @media (max-width: 640px){ .hero-title{ font-size:20px; } }
+        @media (max-width: 640px){ .hero-title{ font-size:18px; } }
         .hero-sub{
           margin-top:6px;
           color:var(--muted);
@@ -695,6 +706,12 @@ export default function DashboardPage() {
           font-size:11px;
           font-weight:800;
           color:var(--text);
+        }
+        @media (max-width: 640px){
+          .hero{ padding:14px; }
+          .hero-top{ gap:10px; }
+          .hero-badges{ gap:6px; }
+          .hero-badges .badge{ padding:5px 8px; font-size:10px; }
         }
         .stats-grid{
           display:grid;
@@ -734,7 +751,12 @@ export default function DashboardPage() {
           color:var(--text);
           font-family:var(--font-mono);
         }
-        @media (max-width: 640px){ .stat-value{ font-size:18px; } }
+        @media (max-width: 640px){
+          .stat-card{ padding:12px; }
+          .stat-value{ font-size:16px; }
+          .stat-label{ font-size:10px; }
+          .stat-note{ font-size:10px; }
+        }
         .stat-note{
           margin-top:6px;
           font-size:11px;
@@ -788,6 +810,10 @@ export default function DashboardPage() {
         .quickbtn:active{ transform:scale(0.97); }
         .quicktitle{ font-weight:800; font-size:14px; color:var(--text); }
         .quickdesc{ margin-top:4px; font-size:11px; color:var(--muted); line-height:1.4; }
+        @media (max-width: 640px){
+          .quickbtn{ padding:14px 12px; }
+          .quicktitle{ font-size:13px; }
+        }
         .two-col{
           display:grid;
           grid-template-columns: 1fr 1fr;
@@ -798,6 +824,10 @@ export default function DashboardPage() {
         th, td{ padding:10px 8px; border-bottom:1px solid var(--border); text-align:left; font-size:13px; }
         th{ font-size:11px; color:var(--muted); font-weight:800; text-transform:uppercase; }
         td{ color:var(--text); }
+        @media (max-width: 640px){
+          th, td{ padding:8px 6px; font-size:12px; }
+          th{ font-size:10px; }
+        }
         .receipt-preview{
           margin-top:12px;
           border:1px dashed var(--border);

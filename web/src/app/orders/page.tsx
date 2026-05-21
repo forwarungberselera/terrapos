@@ -875,7 +875,7 @@ export default function OrdersPage() {
             border-radius:20px 20px 0 0;
             max-height:85vh;
             overflow-y:auto;
-            padding:20px 16px 32px;
+            padding:20px 16px calc(20px + var(--safe-bottom,0px));
             animation:orderSlideUp 0.25s ease;
             box-shadow:0 -8px 30px rgba(0,0,0,0.2);
           }
@@ -889,6 +889,61 @@ export default function OrdersPage() {
           .order-pay-mobile .pay-nom-grid .btn{
             padding:8px 10px;font-size:12px;font-weight:500;
             font-family:var(--font-mono);letter-spacing:-0.3px;
+          }
+        }
+
+        /* Generic order modal → bottom sheet on mobile */
+        .order-modal-overlay{
+          position:fixed;inset:0;z-index:55;
+          background:rgba(0,0,0,0.5);
+          display:grid;place-items:center;
+          padding:16px;
+          animation:orderFadeIn 0.2s ease;
+        }
+        .order-modal-panel{
+          width:520px;max-width:100%;
+        }
+        @media (max-width: 768px){
+          .order-modal-overlay{
+            align-items:flex-end;
+            padding:0;
+          }
+          .order-modal-panel{
+            width:100%;max-width:100%;
+            border-radius:20px 20px 0 0 !important;
+            padding:20px 16px calc(20px + var(--safe-bottom,0px)) !important;
+            animation:orderSlideUp 0.25s ease;
+            max-height:85vh;
+            overflow-y:auto;
+          }
+          .order-modal-panel::before{
+            content:'';display:block;
+            width:36px;height:4px;border-radius:999px;
+            background:var(--border);margin:0 auto 12px;
+          }
+        }
+
+        /* Success dialog → bottom sheet on mobile */
+        .order-success-overlay{
+          position:fixed;inset:0;z-index:90;
+          background:rgba(0,0,0,0.6);
+          display:grid;place-items:center;
+          padding:16px;
+          animation:orderFadeIn 0.2s ease;
+        }
+        .order-success-panel{
+          width:440px;max-width:100%;text-align:center;
+        }
+        @media (max-width: 768px){
+          .order-success-overlay{
+            align-items:flex-end;
+            padding:0;
+          }
+          .order-success-panel{
+            width:100%;max-width:100%;
+            border-radius:20px 20px 0 0 !important;
+            padding:24px 16px calc(24px + var(--safe-bottom,0px)) !important;
+            animation:orderSlideUp 0.25s ease;
           }
         }
       `}</style>
@@ -1325,18 +1380,8 @@ export default function OrdersPage() {
       )}
 
       {refundOpen && refundOrder && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-            zIndex: 60,
-          }}
-        >
-          <div className="card" style={{ width: 520, maxWidth: "100%" }}>
+        <div className="order-modal-overlay">
+          <div className="card order-modal-panel">
             <div className="row">
               <div className="h1">Refund Order</div>
               <div className="spacer" />
@@ -1398,18 +1443,8 @@ export default function OrdersPage() {
       )}
 
       {voidOpen && voidOrder && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-            zIndex: 55,
-          }}
-        >
-          <div className="card" style={{ width: 520, maxWidth: "100%" }}>
+        <div className="order-modal-overlay">
+          <div className="card order-modal-panel">
             <div className="row">
               <div className="h1">Batalkan Order</div>
               <div className="spacer" />
@@ -1459,18 +1494,8 @@ export default function OrdersPage() {
       )}
 
       {shiftPromptOpen && !activeShift && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-            zIndex: 70,
-          }}
-        >
-          <div className="card" style={{ width: 520, maxWidth: "100%" }}>
+        <div className="order-modal-overlay" style={{ zIndex: 70 }}>
+          <div className="card order-modal-panel">
             <div className="h1">Shift Belum Dibuka</div>
             <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
               Open bill belum bisa dibayar karena belum ada shift aktif. Shift perlu dibuka dulu supaya pembayaran masuk ke sesi kasir yang benar.
@@ -1491,10 +1516,10 @@ export default function OrdersPage() {
             </div>
 
             <div className="row" style={{ marginTop: 16 }}>
-              <button className="btn btn-primary" onClick={() => r.push("/shifts")}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => r.push("/shifts")}>
                 Buka Halaman Shift
               </button>
-              <button className="btn" onClick={() => setShiftPromptOpen(false)}>
+              <button className="btn" style={{ flex: 1 }} onClick={() => setShiftPromptOpen(false)}>
                 Tutup
               </button>
             </div>
@@ -1503,8 +1528,8 @@ export default function OrdersPage() {
       )}
 
       {paySuccessDialog && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", padding: 16, zIndex: 90 }}>
-          <div className="card" style={{ width: 440, maxWidth: "100%", textAlign: "center" }}>
+        <div className="order-success-overlay">
+          <div className="card order-success-panel">
             <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
             <div className="h1" style={{ color: "var(--brand)" }}>Pembayaran Berhasil</div>
             <div className="small" style={{ marginTop: 8, lineHeight: 1.6 }}>
@@ -1525,10 +1550,10 @@ export default function OrdersPage() {
             </div>
 
             <div className="row" style={{ marginTop: 12, justifyContent: "center", gap: 10 }}>
-              <button className="btn btn-primary" style={{ padding: "12px 24px", fontSize: 14, fontWeight: 800 }} onClick={handlePaySuccessPrint}>
+              <button className="btn btn-primary" style={{ flex: 1, padding: "14px 24px", fontSize: 14, fontWeight: 800 }} onClick={handlePaySuccessPrint}>
                 Cetak Struk
               </button>
-              <button className="btn" style={{ padding: "12px 24px", fontSize: 14 }} onClick={handlePaySuccessSkip}>
+              <button className="btn" style={{ flex: 1, padding: "14px 24px", fontSize: 14 }} onClick={handlePaySuccessSkip}>
                 Lewati
               </button>
             </div>
