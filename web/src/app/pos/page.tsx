@@ -945,6 +945,29 @@ export default function POSPage() {
             font-family:var(--font-mono);letter-spacing:-0.3px;
           }
         }
+
+        /* Bill success popup: desktop modal vs mobile bottom sheet */
+        .bill-success-desktop{ display:grid; }
+        .bill-success-mobile-overlay{ display:none; }
+        .bill-success-mobile{ display:none !important; }
+        @media (max-width: 980px){
+          .bill-success-desktop{ display:none !important; }
+          .bill-success-mobile-overlay{
+            display:block;
+            position:fixed;inset:0;z-index:90;
+            background:rgba(0,0,0,0.6);
+            animation:fadeIn 0.2s ease;
+          }
+          .bill-success-mobile{
+            display:block !important;
+            position:fixed;bottom:0;left:0;right:0;z-index:91;
+            background:var(--panel);
+            border-radius:24px 24px 0 0;
+            padding:20px 20px 40px;
+            animation:slideUp 0.25s ease;
+            box-shadow:0 -12px 40px rgba(0,0,0,0.25);
+          }
+        }
       `}</style>
 
       <div className="card">
@@ -1650,8 +1673,9 @@ export default function POSPage() {
         </div>
       )}
 
+      {/* BILL SUCCESS - DESKTOP (centered modal) */}
       {billSuccessDialog && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", padding: 16, zIndex: 90 }}>
+        <div className="bill-success-desktop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", padding: 16, zIndex: 90 }}>
           <div className="card" style={{ width: 440, maxWidth: "100%", textAlign: "center" }}>
             <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
             <div className="h1" style={{ color: "var(--brand)" }}>Order Tersimpan</div>
@@ -1671,6 +1695,34 @@ export default function POSPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* BILL SUCCESS - MOBILE (bottom sheet) */}
+      {billSuccessDialog && (
+        <>
+          <div className="bill-success-mobile-overlay" />
+          <div className="bill-success-mobile">
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 20px" }} />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 56, marginBottom: 8 }}>&#10003;</div>
+              <div className="h1" style={{ color: "var(--brand)", fontSize: 22 }}>Order Tersimpan</div>
+              <div className="small" style={{ marginTop: 10, lineHeight: 1.7, fontSize: 14 }}>
+                Order <b>{billSuccessDialog.orderNo}</b> berhasil disimpan sebagai open bill.
+              </div>
+              <div style={{ marginTop: 20, fontSize: 14, color: "var(--muted)" }}>
+                Cetak bill untuk pelanggan?
+              </div>
+              <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+                <button className="btn btn-primary" style={{ width: "100%", padding: "16px 0", fontSize: 16, fontWeight: 800 }} onClick={handleBillPrint}>
+                  Cetak Bill
+                </button>
+                <button className="btn" style={{ width: "100%", padding: "14px 0", fontSize: 15 }} onClick={handleBillSkip}>
+                  Lewati
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </TerraPage>
   );
