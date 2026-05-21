@@ -24,6 +24,7 @@ import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shift
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { LevelBadge } from "@/components/LevelBadge";
+import NotificationBell from "@/components/NotificationBell";
 
 type OrderItem = {
   name: string;
@@ -996,6 +997,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="hero-badges">
+                <NotificationBell tenantId={tenantId} />
                 <span className="badge">Print: {printMode === "bluetooth" ? "Bluetooth" : printMode === "rawbt" ? "RawBT" : "Browser"}</span>
                 <span className="badge">OPEN: {openOrders.length}</span>
                 <span className="badge">PAID: {paidOrders.length}</span>

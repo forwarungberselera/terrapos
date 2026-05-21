@@ -23,6 +23,17 @@ import {
   MaintenanceStatus,
   subscribeMaintenanceStatus,
 } from "@/lib/developer";
+import {
+  NotificationItem,
+  NotificationType,
+  sendNotification,
+  deleteNotification,
+  subscribeNotifications,
+  getNotifTypeLabel,
+  getNotifTypeColor,
+  getNotifTypeIcon,
+  formatTimeAgo,
+} from "@/lib/notifications";
 import { setStoredTenantId, getStoredTenantId } from "@/lib/tenant";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
@@ -73,6 +84,16 @@ export default function DevConsolePage() {
   const [brandColors, setBrandColors] = useState<BrandColorConfig>(DEFAULT_BRAND_COLORS);
   const [savingColors, setSavingColors] = useState(false);
   const [reloading, setReloading] = useState(false);
+
+  // Notification state
+  const [notifTitle, setNotifTitle] = useState("");
+  const [notifMessage, setNotifMessage] = useState("");
+  const [notifType, setNotifType] = useState<NotificationType>("info");
+  const [notifTarget, setNotifTarget] = useState("all");
+  const [notifExpiry, setNotifExpiry] = useState("0"); // hours, 0 = no expiry
+  const [sendingNotif, setSendingNotif] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
 
   const systemInfo = getSystemInfo();
 
@@ -178,6 +199,17 @@ export default function DevConsolePage() {
     return () => unsub();
   }, [isDeveloper]);
 
+  // Subscribe notifications
+  useEffect(() => {
+    if (!isDeveloper) return;
+    setLoadingNotifs(true);
+    const unsub = subscribeNotifications((items) => {
+      setNotifications(items);
+      setLoadingNotifs(false);
+    });
+    return () => unsub();
+  }, [isDeveloper]);
+
   async function handleSaveBrandColors() {
     setSavingColors(true);
     try {
@@ -214,6 +246,43 @@ export default function DevConsolePage() {
       toast.error("Gagal kirim reload: " + (e?.message || ""));
     } finally {
       setReloading(false);
+    }
+  }
+
+  async function handleSendNotification() {
+    if (!notifTitle.trim()) { toast.error("Judul notifikasi wajib diisi."); return; }
+    if (!notifMessage.trim()) { toast.error("Pesan notifikasi wajib diisi."); return; }
+
+    setSendingNotif(true);
+    try {
+      await sendNotification({
+        title: notifTitle,
+        message: notifMessage,
+        type: notifType,
+        target: notifTarget,
+        expiresInHours: parseInt(notifExpiry) || 0,
+        createdBy: email,
+      });
+      toast.success("Notifikasi berhasil dikirim!");
+      setNotifTitle("");
+      setNotifMessage("");
+      setNotifType("info");
+      setNotifTarget("all");
+      setNotifExpiry("0");
+    } catch (e: any) {
+      toast.error("Gagal kirim notifikasi: " + (e?.message || ""));
+    } finally {
+      setSendingNotif(false);
+    }
+  }
+
+  async function handleDeleteNotification(notifId: string) {
+    if (!confirm("Hapus notifikasi ini?")) return;
+    try {
+      await deleteNotification(notifId);
+      toast.success("Notifikasi dihapus.");
+    } catch (e: any) {
+      toast.error("Gagal hapus: " + (e?.message || ""));
     }
   }
 
@@ -662,6 +731,144 @@ export default function DevConsolePage() {
 
         <div className="small" style={{ marginTop: 8 }}>
           Semua user (termasuk kasir yang sedang transaksi) akan di-reload. Gunakan dengan hati-hati.
+        </div>
+      </div>
+
+      {/* NOTIFICATIONS - KIRIM KE USER */}
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h1">Kirim Notifikasi</div>
+        <div className="small" style={{ marginTop: 4 }}>
+          Kirim notifikasi in-app ke semua user atau tenant tertentu. User akan melihat notifikasi via tombol lonceng di dashboard.
+        </div>
+
+        <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
+          <div>
+            <div className="small" style={{ fontWeight: 700 }}>Judul</div>
+            <input
+              className="input"
+              value={notifTitle}
+              onChange={(e) => setNotifTitle(e.target.value)}
+              placeholder="Contoh: Update Fitur Baru!"
+              maxLength={100}
+            />
+          </div>
+
+          <div>
+            <div className="small" style={{ fontWeight: 700 }}>Pesan</div>
+            <textarea
+              className="input"
+              value={notifMessage}
+              onChange={(e) => setNotifMessage(e.target.value)}
+              placeholder="Isi pesan notifikasi..."
+              rows={3}
+              maxLength={500}
+              style={{ resize: "vertical", minHeight: 60 }}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+            <div>
+              <div className="small" style={{ fontWeight: 700 }}>Tipe</div>
+              <select
+                className="input"
+                value={notifType}
+                onChange={(e) => setNotifType(e.target.value as NotificationType)}
+              >
+                <option value="info">ℹ️ Info</option>
+                <option value="warning">⚠️ Peringatan</option>
+                <option value="success">✅ Sukses</option>
+                <option value="promo">🎉 Promo</option>
+              </select>
+            </div>
+
+            <div>
+              <div className="small" style={{ fontWeight: 700 }}>Target</div>
+              <select
+                className="input"
+                value={notifTarget}
+                onChange={(e) => setNotifTarget(e.target.value)}
+              >
+                <option value="all">Semua User</option>
+                {tenants.map((t) => (
+                  <option key={t.id} value={`tenant:${t.id}`}>
+                    {t.name || t.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <div className="small" style={{ fontWeight: 700 }}>Kadaluarsa</div>
+              <select
+                className="input"
+                value={notifExpiry}
+                onChange={(e) => setNotifExpiry(e.target.value)}
+              >
+                <option value="0">Tidak kadaluarsa</option>
+                <option value="1">1 jam</option>
+                <option value="6">6 jam</option>
+                <option value="12">12 jam</option>
+                <option value="24">1 hari</option>
+                <option value="72">3 hari</option>
+                <option value="168">7 hari</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            className="btn btn-primary"
+            style={{ width: "100%" }}
+            onClick={handleSendNotification}
+            disabled={sendingNotif}
+          >
+            {sendingNotif ? "Mengirim..." : "Kirim Notifikasi"}
+          </button>
+        </div>
+
+        {/* LIST NOTIFIKASI AKTIF */}
+        <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+          <div className="small" style={{ fontWeight: 800 }}>Notifikasi Aktif ({notifications.length})</div>
+
+          <div style={{ marginTop: 10, display: "grid", gap: 8, maxHeight: 400, overflowY: "auto" }}>
+            {loadingNotifs ? (
+              <div className="small">Memuat notifikasi...</div>
+            ) : notifications.length === 0 ? (
+              <div className="small" style={{ color: "var(--muted)" }}>Belum ada notifikasi.</div>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  style={{
+                    padding: 12,
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    background: "var(--panel)",
+                    borderLeft: `4px solid ${getNotifTypeColor(n.type)}`,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>{getNotifTypeIcon(n.type)}</span>
+                    <span style={{ fontWeight: 800, fontSize: 13, flex: 1 }}>{n.title}</span>
+                    <button
+                      className="btn btn-danger"
+                      style={{ fontSize: 10, padding: "4px 8px" }}
+                      onClick={() => handleDeleteNotification(n.id)}
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>
+                    {n.message}
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 10, color: "var(--muted)", display: "flex", gap: 12 }}>
+                    <span>Target: {n.target === "all" ? "Semua" : n.target.replace("tenant:", "Tenant: ")}</span>
+                    <span>{formatTimeAgo(n.createdAt)}</span>
+                    {n.expiresAt && <span>Expires: {n.expiresAt.toLocaleString("id-ID")}</span>}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
