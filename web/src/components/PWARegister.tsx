@@ -14,6 +14,16 @@ export default function PWARegister() {
       // Cek update setiap kali halaman dibuka
       reg.update();
 
+      // Pre-cache core pages in background after SW is active
+      if (reg.active) {
+        reg.active.postMessage({ type: "PRECACHE_PAGES" });
+      }
+      reg.addEventListener("controllerchange", () => {
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: "PRECACHE_PAGES" });
+        }
+      });
+
       // Kalau ada update, langsung activate
       reg.addEventListener("updatefound", () => {
         const newWorker = reg.installing;
