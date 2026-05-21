@@ -67,12 +67,12 @@ service cloud.firestore {
       allow read: if docId == "landingPage" || docId == "brandColors" || isSignedIn();
       allow create, update: if isDeveloper();
       allow delete: if false;
+    }
 
-      // Notifications subcollection - readable by all signed-in users, writable by developer only
-      match /notifications/items/{notifId} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isDeveloper();
-      }
+    // ============ NOTIFICATIONS (top-level collection) ============
+    match /notifications/{notifId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isDeveloper();
     }
 
     // ============ USERS ============

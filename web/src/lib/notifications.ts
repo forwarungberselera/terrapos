@@ -50,7 +50,7 @@ export type NotificationItem = {
 
 // ============ CONSTANTS ============
 
-const NOTIF_COLLECTION = "system/notifications/items";
+const NOTIF_COLLECTION = "notifications";
 const NOTIF_READ_KEY_PREFIX = "terrapos_notif_read_";
 const MAX_NOTIFICATIONS = 50;
 
