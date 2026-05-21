@@ -195,6 +195,8 @@ export type BluetoothReceiptData = {
   total: number;
   paidAmount?: number | null;
   items: { name: string; qty: number; price: number; notes?: string }[];
+  qrText?: string;
+  showQR?: boolean;
 };
 
 /**
@@ -294,6 +296,15 @@ export async function printReceipt(data: BluetoothReceiptData) {
   bytes.push(...ALIGN_CENTER);
   bytes.push(...textToBytes(data.footer || "Terima kasih."));
   bytes.push(LF);
+
+  // QR text (printed as URL since ESC/POS QR requires specific printer support)
+  if (data.showQR && data.qrText) {
+    bytes.push(LF);
+    bytes.push(...textToBytes("Scan / Kunjungi:"));
+    bytes.push(LF);
+    bytes.push(...textToBytes(data.qrText.trim()));
+    bytes.push(LF);
+  }
 
   // Feed & Cut
   bytes.push(...FEED_LINES);

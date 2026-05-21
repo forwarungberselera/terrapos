@@ -130,6 +130,8 @@ export type ReceiptData = {
   total: number;
   paidAmount?: number | null;
   items: { name: string; qty: number; price: number; notes?: string }[];
+  qrText?: string;
+  showQR?: boolean;
 };
 
 /**
@@ -183,6 +185,13 @@ export async function printReceipt(data: ReceiptData): Promise<void> {
   output += "--------------------------------" + LF;
   output += CMD.ALIGN_CENTER;
   output += (data.footer || "Terima kasih.") + LF;
+
+  if (data.showQR && data.qrText) {
+    output += LF;
+    output += "Scan / Kunjungi:" + LF;
+    output += data.qrText.trim() + LF;
+  }
+
   output += CMD.FEED;
   output += CMD.CUT;
 

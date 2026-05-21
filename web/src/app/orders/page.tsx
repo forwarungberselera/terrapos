@@ -61,6 +61,10 @@ type ReceiptSettings = {
   address: string;
   footer: string;
   cashierName: string;
+  logoBase64?: string;
+  qrText?: string;
+  showLogo?: boolean;
+  showQR?: boolean;
 };
 
 type ReceiptTitle = "STRUK" | "BILL";
@@ -177,6 +181,10 @@ export default function OrdersPage() {
             address: (d.address || "").toString(),
             footer: (d.footer || "Terima kasih.").toString(),
             cashierName: (d.cashierName || "Kasir TerraPOS").toString(),
+            logoBase64: d.receiptLogoBase64 || "",
+            qrText: d.receiptQrText || "",
+            showLogo: d.receiptShowLogo ?? false,
+            showQR: d.receiptShowQR ?? false,
           });
         }
       } catch {}
@@ -478,6 +486,10 @@ export default function OrdersPage() {
       paidAmount: payMethod === "CASH" ? Number(paidAmount || 0) : null,
       items: o.items.map((it) => ({ name: it.name, qty: it.qty, price: it.price, notes: it.notes || "" })),
       isCopy: options?.isCopy,
+      logoBase64: receiptSettings.logoBase64 || "",
+      qrText: receiptSettings.qrText || "",
+      showLogo: receiptSettings.showLogo ?? false,
+      showQR: receiptSettings.showQR ?? false,
     });
   }
 
@@ -511,6 +523,8 @@ export default function OrdersPage() {
         price: it.price,
       })),
       isCopy: options?.isCopy,
+      qrText: receiptSettings.qrText || "",
+      showQR: receiptSettings.showQR ?? false,
     });
   }
 

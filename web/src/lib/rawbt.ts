@@ -20,6 +20,8 @@ export type RawBtReceiptData = {
   items: RawBtReceiptItem[];
   title?: string;
   isCopy?: boolean;
+  qrText?: string;
+  showQR?: boolean;
 };
 
 function rupiah(n: number) {
@@ -89,6 +91,19 @@ export function buildPlainReceipt(d: RawBtReceiptData) {
 
   rows.push(line());
   rows.push(center(d.footer || "Terima kasih."));
+
+  if (d.showQR && d.qrText) {
+    rows.push("");
+    rows.push(center("Scan / Kunjungi:"));
+    // Split long URLs across lines if needed
+    const qr = d.qrText.trim();
+    if (qr.length <= 32) {
+      rows.push(center(qr));
+    } else {
+      rows.push(qr);
+    }
+  }
+
   rows.push("");
 
   return rows.join("\n");

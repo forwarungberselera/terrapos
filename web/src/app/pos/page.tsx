@@ -38,7 +38,7 @@ type CartItem = {
   qty: number;
   notes?: string;
 };
-type ReceiptSettings = { storeName: string; address: string; footer: string; cashierName: string };
+type ReceiptSettings = { storeName: string; address: string; footer: string; cashierName: string; logoBase64?: string; qrText?: string; showLogo?: boolean; showQR?: boolean };
 type OrderStatus = "OPEN" | "PAID" | "CANCELLED";
 type OrderMode = "PAY_NOW" | "PAY_LATER";
 
@@ -192,6 +192,10 @@ export default function POSPage() {
             address: (d.address || "").toString(),
             footer: (d.footer || "Terima kasih.").toString(),
             cashierName: (d.cashierName || "Kasir TerraPOS").toString(),
+            logoBase64: d.receiptLogoBase64 || "",
+            qrText: d.receiptQrText || "",
+            showLogo: d.receiptShowLogo ?? false,
+            showQR: d.receiptShowQR ?? false,
           });
         }
       } catch {}
@@ -425,6 +429,10 @@ export default function POSPage() {
       total,
       paidAmount: receiptPaymentMethod === "CASH" ? paidAmount : null,
       items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price, notes: c.notes || "" })),
+      logoBase64: receiptSettings.logoBase64 || "",
+      qrText: receiptSettings.qrText || "",
+      showLogo: receiptSettings.showLogo ?? false,
+      showQR: receiptSettings.showQR ?? false,
     });
   }
 
@@ -449,6 +457,8 @@ export default function POSPage() {
         qty: c.qty,
         price: c.price,
       })),
+      qrText: receiptSettings.qrText || "",
+      showQR: receiptSettings.showQR ?? false,
     });
   }
 

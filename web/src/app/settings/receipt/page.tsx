@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
@@ -24,6 +24,8 @@ type ReceiptConfig = {
   showOrderNo: boolean;
   showDateTime: boolean;
   showPaymentMethod: boolean;
+  logoBase64: string;
+  qrText: string;
 };
 
 const DEFAULT_CONFIG: ReceiptConfig = {
@@ -40,7 +42,11 @@ const DEFAULT_CONFIG: ReceiptConfig = {
   showOrderNo: true,
   showDateTime: true,
   showPaymentMethod: true,
+  logoBase64: "",
+  qrText: "",
 };
+
+const MAX_LOGO_SIZE = 150 * 1024; // 150KB max for base64 in Firestore
 
 function rupiah(n: number) {
   return new Intl.NumberFormat("id-ID").format(n);
@@ -51,9 +57,11 @@ export default function ReceiptSettingsPage() {
   const { tenantId, loading } = useTenant();
   const { role, loadingRole } = useRole();
   const toast = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [config, setConfig] = useState<ReceiptConfig>(DEFAULT_CONFIG);
   const [busy, setBusy] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string>("");
 
   const canEdit = ["owner", "developer"].includes((role || "").toString().toLowerCase());
 
@@ -64,6 +72,7 @@ export default function ReceiptSettingsPage() {
         const snap = await getDoc(doc(db, `tenants/${tenantId}/settings/main`));
         if (snap.exists()) {
           const d: any = snap.data();
+          const logoData = d.receiptLogoBase64 || "";
           setConfig({
             storeName: d.storeName || DEFAULT_CONFIG.storeName,
             address: d.address || DEFAULT_CONFIG.address,
@@ -78,7 +87,10 @@ export default function ReceiptSettingsPage() {
             showOrderNo: d.receiptShowOrderNo ?? DEFAULT_CONFIG.showOrderNo,
             showDateTime: d.receiptShowDateTime ?? DEFAULT_CONFIG.showDateTime,
             showPaymentMethod: d.receiptShowPaymentMethod ?? DEFAULT_CONFIG.showPaymentMethod,
+            logoBase64: logoData,
+            qrText: d.receiptQrText || "",
           });
+          if (logoData) setLogoPreview(logoData);
         }
       } catch (e: any) {
         toast.error(e?.message || "Gagal load settings");
@@ -106,6 +118,8 @@ export default function ReceiptSettingsPage() {
           receiptShowOrderNo: config.showOrderNo,
           receiptShowDateTime: config.showDateTime,
           receiptShowPaymentMethod: config.showPaymentMethod,
+          receiptLogoBase64: config.logoBase64 || "",
+          receiptQrText: config.qrText.trim() || "",
           updatedAt: serverTimestamp(),
         },
         { merge: true }
@@ -120,6 +134,72 @@ export default function ReceiptSettingsPage() {
 
   function update<K extends keyof ReceiptConfig>(key: K, val: ReceiptConfig[K]) {
     setConfig((prev) => ({ ...prev, [key]: val }));
+  }
+
+  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("File harus berupa gambar (PNG/JPG)");
+      return;
+    }
+
+    if (file.size > 500 * 1024) {
+      toast.error("Ukuran file maks 500KB. Kompres gambar terlebih dahulu.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+
+      // Resize image to max 200x200 for receipt
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxSize = 200;
+        let w = img.width;
+        let h = img.height;
+
+        if (w > maxSize || h > maxSize) {
+          if (w > h) {
+            h = Math.round((h * maxSize) / w);
+            w = maxSize;
+          } else {
+            w = Math.round((w * maxSize) / h);
+            h = maxSize;
+          }
+        }
+
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+
+        const compressed = canvas.toDataURL("image/png", 0.8);
+
+        if (compressed.length > MAX_LOGO_SIZE) {
+          toast.error("Logo terlalu besar setelah diproses. Gunakan gambar yang lebih kecil.");
+          return;
+        }
+
+        update("logoBase64", compressed);
+        setLogoPreview(compressed);
+        toast.success("Logo berhasil diupload!");
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function removeLogo() {
+    update("logoBase64", "");
+    setLogoPreview("");
+    toast.success("Logo dihapus");
   }
 
   if (loading || loadingRole)
@@ -231,6 +311,7 @@ export default function ReceiptSettingsPage() {
         .preview-body .store-name{
           font-weight:900;
           text-align:center;
+          font-size:1.4em;
         }
         .preview-body .center{
           text-align:center;
@@ -257,6 +338,46 @@ export default function ReceiptSettingsPage() {
           width:100%;
           margin-top:8px;
           accent-color:var(--brand);
+        }
+        .logo-upload-area{
+          margin-top:10px;
+          border:2px dashed var(--border);
+          border-radius:var(--radius-sm);
+          padding:16px;
+          text-align:center;
+          cursor:pointer;
+          transition: border-color 0.2s ease, background 0.2s ease;
+        }
+        .logo-upload-area:hover{
+          border-color:var(--brand2);
+          background:var(--brandSoft);
+        }
+        .logo-preview-box{
+          margin-top:10px;
+          display:flex;
+          align-items:center;
+          gap:12px;
+          padding:12px;
+          border:1px solid var(--border);
+          border-radius:var(--radius-sm);
+          background:var(--input-bg);
+        }
+        .logo-preview-box img{
+          width:48px;
+          height:48px;
+          object-fit:contain;
+          border-radius:8px;
+          border:1px solid var(--border);
+        }
+        .qr-preview-box{
+          width:64px;
+          height:64px;
+          border:1px solid var(--border);
+          border-radius:4px;
+          margin:0 auto;
+          display:grid;
+          place-items:center;
+          background:#fff;
         }
       `}</style>
 
@@ -311,6 +432,79 @@ export default function ReceiptSettingsPage() {
             />
           </div>
 
+          {/* Logo Upload */}
+          <div className="card">
+            <div style={{ fontWeight: 900, fontSize: 14 }}>Logo Toko</div>
+            <div className="small" style={{ marginTop: 4 }}>
+              Upload logo toko (maks 500KB, akan di-resize ke 200x200px). Ditampilkan di bagian atas struk.
+            </div>
+
+            {logoPreview ? (
+              <div className="logo-preview-box">
+                <img src={logoPreview} alt="Logo" />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>Logo tersimpan</div>
+                  <div className="small">Klik hapus untuk ganti logo baru</div>
+                </div>
+                <button className="btn btn-danger" style={{ fontSize: 12, padding: "8px 12px" }} onClick={removeLogo}>
+                  Hapus
+                </button>
+              </div>
+            ) : (
+              <div className="logo-upload-area" onClick={() => fileRef.current?.click()}>
+                <div style={{ fontSize: 28, opacity: 0.4 }}>&#128247;</div>
+                <div style={{ fontWeight: 700, fontSize: 13, marginTop: 6 }}>Klik untuk upload logo</div>
+                <div className="small">PNG atau JPG, maks 500KB</div>
+              </div>
+            )}
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              style={{ display: "none" }}
+              onChange={handleLogoUpload}
+            />
+
+            {logoPreview && (
+              <button
+                className="btn"
+                style={{ width: "100%", marginTop: 10, fontSize: 12 }}
+                onClick={() => fileRef.current?.click()}
+              >
+                Ganti Logo
+              </button>
+            )}
+          </div>
+
+          {/* QR Code */}
+          <div className="card">
+            <div style={{ fontWeight: 900, fontSize: 14 }}>QR Code Struk</div>
+            <div className="small" style={{ marginTop: 4 }}>
+              Masukkan URL atau teks yang akan di-generate menjadi QR code di bagian bawah struk.
+              Cocok untuk link pembayaran QRIS, website toko, atau nomor WhatsApp.
+            </div>
+
+            <div className="small" style={{ marginTop: 12 }}>URL / Teks untuk QR Code</div>
+            <input
+              className="input"
+              value={config.qrText}
+              onChange={(e) => update("qrText", e.target.value)}
+              placeholder="https://wa.me/628xxx atau link QRIS"
+            />
+
+            {config.qrText && (
+              <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
+                <div className="small" style={{ fontWeight: 700 }}>
+                  QR akan di-generate otomatis dari:
+                </div>
+                <div style={{ fontSize: 12, marginTop: 4, wordBreak: "break-all", fontFamily: "var(--font-mono)" }}>
+                  {config.qrText}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Font Size */}
           <div className="card">
             <div style={{ fontWeight: 900, fontSize: 14 }}>Ukuran Font Struk</div>
@@ -345,7 +539,7 @@ export default function ReceiptSettingsPage() {
             />
             <ToggleItem
               label="QR Code"
-              desc="QR code untuk pembayaran digital"
+              desc="QR code di bagian bawah struk"
               value={config.showQR}
               onChange={(v) => update("showQR", v)}
             />
@@ -404,9 +598,17 @@ export default function ReceiptSettingsPage() {
           <div className="preview-body" style={{ fontSize: config.fontSize }}>
             {config.showLogo && (
               <div className="center" style={{ marginBottom: 8 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 8, background: "var(--brandSoft)", border: "1px solid var(--brand2)", margin: "0 auto", display: "grid", placeItems: "center", fontSize: 18, fontWeight: 900, color: "var(--brand)" }}>
-                  T
-                </div>
+                {logoPreview ? (
+                  <img
+                    src={logoPreview}
+                    alt="Logo"
+                    style={{ width: 48, height: 48, objectFit: "contain", borderRadius: 8, margin: "0 auto", display: "block" }}
+                  />
+                ) : (
+                  <div style={{ width: 48, height: 48, borderRadius: 8, background: "var(--brandSoft)", border: "1px solid var(--brand2)", margin: "0 auto", display: "grid", placeItems: "center", fontSize: 20, fontWeight: 900, color: "var(--brand)" }}>
+                    T
+                  </div>
+                )}
               </div>
             )}
 
@@ -419,38 +621,40 @@ export default function ReceiptSettingsPage() {
             )}
 
             <div className="center" style={{ marginTop: 6 }}>
-              <span style={{ display: "inline-block", padding: "2px 8px", border: "1px solid var(--border)", borderRadius: 999, fontSize: config.fontSize - 2, fontWeight: 900 }}>
+              <span style={{ display: "inline-block", padding: "2px 8px", border: "2px solid #111", borderRadius: 999, fontSize: config.fontSize - 2, fontWeight: 900, letterSpacing: 0.5 }}>
                 STRUK
               </span>
             </div>
 
             <div className="line" />
 
-            {config.showDateTime && (
-              <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
-                Waktu: {new Date().toLocaleString("id-ID")}
-              </div>
-            )}
-            {config.showOrderNo && (
-              <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
-                Order: ORD-001
-              </div>
-            )}
-            {config.showTableNo && (
-              <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
-                Meja: 5
-              </div>
-            )}
-            {config.showCashier && (
-              <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
-                Kasir: {config.cashierName || "Kasir"}
-              </div>
-            )}
-            {config.showPaymentMethod && (
-              <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
-                Metode: CASH
-              </div>
-            )}
+            <div className="center">
+              {config.showDateTime && (
+                <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
+                  {new Date().toLocaleString("id-ID")}
+                </div>
+              )}
+              {config.showOrderNo && (
+                <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
+                  Order: <b>ORD-001</b>
+                </div>
+              )}
+              {config.showTableNo && (
+                <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
+                  Meja: <b>5</b>
+                </div>
+              )}
+              {config.showCashier && (
+                <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
+                  Kasir: {config.cashierName || "Kasir"}
+                </div>
+              )}
+              {config.showPaymentMethod && (
+                <div className="muted" style={{ fontSize: config.fontSize - 2 }}>
+                  Metode: <b>CASH</b>
+                </div>
+              )}
+            </div>
 
             <div className="line" />
 
@@ -500,11 +704,38 @@ export default function ReceiptSettingsPage() {
 
             <div className="line" />
 
-            {config.showQR && (
+            {config.showQR && config.qrText && (
               <div className="center" style={{ marginBottom: 8 }}>
-                <div style={{ width: 60, height: 60, border: "1px solid var(--border)", borderRadius: 4, margin: "0 auto", display: "grid", placeItems: "center", fontSize: 9, color: "var(--muted)" }}>
-                  [QR]
+                <div className="qr-preview-box">
+                  <svg viewBox="0 0 100 100" width="48" height="48">
+                    <rect x="10" y="10" width="25" height="25" fill="#111" rx="3"/>
+                    <rect x="65" y="10" width="25" height="25" fill="#111" rx="3"/>
+                    <rect x="10" y="65" width="25" height="25" fill="#111" rx="3"/>
+                    <rect x="15" y="15" width="15" height="15" fill="#fff" rx="2"/>
+                    <rect x="70" y="15" width="15" height="15" fill="#fff" rx="2"/>
+                    <rect x="15" y="70" width="15" height="15" fill="#fff" rx="2"/>
+                    <rect x="19" y="19" width="7" height="7" fill="#111"/>
+                    <rect x="74" y="19" width="7" height="7" fill="#111"/>
+                    <rect x="19" y="74" width="7" height="7" fill="#111"/>
+                    <rect x="42" y="42" width="16" height="16" fill="#111" rx="2"/>
+                    <rect x="40" y="10" width="5" height="5" fill="#111"/>
+                    <rect x="50" y="15" width="5" height="5" fill="#111"/>
+                    <rect x="40" y="25" width="5" height="5" fill="#111"/>
+                    <rect x="65" y="45" width="5" height="5" fill="#111"/>
+                    <rect x="75" y="50" width="5" height="5" fill="#111"/>
+                    <rect x="85" y="45" width="5" height="5" fill="#111"/>
+                    <rect x="65" y="65" width="5" height="5" fill="#111"/>
+                    <rect x="75" y="75" width="5" height="5" fill="#111"/>
+                    <rect x="85" y="85" width="5" height="5" fill="#111"/>
+                  </svg>
                 </div>
+                <div className="muted" style={{ fontSize: 9, marginTop: 4 }}>Scan untuk bayar</div>
+              </div>
+            )}
+
+            {config.showQR && !config.qrText && (
+              <div className="center muted" style={{ fontSize: 10, marginBottom: 8 }}>
+                (QR aktif tapi belum ada URL/teks)
               </div>
             )}
 
