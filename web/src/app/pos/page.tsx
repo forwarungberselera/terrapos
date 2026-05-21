@@ -1101,7 +1101,7 @@ export default function POSPage() {
                 disabled={cart.length === 0}
                 onClick={() => {
                   setPayOpen(true);
-                  setPaidAmount(total);
+                  setPaidAmount(0);
                   setPaymentMethod("CASH");
                 }}
               >
@@ -1175,6 +1175,13 @@ export default function POSPage() {
                     onClick={() => setPaidAmount(total)}
                   >
                     Uang Pas
+                  </button>
+                  <button
+                    className="btn"
+                    style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500, color: "var(--danger)" }}
+                    onClick={() => setPaidAmount(0)}
+                  >
+                    Reset
                   </button>
                 </div>
                 <div className="row" style={{ justifyContent: "space-between", marginTop: 10 }}>
