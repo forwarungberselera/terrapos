@@ -91,6 +91,7 @@ export default function DashboardPage() {
   const roleLower = (role || "").toString().toLowerCase();
   const isOwner = roleLower === "owner" || roleLower === "developer";
   const canView = roleLower === "owner" || roleLower === "admin" || roleLower === "developer";
+  const isDev = roleLower === "developer";
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [refunds, setRefunds] = useState<{ id: string; total: number; refundedAt?: any }[]>([]);
@@ -920,6 +921,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="sidegroup">
+            {isDev && (
+              <button className="sidebtn" onClick={() => r.push("/dev")} style={{ background: "var(--brandSoft)", border: "1px solid var(--brand2)", fontWeight: 800, color: "var(--brand)" }}>
+                Dev Console
+              </button>
+            )}
             <button className="sidebtn" onClick={() => r.push("/pos")}>Buka POS</button>
 
             <div className="sidelabel" onClick={() => toggleSide("operasional")}>

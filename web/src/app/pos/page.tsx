@@ -80,6 +80,7 @@ export default function POSPage() {
 
   const isOwner = ["owner", "developer"].includes((role || "").toString().toLowerCase());
   const canUse = ["owner", "admin", "developer"].includes((role || "").toString().toLowerCase());
+  const isDev = (role || "").toString().toLowerCase() === "developer";
 
   const [mode, setMode] = useState<OrderMode>("PAY_NOW");
   const [products, setProducts] = useState<Product[]>([]);
@@ -757,10 +758,14 @@ export default function POSPage() {
           gap:10px;
         }
         @media (max-width: 640px){
-          .product-grid{ grid-template-columns: repeat(2, 1fr); gap:8px; }
+          .product-grid{ grid-template-columns: repeat(2, 1fr); gap:6px; }
+          .product-btn{ padding:10px 12px; }
+          .product-name{ font-size:13px; }
+          .product-meta{ font-size:10px; margin-top:2px; }
+          .product-price{ margin-top:5px; font-size:13px; }
         }
         @media (max-width: 380px){
-          .product-grid{ grid-template-columns: 1fr; }
+          .product-grid{ grid-template-columns: repeat(2, 1fr); }
         }
         .product-btn{
           text-align:left;
@@ -956,6 +961,11 @@ export default function POSPage() {
             {isOwner && (
               <button className="btn btn-primary" onClick={() => r.push("/dashboard")}>
                 Dashboard
+              </button>
+            )}
+            {isDev && (
+              <button className="btn" onClick={() => r.push("/dev")} style={{ background: "var(--input-bg)", fontWeight: 700 }}>
+                Dev
               </button>
             )}
             <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>
