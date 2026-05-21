@@ -9,6 +9,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { useLevel } from "@/hooks/useLevel";
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 type Member = { id: string; name: string; phone: string; points: number };
 
@@ -26,6 +27,8 @@ export default function MembersPage() {
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -72,8 +75,15 @@ export default function MembersPage() {
 
   async function removeMember(m: Member) {
     if (!tenantId) return;
-    if (!confirm(`Hapus "${m.name}"?`)) return;
-    await deleteDoc(doc(db, `tenants/${tenantId}/members/${m.id}`));
+    setMemberToDelete(m);
+    setConfirmOpen(true);
+  }
+
+  async function doRemoveMember() {
+    if (!tenantId || !memberToDelete) return;
+    await deleteDoc(doc(db, `tenants/${tenantId}/members/${memberToDelete.id}`));
+    setConfirmOpen(false);
+    setMemberToDelete(null);
   }
 
   if (loading || loadingRole) return <TerraPage><div className="card">Loading...</div></TerraPage>;
@@ -110,6 +120,15 @@ export default function MembersPage() {
 
   return (
     <TerraPage>
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setMemberToDelete(null); }}
+        onConfirm={doRemoveMember}
+        title="Hapus Member"
+        message={`Hapus "${memberToDelete?.name || ""}"? Data member akan hilang permanen.`}
+        confirmText="Hapus"
+        variant="danger"
+      />
       <div className="card">
         <div className="row">
           <div>

@@ -6,6 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   addDoc, collection, deleteDoc, doc, onSnapshot,
   orderBy, query, serverTimestamp, updateDoc, writeBatch
@@ -217,10 +218,21 @@ export default function ProductsPage() {
     });
   }
 
+  // Confirm dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [confirmMessage, setConfirmMessage] = useState("");
+  const [confirmTitle, setConfirmTitle] = useState("Konfirmasi");
+
   async function removeProduct(p: Product) {
     if (!tenantId) return;
-    if (!confirm(`Hapus "${p.name}"?`)) return;
-    await deleteDoc(doc(db, `tenants/${tenantId}/products/${p.id}`));
+    setConfirmTitle("Hapus Produk");
+    setConfirmMessage(`Hapus "${p.name}"? Produk yang sudah dihapus tidak bisa dikembalikan.`);
+    setConfirmAction(() => async () => {
+      await deleteDoc(doc(db, `tenants/${tenantId}/products/${p.id}`));
+      setConfirmOpen(false);
+    });
+    setConfirmOpen(true);
   }
 
   // Bulk actions
@@ -245,20 +257,25 @@ export default function ProductsPage() {
 
   async function bulkDelete() {
     if (!tenantId || selectedIds.size === 0) return;
-    if (!confirm(`Hapus ${selectedIds.size} produk yang dipilih?`)) return;
-    setBulkBusy(true);
-    try {
-      const batch = writeBatch(db);
-      selectedIds.forEach((id) => {
-        batch.delete(doc(db, `tenants/${tenantId}/products/${id}`));
-      });
-      await batch.commit();
-      setSelectedIds(new Set());
-    } catch (e: any) {
-      setErr(e?.message || "Gagal bulk delete");
-    } finally {
-      setBulkBusy(false);
-    }
+    setConfirmTitle("Hapus Massal");
+    setConfirmMessage(`Hapus ${selectedIds.size} produk yang dipilih? Aksi ini tidak bisa dibatalkan.`);
+    setConfirmAction(() => async () => {
+      setBulkBusy(true);
+      try {
+        const batch = writeBatch(db);
+        selectedIds.forEach((id) => {
+          batch.delete(doc(db, `tenants/${tenantId}/products/${id}`));
+        });
+        await batch.commit();
+        setSelectedIds(new Set());
+      } catch (e: any) {
+        setErr(e?.message || "Gagal bulk delete");
+      } finally {
+        setBulkBusy(false);
+      }
+      setConfirmOpen(false);
+    });
+    setConfirmOpen(true);
   }
 
 
@@ -280,6 +297,17 @@ export default function ProductsPage() {
   return (
     <TerraPage>
       <style>{productsStyles}</style>
+
+      {/* Confirm Dialog (mobile-friendly) */}
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={confirmAction}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmText="Hapus"
+        variant="danger"
+      />
 
       {/* Edit Modal */}
       {editProduct && (
@@ -834,16 +862,48 @@ const productsStyles = `
   .prod-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.3px; }
   .prod-error { color: var(--danger); font-weight: 800; font-size: 13px; margin-top: 8px; }
 
+  /* Mobile: modals jadi bottom sheet */
   @media (max-width: 768px) {
     .prod-stats { grid-template-columns: repeat(2, 1fr); }
     .prod-header { flex-direction: column; align-items: flex-start; }
     .prod-header-actions { width: 100%; }
     .prod-header-actions .btn { flex: 1; }
-    .prod-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    .prod-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+    .prod-card { padding: 12px; }
+    .prod-card-name { font-size: 13px; }
+    .prod-card-price { font-size: 14px; }
+    .prod-card-actions { gap: 4px; }
+    .prod-action-btn { padding: 8px; }
     .prod-list-item { flex-wrap: wrap; }
     .prod-list-price { width: 100%; order: 3; margin-top: 4px; }
     .prod-list-actions { width: 100%; order: 4; margin-top: 8px; }
     .prod-toolbar { flex-direction: column; }
     .prod-search-wrap { width: 100%; }
+
+    .prod-modal-overlay {
+      align-items: flex-end;
+      padding: 0;
+    }
+    .prod-modal {
+      max-width: 100%;
+      border-radius: 20px 20px 0 0;
+      padding: 20px 16px calc(20px + var(--safe-bottom, 0px));
+      animation: slideUp 0.25s ease-out;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .prod-modal::before {
+      content: '';
+      display: block;
+      width: 36px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border);
+      margin: 0 auto 12px;
+    }
+    .prod-modal-header { margin-bottom: 16px; }
+    .prod-form-group { margin-bottom: 12px; }
+    .prod-bulk-bar { flex-wrap: wrap; }
+    .prod-bulk-actions { flex-wrap: wrap; }
   }
 `;

@@ -1527,150 +1527,151 @@ export default function POSPage() {
       )}
 
       {showTableWarning && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-            zIndex: 80,
-          }}
-        >
-          <div className="card" style={{ width: 420, maxWidth: "100%", textAlign: "center" }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>&#9888;&#65039;</div>
-            <div className="h1">No. Meja Belum Diisi</div>
-            <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
-              Mode Bayar Nanti wajib mengisi No. Meja atau nama pelanggan agar order bisa diidentifikasi.
-            </div>
-
-            <div className="row" style={{ marginTop: 16, justifyContent: "center", gap: 10 }}>
-              <button className="btn btn-primary" onClick={() => { setShowTableWarning(false); }}>
-                OK, Isi Sekarang
-              </button>
+        <>
+          <style>{`
+            .pos-alert-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:grid;place-items:center;padding:16px;z-index:80;animation:fadeIn 0.2s ease;}
+            .pos-alert-panel{width:420px;max-width:100%;text-align:center;}
+            @media(max-width:768px){
+              .pos-alert-overlay{align-items:flex-end;padding:0;}
+              .pos-alert-panel{width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:24px 16px calc(24px + var(--safe-bottom,0px));animation:slideUp 0.25s ease;}
+            }
+          `}</style>
+          <div className="pos-alert-overlay" onClick={() => setShowTableWarning(false)}>
+            <div className="card pos-alert-panel" onClick={(e) => e.stopPropagation()}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>&#9888;&#65039;</div>
+              <div className="h1">No. Meja Belum Diisi</div>
+              <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+                Mode Bayar Nanti wajib mengisi No. Meja atau nama pelanggan agar order bisa diidentifikasi.
+              </div>
+              <div className="row" style={{ marginTop: 16, justifyContent: "center", gap: 10 }}>
+                <button className="btn btn-primary" style={{ flex: 1, maxWidth: 200 }} onClick={() => { setShowTableWarning(false); }}>
+                  OK, Isi Sekarang
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {shiftPromptOpen && !activeShift && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-            zIndex: 70,
-          }}
-        >
-          <div className="card" style={{ width: 520, maxWidth: "100%" }}>
-            <div className="h1">Shift Belum Dibuka</div>
-            <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
-              Sebelum kasir mulai transaksi, shift harus dibuka dulu agar semua pembayaran tercatat ke sesi kasir yang aktif.
-            </div>
+        <>
+          <style>{`
+            .pos-shift-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:grid;place-items:center;padding:16px;z-index:70;animation:fadeIn 0.2s ease;}
+            .pos-shift-panel{width:520px;max-width:100%;}
+            @media(max-width:768px){
+              .pos-shift-overlay{align-items:flex-end;padding:0;}
+              .pos-shift-panel{width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:24px 16px calc(24px + var(--safe-bottom,0px));animation:slideUp 0.25s ease;}
+            }
+          `}</style>
+          <div className="pos-shift-overlay">
+            <div className="card pos-shift-panel">
+              <div className="h1">Shift Belum Dibuka</div>
+              <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+                Sebelum kasir mulai transaksi, shift harus dibuka dulu agar semua pembayaran tercatat ke sesi kasir yang aktif.
+              </div>
 
-            <div
-              style={{
-                marginTop: 14,
-                padding: 12,
-                borderRadius: 14,
-                border: "1px solid var(--border)",
-                background: "var(--brandSoft)",
-                fontSize: 13,
-                lineHeight: 1.6,
-              }}
-            >
-              Buka shift dulu di halaman <b>Shift</b>, lalu kembali ke POS untuk lanjut transaksi.
-            </div>
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: 12,
+                  borderRadius: 14,
+                  border: "1px solid var(--border)",
+                  background: "var(--brandSoft)",
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                }}
+              >
+                Buka shift dulu di halaman <b>Shift</b>, lalu kembali ke POS untuk lanjut transaksi.
+              </div>
 
-            <div className="row" style={{ marginTop: 16 }}>
-              <button className="btn btn-primary" onClick={() => r.push("/shifts")}>
-                Buka Halaman Shift
-              </button>
-              <button className="btn" onClick={() => r.push("/dashboard")}>
-                Ke Dashboard
-              </button>
+              <div className="row" style={{ marginTop: 16 }}>
+                <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => r.push("/shifts")}>
+                  Buka Halaman Shift
+                </button>
+                <button className="btn" style={{ flex: 1 }} onClick={() => r.push("/dashboard")}>
+                  Ke Dashboard
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {successDialog && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-            zIndex: 90,
-          }}
-        >
-          <div className="card" style={{ width: 440, maxWidth: "100%", textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
-            <div className="h1" style={{ color: "var(--brand)" }}>Transaksi Berhasil</div>
-            <div className="small" style={{ marginTop: 8, lineHeight: 1.6 }}>
-              Pembayaran telah tercatat. Order <b>{successDialog.orderNo}</b> selesai.
-            </div>
-
-            {successDialog.change > 0 && (
-              <div style={{ marginTop: 12, padding: "12px 16px", borderRadius: 12, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
-                <div className="small" style={{ fontWeight: 700 }}>Kembalian</div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: "var(--brand)", fontFamily: "var(--font-mono)", marginTop: 4 }}>
-                  Rp {rupiah(successDialog.change)}
-                </div>
+        <>
+          <style>{`
+            .pos-success-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:grid;place-items:center;padding:16px;z-index:90;animation:fadeIn 0.2s ease;}
+            .pos-success-panel{width:440px;max-width:100%;text-align:center;}
+            @media(max-width:768px){
+              .pos-success-overlay{align-items:flex-end;padding:0;}
+              .pos-success-panel{width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:24px 16px calc(24px + var(--safe-bottom,0px));animation:slideUp 0.25s ease;}
+            }
+          `}</style>
+          <div className="pos-success-overlay">
+            <div className="card pos-success-panel">
+              <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
+              <div className="h1" style={{ color: "var(--brand)" }}>Transaksi Berhasil</div>
+              <div className="small" style={{ marginTop: 8, lineHeight: 1.6 }}>
+                Pembayaran telah tercatat. Order <b>{successDialog.orderNo}</b> selesai.
               </div>
-            )}
 
-            <div style={{ marginTop: 16, fontSize: 13, color: "var(--muted)" }}>
-              Cetak struk untuk pelanggan?
-            </div>
+              {successDialog.change > 0 && (
+                <div style={{ marginTop: 12, padding: "12px 16px", borderRadius: 12, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
+                  <div className="small" style={{ fontWeight: 700 }}>Kembalian</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: "var(--brand)", fontFamily: "var(--font-mono)", marginTop: 4 }}>
+                    Rp {rupiah(successDialog.change)}
+                  </div>
+                </div>
+              )}
 
-            <div className="row" style={{ marginTop: 12, justifyContent: "center", gap: 10 }}>
-              <button
-                className="btn btn-primary"
-                style={{ padding: "12px 24px", fontSize: 14, fontWeight: 800 }}
-                onClick={handleSuccessPrint}
-              >
-                Cetak Struk
-              </button>
-              <button
-                className="btn"
-                style={{ padding: "12px 24px", fontSize: 14 }}
-                onClick={handleSuccessSkip}
-              >
-                Lewati
-              </button>
+              <div style={{ marginTop: 16, fontSize: 13, color: "var(--muted)" }}>
+                Cetak struk untuk pelanggan?
+              </div>
+
+              <div className="row" style={{ marginTop: 12, justifyContent: "center", gap: 10 }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1, padding: "14px 24px", fontSize: 14, fontWeight: 800 }}
+                  onClick={handleSuccessPrint}
+                >
+                  Cetak Struk
+                </button>
+                <button
+                  className="btn"
+                  style={{ flex: 1, padding: "14px 24px", fontSize: 14 }}
+                  onClick={handleSuccessSkip}
+                >
+                  Lewati
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {billSuccessDialog && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", padding: 16, zIndex: 90 }}>
-          <div className="card" style={{ width: 440, maxWidth: "100%", textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
-            <div className="h1" style={{ color: "var(--brand)" }}>Order Tersimpan</div>
-            <div className="small" style={{ marginTop: 8, lineHeight: 1.6 }}>
-              Order <b>{billSuccessDialog.orderNo}</b> berhasil disimpan sebagai open bill.
-            </div>
-            <div style={{ marginTop: 16, fontSize: 13, color: "var(--muted)" }}>
-              Cetak bill untuk pelanggan?
-            </div>
-            <div className="row" style={{ marginTop: 12, justifyContent: "center", gap: 10 }}>
-              <button className="btn btn-primary" style={{ padding: "12px 24px", fontSize: 14, fontWeight: 800 }} onClick={handleBillPrint}>
-                Cetak Bill
-              </button>
-              <button className="btn" style={{ padding: "12px 24px", fontSize: 14 }} onClick={handleBillSkip}>
-                Lewati
-              </button>
+        <>
+          <div className="pos-success-overlay">
+            <div className="card pos-success-panel">
+              <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
+              <div className="h1" style={{ color: "var(--brand)" }}>Order Tersimpan</div>
+              <div className="small" style={{ marginTop: 8, lineHeight: 1.6 }}>
+                Order <b>{billSuccessDialog.orderNo}</b> berhasil disimpan sebagai open bill.
+              </div>
+              <div style={{ marginTop: 16, fontSize: 13, color: "var(--muted)" }}>
+                Cetak bill untuk pelanggan?
+              </div>
+              <div className="row" style={{ marginTop: 12, justifyContent: "center", gap: 10 }}>
+                <button className="btn btn-primary" style={{ flex: 1, padding: "14px 24px", fontSize: 14, fontWeight: 800 }} onClick={handleBillPrint}>
+                  Cetak Bill
+                </button>
+                <button className="btn" style={{ flex: 1, padding: "14px 24px", fontSize: 14 }} onClick={handleBillSkip}>
+                  Lewati
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </TerraPage>
   );

@@ -21,6 +21,7 @@ import {
 } from "firebase/firestore";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 export type Promo = {
   id: string;
@@ -65,6 +66,8 @@ export default function PromosPage() {
   const [promoCode, setPromoCode] = useState("");
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [promoToDelete, setPromoToDelete] = useState<Promo | null>(null);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -191,19 +194,26 @@ export default function PromosPage() {
 
   async function handleDelete(promo: Promo) {
     if (!tenantId) return;
-    if (!confirm(`Hapus promo "${promo.name}"?`)) return;
+    setPromoToDelete(promo);
+    setDeleteConfirmOpen(true);
+  }
+
+  async function doDeletePromo() {
+    if (!tenantId || !promoToDelete) return;
     try {
-      await deleteDoc(doc(db, `tenants/${tenantId}/promos/${promo.id}`));
+      await deleteDoc(doc(db, `tenants/${tenantId}/promos/${promoToDelete.id}`));
       toast.success("Promo dihapus");
       logAudit(tenantId, {
         action: "PROMO_DELETE",
         userEmail: email || "",
-        description: `Hapus promo "${promo.name}"`,
-        metadata: { promoId: promo.id },
+        description: `Hapus promo "${promoToDelete.name}"`,
+        metadata: { promoId: promoToDelete.id },
       });
     } catch (e: any) {
       toast.error("Gagal hapus: " + (e?.message || ""));
     }
+    setDeleteConfirmOpen(false);
+    setPromoToDelete(null);
   }
 
   if (loading || loadingRole) {
@@ -242,6 +252,15 @@ export default function PromosPage() {
 
   return (
     <TerraPage>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => { setDeleteConfirmOpen(false); setPromoToDelete(null); }}
+        onConfirm={doDeletePromo}
+        title="Hapus Promo"
+        message={`Hapus promo "${promoToDelete?.name || ""}"? Promo yang sudah dihapus tidak bisa dikembalikan.`}
+        confirmText="Hapus"
+        variant="danger"
+      />
       <style>{`
         .promo-item{
           padding:14px;
@@ -261,6 +280,13 @@ export default function PromosPage() {
           font-size:11px;
         }
         .day-btn.active{ background:var(--brand); color:white; border-color:var(--brand); }
+        @media (max-width: 768px){
+          .promo-item{ padding:12px; }
+          .promo-item .row{ flex-direction:column; align-items:stretch; gap:10px; }
+          .promo-item .row .row{ flex-direction:row; flex-wrap:wrap; }
+          .promo-item .row .row .btn{ flex:1; min-width:0; }
+          .day-btn{ width:32px; height:32px; font-size:10px; }
+        }
       `}</style>
 
       <div className="card">
