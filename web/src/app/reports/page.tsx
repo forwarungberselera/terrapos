@@ -21,6 +21,7 @@ type Order = {
   items: any[];
   createdAt: any;
   paidAt: any;
+  shiftId?: string | null;
 };
 
 type Refund = {
@@ -32,7 +33,24 @@ type Refund = {
   createdAt: any;
 };
 
-type TabType = "ringkasan" | "harian" | "refund" | "export";
+type ShiftData = {
+  id: string;
+  status: string;
+  openedByEmail: string;
+  openedAt: any;
+  closedAt: any;
+  openingCash: number;
+  cashSales: number;
+  qrisSales: number;
+  totalSales: number;
+  orderCount: number;
+  closingCashExpected: number;
+  closingCashActual: number;
+  variance: number;
+};
+
+type TabType = "ringkasan" | "harian" | "refund" | "export" | "shift";
+
 
 function rupiah(n: number) {
   return "Rp " + new Intl.NumberFormat("id-ID").format(n);
@@ -61,6 +79,7 @@ function getEndOfWeek(d: Date) { const s = getStartOfWeek(d); const e = new Date
 function getStartOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0); }
 function getEndOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999); }
 
+
 export default function ReportsPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
@@ -75,6 +94,7 @@ export default function ReportsPage() {
   const [customEnd, setCustomEnd] = useState(() => new Date().toISOString().split("T")[0]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [refunds, setRefunds] = useState<Refund[]>([]);
+  const [shiftsData, setShiftsData] = useState<ShiftData[]>([]);
   const [fetching, setFetching] = useState(false);
 
 
@@ -88,6 +108,7 @@ export default function ReportsPage() {
     return { start: getStartOfMonth(d), end: getEndOfMonth(d) };
   }, [rangeMode, preset, selectedDate, customStart, customEnd]);
 
+
   // Fetch orders
   useEffect(() => {
     if (!tenantId) return;
@@ -99,7 +120,7 @@ export default function ReportsPage() {
         const qy = query(ref, where("createdAt", ">=", Timestamp.fromDate(dateRange.start)), where("createdAt", "<=", Timestamp.fromDate(dateRange.end)), orderBy("createdAt", "desc"));
         const snap = await getDocs(qy);
         if (cancelled) return;
-        setOrders(snap.docs.map((d) => { const data = d.data() as any; return { id: d.id, orderNo: data.orderNo || "", status: data.status || "", mode: data.mode || "", paymentMethod: data.paymentMethod || null, subtotal: Number(data.subtotal || 0), discount: Number(data.discount || 0), total: Number(data.total || 0), items: Array.isArray(data.items) ? data.items : [], createdAt: data.createdAt, paidAt: data.paidAt }; }));
+        setOrders(snap.docs.map((d) => { const data = d.data() as any; return { id: d.id, orderNo: data.orderNo || "", status: data.status || "", mode: data.mode || "", paymentMethod: data.paymentMethod || null, subtotal: Number(data.subtotal || 0), discount: Number(data.discount || 0), total: Number(data.total || 0), items: Array.isArray(data.items) ? data.items : [], createdAt: data.createdAt, paidAt: data.paidAt, shiftId: data.shiftId || null }; }));
       } catch {} finally { if (!cancelled) setFetching(false); }
     })();
     return () => { cancelled = true; };
@@ -121,6 +142,58 @@ export default function ReportsPage() {
     return () => { cancelled = true; };
   }, [tenantId, dateRange]);
 
+
+  // Fetch shifts for Per Shift tab
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const ref = collection(db, `tenants/${tenantId}/shifts`);
+        const qy = query(ref, where("openedAt", ">=", Timestamp.fromDate(dateRange.start)), where("openedAt", "<=", Timestamp.fromDate(dateRange.end)), orderBy("openedAt", "desc"));
+        const snap = await getDocs(qy);
+        if (cancelled) return;
+        setShiftsData(snap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            status: data.status || "OPEN",
+            openedByEmail: data.openedByEmail || "",
+            openedAt: data.openedAt,
+            closedAt: data.closedAt,
+            openingCash: Number(data.openingCash || 0),
+            cashSales: Number(data.cashSales || 0),
+            qrisSales: Number(data.qrisSales || 0),
+            totalSales: Number(data.totalSales || 0),
+            orderCount: Number(data.orderCount || 0),
+            closingCashExpected: Number(data.closingCashExpected || 0),
+            closingCashActual: Number(data.closingCashActual || 0),
+            variance: Number(data.variance || 0),
+          };
+        }));
+      } catch { if (!cancelled) setShiftsData([]); }
+    })();
+    return () => { cancelled = true; };
+  }, [tenantId, dateRange]);
+
+
+  // Get products sold per shift from orders
+  function getShiftProducts(shiftId: string): { name: string; qty: number; revenue: number }[] {
+    const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
+    for (const order of orders) {
+      if ((order.status || "").toUpperCase() !== "PAID") continue;
+      if ((order.shiftId || "") !== shiftId) continue;
+      if (!order.items) continue;
+      for (const item of order.items) {
+        const key = (item.name || "").toString();
+        if (!key) continue;
+        if (!productMap[key]) productMap[key] = { name: key, qty: 0, revenue: 0 };
+        productMap[key].qty += Number(item.qty || 0);
+        productMap[key].revenue += Number(item.price || 0) * Number(item.qty || 0);
+      }
+    }
+    return Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
+  }
 
   const stats = useMemo(() => {
     const paid = orders.filter((o) => o.status === "PAID");
@@ -174,7 +247,13 @@ export default function ReportsPage() {
         .rp-table th{font-weight:700;color:var(--muted);font-size:11px;text-transform:uppercase;}
         .rp-bar{height:8px;border-radius:4px;background:var(--brand);margin-top:4px;}
         .rp-refund-card{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--panel);margin-top:10px;}
+        .rp-shift-card{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--panel);margin-top:12px;}
+        .rp-shift-products{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--brandSoft);}
+        .rp-shift-products table{width:100%;font-size:12px;border-collapse:collapse;}
+        .rp-shift-products th,.rp-shift-products td{padding:4px 8px;text-align:left;}
+        .rp-shift-products th{font-weight:700;color:var(--muted);font-size:10px;text-transform:uppercase;}
       `}</style>
+
 
 
       {/* HEADER */}
@@ -212,10 +291,12 @@ export default function ReportsPage() {
         <div className="rp-tabs">
           <button className={"rp-tab " + (tab === "ringkasan" ? "active" : "")} onClick={() => setTab("ringkasan")}>Ringkasan</button>
           <button className={"rp-tab " + (tab === "harian" ? "active" : "")} onClick={() => setTab("harian")}>Breakdown Harian</button>
+          <button className={"rp-tab " + (tab === "shift" ? "active" : "")} onClick={() => setTab("shift")}>Per Shift</button>
           <button className={"rp-tab " + (tab === "refund" ? "active" : "")} onClick={() => setTab("refund")}>Refund ({stats.refundCount})</button>
           <button className={"rp-tab " + (tab === "export" ? "active" : "")} onClick={() => setTab("export")}>Export</button>
         </div>
       </div>
+
 
 
       {fetching ? <div style={{ marginTop: 14 }}><SkeletonStyles /><PageSkeleton cards={2} /></div> : (<>
@@ -245,6 +326,7 @@ export default function ReportsPage() {
       </>)}
 
 
+
       {/* TAB: BREAKDOWN HARIAN */}
       {tab === "harian" && (<>
         {stats.dailyBreakdown.length > 0 ? (
@@ -260,6 +342,76 @@ export default function ReportsPage() {
           </div>
         ) : <div className="card" style={{ marginTop: 14 }}><div className="small">Tidak ada data di periode ini.</div></div>}
       </>)}
+
+
+      {/* TAB: PER SHIFT */}
+      {tab === "shift" && (<>
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="h1">Laporan Per Shift</div>
+          <div className="small" style={{ marginTop: 4 }}>Rekap penjualan per sesi shift dalam periode yang dipilih.</div>
+        </div>
+
+        {shiftsData.length > 0 ? shiftsData.map((shift) => {
+          const shiftOpenedAt = toDate(shift.openedAt);
+          const shiftClosedAt = toDate(shift.closedAt);
+          const products = getShiftProducts(shift.id);
+          return (
+            <div key={shift.id} className="rp-shift-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 15 }}>{shift.openedByEmail || "-"}</div>
+                  <div className="small" style={{ marginTop: 4 }}>
+                    Buka: <b>{shiftOpenedAt ? formatDateTime(shiftOpenedAt) : "-"}</b> — Tutup: <b>{shiftClosedAt ? formatDateTime(shiftClosedAt) : "-"}</b>
+                  </div>
+                </div>
+                <span style={{ padding: "5px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, border: "1px solid var(--border)", background: shift.status === "CLOSED" ? "var(--input-bg)" : "var(--brandSoft)" }}>
+                  {shift.status}
+                </span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginTop: 12 }}>
+                <div className="rp-stat" style={{ padding: 10 }}>
+                  <div className="rp-stat-label">Total Sales</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, marginTop: 4, color: "var(--brand)" }}>{rupiah(shift.totalSales)}</div>
+                </div>
+                <div className="rp-stat" style={{ padding: 10 }}>
+                  <div className="rp-stat-label">Order</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, marginTop: 4 }}>{shift.orderCount}</div>
+                </div>
+                <div className="rp-stat" style={{ padding: 10 }}>
+                  <div className="rp-stat-label">Cash</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, marginTop: 4 }}>{rupiah(shift.cashSales)}</div>
+                </div>
+                <div className="rp-stat" style={{ padding: 10 }}>
+                  <div className="rp-stat-label">QRIS</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, marginTop: 4 }}>{rupiah(shift.qrisSales)}</div>
+                </div>
+                <div className="rp-stat" style={{ padding: 10 }}>
+                  <div className="rp-stat-label">Selisih (Variance)</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, marginTop: 4, color: shift.variance < 0 ? "var(--danger)" : "var(--success)" }}>{rupiah(shift.variance)}</div>
+                </div>
+              </div>
+
+              {products.length > 0 && (
+                <div className="rp-shift-products">
+                  <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 6 }}>Produk Terjual</div>
+                  <table>
+                    <thead><tr><th>Produk</th><th>Qty</th><th>Revenue</th></tr></thead>
+                    <tbody>
+                      {products.map((p) => (
+                        <tr key={p.name}><td>{p.name}</td><td>{p.qty}</td><td>{rupiah(p.revenue)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        }) : (
+          <div className="card" style={{ marginTop: 14 }}><div className="small">Tidak ada shift di periode ini.</div></div>
+        )}
+      </>)}
+
 
       {/* TAB: REFUND */}
       {tab === "refund" && (<>

@@ -29,6 +29,7 @@ type Order = {
   total?: number;
   paymentMethod?: "CASH" | "QRIS" | null;
   shiftId?: string | null;
+  items?: { name: string; qty: number; price: number }[];
 };
 
 function rupiah(n: number) {
@@ -61,6 +62,7 @@ export default function ShiftsPage() {
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
+  const [showProductBreakdown, setShowProductBreakdown] = useState(true);
 
   const [openingCash, setOpeningCash] = useState("0");
   const [openingNote, setOpeningNote] = useState("");
@@ -102,6 +104,7 @@ export default function ShiftsPage() {
               total: Number(data.total || 0),
               paymentMethod: data.paymentMethod ?? null,
               shiftId: data.shiftId ?? null,
+              items: Array.isArray(data.items) ? data.items : [],
             };
           })
         );
@@ -122,6 +125,23 @@ export default function ShiftsPage() {
       expectedCash: Number(activeShift.openingCash || 0) + totals.cashSales,
     };
   }, [activeShift, orders]);
+
+  function getShiftProducts(shiftId: string): { name: string; qty: number; revenue: number }[] {
+    const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
+    for (const order of orders) {
+      if ((order.status || "").toUpperCase() !== "PAID") continue;
+      if ((order.shiftId || "") !== shiftId) continue;
+      if (!order.items) continue;
+      for (const item of order.items) {
+        const key = (item.name || "").toString();
+        if (!key) continue;
+        if (!productMap[key]) productMap[key] = { name: key, qty: 0, revenue: 0 };
+        productMap[key].qty += Number(item.qty || 0);
+        productMap[key].revenue += Number(item.price || 0) * Number(item.qty || 0);
+      }
+    }
+    return Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
+  }
 
   async function openShift() {
     try {
@@ -208,6 +228,7 @@ export default function ShiftsPage() {
       });
 
       // Auto-print laporan tutup shift
+      const products = showProductBreakdown ? getShiftProducts(activeShift.id) : undefined;
       printShiftReport({
         openedByEmail: activeShift.openedByEmail || "-",
         openedAt: toDateSafe(activeShift.openedAt),
@@ -221,7 +242,7 @@ export default function ShiftsPage() {
         actualCash: actual,
         variance: actual - expected,
         closingNote: closingNote.trim(),
-      });
+      }, products);
     } catch (e: any) {
       setMsg(e?.message || "Gagal tutup shift.");
     } finally {
@@ -242,7 +263,7 @@ export default function ShiftsPage() {
     actualCash: number;
     variance: number;
     closingNote: string;
-  }) {
+  }, products?: { name: string; qty: number; revenue: number }[]) {
     const lines: string[] = [];
     lines.push("================================");
     lines.push("     LAPORAN TUTUP SHIFT");
@@ -264,6 +285,15 @@ export default function ShiftsPage() {
     if (data.closingNote) {
       lines.push("--------------------------------");
       lines.push(`Catatan: ${data.closingNote}`);
+    }
+    if (products && products.length > 0) {
+      lines.push("================================");
+      lines.push("       PRODUK TERJUAL");
+      lines.push("================================");
+      for (const p of products) {
+        lines.push(`${p.name}`);
+        lines.push(`  ${p.qty}x  Rp ${rupiah(p.revenue)}`);
+      }
     }
     lines.push("================================");
     lines.push("");
@@ -310,6 +340,24 @@ export default function ShiftsPage() {
     w.document.close();
   }
 
+  function printHistoryShiftReport(shift: ShiftRecord) {
+    const products = showProductBreakdown ? getShiftProducts(shift.id) : undefined;
+    printShiftReport({
+      openedByEmail: shift.openedByEmail || "-",
+      openedAt: toDateSafe(shift.openedAt),
+      closedAt: toDateSafe(shift.closedAt),
+      openingCash: Number(shift.openingCash || 0),
+      cashSales: Number(shift.cashSales || 0),
+      qrisSales: Number(shift.qrisSales || 0),
+      totalSales: Number(shift.totalSales || 0),
+      orderCount: Number(shift.orderCount || 0),
+      expectedCash: Number(shift.closingCashExpected || 0),
+      actualCash: Number(shift.closingCashActual || 0),
+      variance: Number(shift.variance || 0),
+      closingNote: shift.noteClose || "",
+    }, products);
+  }
+
   if (loading || loadingRole) {
     return (
       <TerraPage>
@@ -345,6 +393,8 @@ export default function ShiftsPage() {
         .history{ margin-top:12px; display:grid; gap:12px; }
         .history-card{ border:1px solid var(--border); border-radius:16px; padding:14px; background:var(--panel); }
         .badge{ display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid var(--border); font-size:12px; font-weight:900; }
+        .toggle-row{ display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 14px; border:1px solid var(--border); border-radius:12px; background:var(--panel); }
+        .toggle-row label{ font-size:13px; font-weight:700; cursor:pointer; user-select:none; }
       `}</style>
 
       <div className="card">
@@ -435,6 +485,16 @@ export default function ShiftsPage() {
                   />
                 </div>
 
+                <div className="toggle-row">
+                  <input
+                    type="checkbox"
+                    id="productBreakdownToggle"
+                    checked={showProductBreakdown}
+                    onChange={(e) => setShowProductBreakdown(e.target.checked)}
+                  />
+                  <label htmlFor="productBreakdownToggle">Tampilkan detail produk di laporan</label>
+                </div>
+
                 <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={closeShift} disabled={saving}>
                   {saving ? "Menyimpan..." : "Tutup Shift"}
                 </button>
@@ -507,6 +567,16 @@ export default function ShiftsPage() {
                 <div className="small">
                   Selisih: <b>Rp {rupiah(shift.variance || 0)}</b>
                 </div>
+
+                {shift.status === "CLOSED" && (
+                  <button
+                    className="btn"
+                    style={{ marginTop: 10, width: "100%", fontSize: 12, fontWeight: 800 }}
+                    onClick={() => printHistoryShiftReport(shift)}
+                  >
+                    Print Laporan
+                  </button>
+                )}
               </div>
             ))}
 
