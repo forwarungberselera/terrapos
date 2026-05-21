@@ -117,6 +117,7 @@ export default function POSPage() {
   const [redeemedCode, setRedeemedCode] = useState("");
 
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
 
   useEffect(() => {
     const t = sp.get("table");
@@ -748,7 +749,7 @@ export default function POSPage() {
           align-items:start;
         }
         @media (max-width: 1080px){ .pos-grid{ grid-template-columns: 1fr 320px; } }
-        @media (max-width: 980px){ .pos-grid{ grid-template-columns: 1fr !important; } }
+        @media (max-width: 980px){ .pos-grid{ grid-template-columns: 1fr !important; padding-bottom:70px; } }
         .product-grid{
           margin-top:12px;
           display:grid;
@@ -846,7 +847,57 @@ export default function POSPage() {
             bottom:0;
             z-index:10;
           }
+          .pos-cart-desktop{ display:none !important; }
         }
+        @media (min-width: 981px){
+          .pos-mobile-bar{ display:none !important; }
+          .pos-mobile-sheet{ display:none !important; }
+        }
+        .pos-mobile-bar{
+          position:fixed;bottom:0;left:0;right:0;z-index:40;
+          padding:12px 16px;
+          background:var(--brand,#d59567);
+          color:#fff;
+          display:flex;align-items:center;gap:12px;
+          cursor:pointer;
+          box-shadow:0 -4px 20px rgba(0,0,0,0.15);
+          transition:transform 0.2s ease;
+          touch-action:manipulation;
+        }
+        .pos-mobile-bar:active{transform:scale(0.98);}
+        .pos-mobile-bar-badge{
+          width:28px;height:28px;border-radius:50%;
+          background:rgba(255,255,255,0.25);
+          display:grid;place-items:center;
+          font-weight:900;font-size:14px;
+        }
+        .pos-mobile-bar-text{flex:1;font-weight:700;font-size:14px;}
+        .pos-mobile-bar-total{font-weight:900;font-size:16px;font-family:var(--font-mono);}
+        .pos-mobile-sheet-overlay{
+          position:fixed;inset:0;z-index:45;
+          background:rgba(0,0,0,0.5);
+          animation:fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+        @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+        .pos-mobile-sheet{
+          position:fixed;bottom:0;left:0;right:0;z-index:46;
+          background:var(--panel);
+          border-radius:20px 20px 0 0;
+          max-height:85vh;
+          overflow-y:auto;
+          padding:20px 16px 32px;
+          animation:slideUp 0.25s ease;
+          box-shadow:0 -8px 30px rgba(0,0,0,0.2);
+        }
+        .pos-mobile-sheet-handle{
+          width:40px;height:4px;border-radius:2px;
+          background:var(--border);margin:0 auto 16px;
+        }
+        .pos-mobile-sheet .cart-item{
+          padding:12px 0;border-bottom:1px solid var(--border);
+        }
+        .pos-mobile-sheet .cart-item:last-child{border-bottom:none;}
       `}</style>
 
       <div className="card">
@@ -961,7 +1012,7 @@ export default function POSPage() {
           {filtered.length === 0 && <div className="small" style={{ marginTop: 12 }}>Tidak ada menu.</div>}
         </div>
 
-        <div className="card">
+        <div className="card pos-cart-desktop">
           <div className="row">
             <div className="h1">Keranjang</div>
             <div className="spacer" />
@@ -1146,6 +1197,124 @@ export default function POSPage() {
           </div>
         </div>
       </div>
+
+      {/* MOBILE STICKY CART BAR */}
+      {cart.length > 0 && !mobileCartOpen && !payOpen && !successDialog && !billSuccessDialog && (
+        <div className="pos-mobile-bar" onClick={() => setMobileCartOpen(true)}>
+          <div className="pos-mobile-bar-badge">{cart.reduce((a, i) => a + i.qty, 0)}</div>
+          <div className="pos-mobile-bar-text">Lihat Keranjang</div>
+          <div className="pos-mobile-bar-total">Rp {rupiah(total)}</div>
+        </div>
+      )}
+
+      {/* MOBILE CART BOTTOM SHEET */}
+      {mobileCartOpen && (
+        <>
+          <div className="pos-mobile-sheet-overlay" onClick={() => setMobileCartOpen(false)} />
+          <div className="pos-mobile-sheet">
+            <div className="pos-mobile-sheet-handle" />
+            <div className="row" style={{ marginBottom: 12 }}>
+              <div className="h1">Keranjang</div>
+              <div className="spacer" />
+              <button className="btn" onClick={resetCart}>Reset</button>
+              <button className="btn" onClick={() => setMobileCartOpen(false)} style={{ marginLeft: 6 }}>Tutup</button>
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="small">Keranjang kosong.</div>
+            ) : (
+              cart.map((i, index) => (
+                <div key={`m-${i.id}-${index}`} className="cart-item">
+                  <div className="row" style={{ alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 900, fontSize: 14 }}>{i.name}</div>
+                      <div className="small">{i.category} • Rp {rupiah(i.price)}</div>
+                      {(i.notes || "").trim() && (
+                        <div className="small" style={{ marginTop: 4 }}>Catatan: <b>{i.notes}</b></div>
+                      )}
+                    </div>
+                    <div className="row" style={{ gap: 4 }}>
+                      <button className="btn" style={{ padding: "6px 10px" }} onClick={() => dec(index)}>-</button>
+                      <b style={{ minWidth: 24, textAlign: "center" }}>{i.qty}</b>
+                      <button className="btn" style={{ padding: "6px 10px" }} onClick={() => inc(index)}>+</button>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <button className="btn" style={{ padding: "6px 10px", fontSize: 12 }} onClick={() => openNoteEditor(index)}>
+                      {(i.notes || "").trim() ? "Edit Catatan" : "+ Catatan"}
+                    </button>
+                  </div>
+                  {noteOpenId === String(index) && (
+                    <div className="note-box">
+                      <textarea
+                        className="input"
+                        style={{ minHeight: 60 }}
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value)}
+                        placeholder="Catatan pesanan..."
+                      />
+                      <div className="row" style={{ marginTop: 8, gap: 6 }}>
+                        <button className="btn btn-primary" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => saveNote(index)}>Simpan</button>
+                        <button className="btn" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => clearNote(index)}>Hapus</button>
+                        <button className="btn" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => { setNoteOpenId(null); setNoteDraft(""); }}>Batal</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+
+            {cart.length > 0 && (
+              <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <span className="small">Subtotal</span>
+                  <b>Rp {rupiah(subtotal)}</b>
+                </div>
+
+                <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}>
+                  <span className="small">Diskon</span>
+                  <div className="row" style={{ gap: 6 }}>
+                    <button className={"btn " + (discountType === "nominal" ? "btn-primary" : "")} style={{ padding: "4px 8px", fontSize: 11 }} onClick={() => setDiscountType("nominal")}>Rp</button>
+                    <button className={"btn " + (discountType === "persen" ? "btn-primary" : "")} style={{ padding: "4px 8px", fontSize: 11 }} onClick={() => setDiscountType("persen")}>%</button>
+                    <input className="input" style={{ width: 80, textAlign: "right" }} type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value || 0))} />
+                  </div>
+                </div>
+
+                {appliedPromo && promoDiscountAmount > 0 && (
+                  <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
+                    <div className="row" style={{ justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}>Promo: {appliedPromo.name}</span>
+                      <b style={{ fontSize: 13, color: "var(--brand)" }}>- Rp {rupiah(promoDiscountAmount)}</b>
+                    </div>
+                  </div>
+                )}
+
+                {!redeemedCode && (
+                  <div className="row" style={{ marginTop: 8, gap: 6 }}>
+                    <input className="input" style={{ flex: 1, textTransform: "uppercase" }} value={promoCodeInput} onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())} placeholder="Kode promo..." />
+                    <button className="btn btn-primary" style={{ padding: "10px 14px", fontSize: 12 }} onClick={() => { const code = promoCodeInput.trim().toUpperCase(); if (!code) return; const found = promos.find((p) => p.code === code); if (!found) { toast.error("Kode promo tidak ditemukan"); return; } setRedeemedCode(code); toast.success(`Kode "${code}" berhasil dipakai!`); }}>Pakai</button>
+                  </div>
+                )}
+
+                <div className="row" style={{ justifyContent: "space-between", marginTop: 10 }}>
+                  <b>Total</b>
+                  <b style={{ color: "var(--brand)", fontSize: 18, fontFamily: "var(--font-mono)" }}>Rp {rupiah(total)}</b>
+                </div>
+
+                {mode === "PAY_NOW" ? (
+                  <button className="btn btn-primary" style={{ width: "100%", marginTop: 14, padding: "14px 0", fontSize: 15, fontWeight: 800 }} disabled={cart.length === 0} onClick={() => { setMobileCartOpen(false); setPayOpen(true); setPaidAmount(0); setPaymentMethod("CASH"); }}>
+                    Bayar Sekarang
+                  </button>
+                ) : (
+                  <button className="btn btn-primary" style={{ width: "100%", marginTop: 14, padding: "14px 0", fontSize: 15, fontWeight: 800 }} disabled={cart.length === 0} onClick={() => { setMobileCartOpen(false); savePayLater(); }}>
+                    Simpan Order (Bayar Nanti)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {payOpen && mode === "PAY_NOW" && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "grid", placeItems: "center", padding: 16, zIndex: 50 }}>
