@@ -1158,12 +1158,12 @@ export default function POSPage() {
                   <div className="small">Uang dibayar</div>
                   <input className="input" type="number" value={paidAmount} onChange={(e) => setPaidAmount(Number(e.target.value || 0))} />
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
                   {[1000, 2000, 5000, 10000, 20000, 50000, 100000].map((nom) => (
                     <button
                       key={nom}
                       className="btn"
-                      style={{ padding: "8px 12px", fontSize: 12, fontWeight: 700, fontFamily: "var(--font-mono)" }}
+                      style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500, fontFamily: "var(--font-mono)", letterSpacing: -0.3 }}
                       onClick={() => setPaidAmount((prev) => prev + nom)}
                     >
                       +{rupiah(nom)}
@@ -1171,7 +1171,7 @@ export default function POSPage() {
                   ))}
                   <button
                     className="btn"
-                    style={{ padding: "8px 12px", fontSize: 12, fontWeight: 700 }}
+                    style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500 }}
                     onClick={() => setPaidAmount(total)}
                   >
                     Uang Pas
