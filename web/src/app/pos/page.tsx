@@ -748,9 +748,14 @@ export default function POSPage() {
           grid-template-columns: 1fr 360px;
           gap:14px;
           align-items:start;
+          max-width:100%;
+          overflow:hidden;
         }
         @media (max-width: 1080px){ .pos-grid{ grid-template-columns: 1fr 320px; } }
-        @media (max-width: 980px){ .pos-grid{ grid-template-columns: 1fr !important; padding-bottom:80px; } }
+        @media (max-width: 980px){
+          .pos-grid{ grid-template-columns: 1fr !important; padding-bottom:80px; }
+          .pos-grid > .card{ min-width:0; overflow:hidden; }
+        }
         .product-grid{
           margin-top:12px;
           display:grid;
