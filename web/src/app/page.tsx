@@ -34,38 +34,7 @@ export default function HomePage() {
     }
   }, []);
 
-  const { hero, features, featuresTitle, pricingTitle, pricingSubtitle, ctaTitle, ctaSubtitle, footerText } = config;
-
-  // Pricing always uses latest hardcoded values (not Firestore) to avoid stale data
-  const pricing = [
-    {
-      name: "Seed",
-      price: "Segera Hadir",
-      period: "",
-      description: "Untuk memulai bisnis kecil",
-      features: ["Point of Sales", "Management Product", "Laporan Penjualan", "Shift System", "Single Outlet", "1 User"],
-      highlighted: false,
-      ctaText: "Hubungi Kami",
-    },
-    {
-      name: "Core",
-      price: "Segera Hadir",
-      period: "",
-      description: "Untuk bisnis yang berkembang",
-      features: ["Semua fitur Seed", "Promo & Discount", "Staff Management (3-5 user)", "Audit Log", "QR Meja"],
-      highlighted: true,
-      ctaText: "Hubungi Kami",
-    },
-    {
-      name: "Orbit",
-      price: "Segera Hadir",
-      period: "",
-      description: "Untuk enterprise & multi-outlet",
-      features: ["Semua fitur Core", "Multi-outlet management", "Unlimited user", "Priority support", "Custom branding", "API access", "Dedicated account manager"],
-      highlighted: false,
-      ctaText: "Hubungi Kami",
-    },
-  ];
+  const { hero, features, featuresTitle, pricing, pricingTitle, pricingSubtitle, ctaTitle, ctaSubtitle, footerText } = config;
 
   return (
     <main>

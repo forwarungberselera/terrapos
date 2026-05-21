@@ -12,7 +12,11 @@ interface Feature {
 interface PricingPlan {
   name: string;
   price: string;
+  period: string;
+  description: string;
   features: string[];
+  highlighted: boolean;
+  ctaText: string;
 }
 
 interface LandingData {
@@ -24,7 +28,11 @@ interface LandingData {
 const EMPTY_LANDING: LandingData = {
   hero: { title: "", subtitle: "" },
   features: [],
-  pricing: [],
+  pricing: [
+    { name: "Seed", price: "Segera Hadir", period: "", description: "Untuk memulai bisnis kecil", features: ["Point of Sales", "Management Product", "Laporan Penjualan", "Shift System", "Single Outlet", "1 User"], highlighted: false, ctaText: "Hubungi Kami" },
+    { name: "Core", price: "Segera Hadir", period: "", description: "Untuk bisnis yang berkembang", features: ["Semua fitur Seed", "Promo & Discount", "Staff Management (3-5 user)", "Audit Log", "QR Meja"], highlighted: true, ctaText: "Hubungi Kami" },
+    { name: "Orbit", price: "Segera Hadir", period: "", description: "Untuk enterprise & multi-outlet", features: ["Semua fitur Core", "Multi-outlet management", "Unlimited user", "Priority support", "Custom branding", "API access", "Dedicated account manager"], highlighted: false, ctaText: "Hubungi Kami" },
+  ],
 };
 
 export default function LandingPage() {
@@ -42,7 +50,15 @@ export default function LandingPage() {
           setData({
             hero: raw.hero || { title: "", subtitle: "" },
             features: raw.features || [],
-            pricing: raw.pricing || [],
+            pricing: (raw.pricing || []).map((p: any) => ({
+              name: p.name || "",
+              price: p.price || "Segera Hadir",
+              period: p.period || "",
+              description: p.description || "",
+              features: Array.isArray(p.features) ? p.features : [],
+              highlighted: p.highlighted ?? false,
+              ctaText: p.ctaText || "Hubungi Kami",
+            })),
           });
         }
       } catch (e) {
@@ -100,12 +116,12 @@ export default function LandingPage() {
   const addPricing = () => {
     setData((prev) => ({
       ...prev,
-      pricing: [...prev.pricing, { name: "", price: "", features: [] }],
+      pricing: [...prev.pricing, { name: "", price: "Segera Hadir", period: "", description: "", features: [], highlighted: false, ctaText: "Hubungi Kami" }],
     }));
     setSaved(false);
   };
 
-  const updatePricing = (index: number, field: "name" | "price", value: string) => {
+  const updatePricing = (index: number, field: keyof PricingPlan, value: any) => {
     setData((prev) => {
       const pricing = [...prev.pricing];
       pricing[index] = { ...pricing[index], [field]: value };
@@ -228,40 +244,46 @@ export default function LandingPage() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {data.pricing.map((p, i) => (
-                  <div key={i} style={{ padding: 12, background: "var(--input-bg)", borderRadius: 8, border: "1px solid var(--border)" }}>
-                    <div className="row" style={{ marginBottom: 8 }}>
+                  <div key={i} style={{ padding: 16, background: "var(--input-bg)", borderRadius: 10, border: p.highlighted ? "2px solid var(--brand)" : "1px solid var(--border)" }}>
+                    <div className="row" style={{ marginBottom: 10 }}>
                       <span className="badge">{p.name || `Plan ${i + 1}`}</span>
+                      {p.highlighted && <span className="badge" style={{ background: "var(--brand)", color: "#fff", marginLeft: 6 }}>Populer</span>}
                       <div className="spacer" />
                       <button className="btn btn-danger" onClick={() => removePricing(i)} style={{ padding: "4px 8px", fontSize: 11 }}>
                         Remove
                       </button>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                      <input
-                        className="input"
-                        value={p.name}
-                        onChange={(e) => updatePricing(i, "name", e.target.value)}
-                        placeholder="Plan name (e.g. Basic)"
-                      />
-                      <input
-                        className="input"
-                        value={p.price}
-                        onChange={(e) => updatePricing(i, "price", e.target.value)}
-                        placeholder="Price (e.g. Rp 99.000/bln)"
-                      />
+                      <div>
+                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Nama Paket</label>
+                        <input className="input" value={p.name} onChange={(e) => updatePricing(i, "name", e.target.value)} placeholder="Seed / Core / Orbit" />
+                      </div>
+                      <div>
+                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Harga</label>
+                        <input className="input" value={p.price} onChange={(e) => updatePricing(i, "price", e.target.value)} placeholder="Rp 99.000 atau Segera Hadir" />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                      <div>
+                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Periode</label>
+                        <input className="input" value={p.period} onChange={(e) => updatePricing(i, "period", e.target.value)} placeholder="/bulan atau kosong" />
+                      </div>
+                      <div>
+                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Teks Tombol (CTA)</label>
+                        <input className="input" value={p.ctaText} onChange={(e) => updatePricing(i, "ctaText", e.target.value)} placeholder="Hubungi Kami" />
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <label className="small" style={{ display: "block", marginBottom: 4 }}>Deskripsi</label>
+                      <input className="input" value={p.description} onChange={(e) => updatePricing(i, "description", e.target.value)} placeholder="Untuk memulai bisnis kecil" />
+                    </div>
+                    <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                      <input type="checkbox" id={`highlight-${i}`} checked={p.highlighted} onChange={(e) => updatePricing(i, "highlighted", e.target.checked)} />
+                      <label htmlFor={`highlight-${i}`} className="small" style={{ fontWeight: 700 }}>Tandai sebagai &quot;Populer&quot;</label>
                     </div>
                     <div>
-                      <label className="small" style={{ display: "block", marginBottom: 4 }}>
-                        Features (one per line)
-                      </label>
-                      <textarea
-                        className="input"
-                        rows={3}
-                        value={p.features.join("\n")}
-                        onChange={(e) => updatePricingFeatures(i, e.target.value)}
-                        placeholder={"Feature 1\nFeature 2\nFeature 3"}
-                        style={{ resize: "vertical" }}
-                      />
+                      <label className="small" style={{ display: "block", marginBottom: 4 }}>Fitur (satu per baris)</label>
+                      <textarea className="input" rows={4} value={p.features.join("\n")} onChange={(e) => updatePricingFeatures(i, e.target.value)} placeholder={"Point of Sales\nManagement Product\nLaporan Penjualan"} style={{ resize: "vertical" }} />
                     </div>
                   </div>
                 ))}
