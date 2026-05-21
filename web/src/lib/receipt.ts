@@ -54,10 +54,6 @@ export function receiptHTML(d: ReceiptData) {
       ? Math.max(0, Number(d.paidAmount || 0) - Number(d.total || 0))
       : 0;
 
-  const addressHtml = d.address?.trim()
-    ? `<div class="muted">${escapeHtml(d.address.trim())}</div>`
-    : ``;
-
   const footerText = (d.footer ?? "Terima kasih.").trim() || "Terima kasih.";
   const title = (d.title ?? "STRUK").trim() || "STRUK";
 
@@ -68,29 +64,56 @@ export function receiptHTML(d: ReceiptData) {
   <meta charset="utf-8"/>
   <title>${escapeHtml(title)} ${escapeHtml(d.orderNo)}</title>
   <style>
-    @page { margin: 10mm; }
-    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; color:#111; }
-    .wrap { max-width: 320px; margin: 0 auto; }
-    .center { text-align:center; }
-    .muted { opacity:.8; font-size:12px; }
-    table { width:100%; border-collapse:collapse; }
-    .line { border-top:1px dashed #333; margin:10px 0; }
-    .total { font-size:16px; font-weight:900; }
-    .badge { display:inline-block; padding:4px 8px; border:1px solid #333; border-radius:999px; font-size:12px; font-weight:900; margin-top:6px; }
+    @page { margin: 8mm; }
+    body {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      color: #111;
+      margin: 0;
+      padding: 0;
+    }
+    .wrap { max-width: 320px; margin: 0 auto; padding: 8px 0; }
+    .center { text-align: center; }
+    .muted { opacity: .8; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    .line { border-top: 1px dashed #333; margin: 10px 0; }
+    .total { font-size: 18px; font-weight: 900; }
+    .badge { display: inline-block; padding: 4px 10px; border: 2px solid #111; border-radius: 999px; font-size: 12px; font-weight: 900; margin-top: 8px; letter-spacing: 0.5px; }
+    .store-name {
+      font-weight: 900;
+      font-size: 22px;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+    .store-address {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+    .info-row {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="center">
-      <div style="font-weight:900;font-size:18px;">${escapeHtml(d.storeName || "TerraPOS")}</div>
-      ${addressHtml}
+      <div class="store-name">${escapeHtml(d.storeName || "TerraPOS")}</div>
+      ${d.address?.trim() ? `<div class="store-address">${escapeHtml(d.address.trim())}</div>` : ``}
       <div class="badge">${escapeHtml(title)}</div>
-      ${d.isCopy ? `<div style="margin-top:4px;font-weight:900;font-size:14px;color:#666;">*** COPY ***</div>` : ``}
-      <div class="muted" style="margin-top:6px;">${escapeHtml(d.dateText)}</div>
-      <div class="muted">Order: ${escapeHtml(d.orderNo)}</div>
-      ${d.tableNo ? `<div class="muted">Meja: ${escapeHtml(String(d.tableNo))}</div>` : ``}
-      ${d.cashierEmail ? `<div class="muted">Kasir: ${escapeHtml(String(d.cashierEmail))}</div>` : ``}
-      ${d.paymentMethod ? `<div class="muted">Metode: ${escapeHtml(d.paymentMethod)}</div>` : ``}
+      ${d.isCopy ? `<div style="margin-top:6px;font-weight:900;font-size:14px;color:#666;">*** COPY ***</div>` : ``}
+    </div>
+
+    <div class="line"></div>
+
+    <div class="center">
+      <div class="info-row">${escapeHtml(d.dateText)}</div>
+      <div class="info-row">Order: <b>${escapeHtml(d.orderNo)}</b></div>
+      ${d.tableNo ? `<div class="info-row">Meja: <b>${escapeHtml(String(d.tableNo))}</b></div>` : ``}
+      ${d.cashierEmail ? `<div class="info-row">Kasir: ${escapeHtml(String(d.cashierEmail))}</div>` : ``}
+      ${d.paymentMethod ? `<div class="info-row">Metode: <b>${escapeHtml(d.paymentMethod)}</b></div>` : ``}
     </div>
 
     <div class="line"></div>
@@ -115,8 +138,8 @@ export function receiptHTML(d: ReceiptData) {
 
     <div class="line"></div>
 
-    <div class="center muted">
-      ${escapeHtml(footerText)}
+    <div class="center" style="padding:4px 0;">
+      <div style="font-size:12px;opacity:0.8;">${escapeHtml(footerText)}</div>
     </div>
   </div>
 
