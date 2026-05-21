@@ -853,13 +853,16 @@ export default function POSPage() {
         <div className="row">
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-primary)", lineHeight: 1 }}>terra <span style={{ color: "var(--brand)" }}>POS</span></div>
-            <div className="small">Tenant: {tenantId}</div>
-            <div className="small">
-              User: {email || "-"} | Role: <b>{role || "-"}</b>
-              {tableNo ? <> | Meja: <b>{tableNo}</b></> : null}
-            </div>
-            <div style={{ marginTop: 4 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 6 }}>
               <LevelBadge size="small" />
+              <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 8px", borderRadius: 999, background: "var(--input-bg)", border: "1px solid var(--border)", fontSize: 11, fontWeight: 600, color: "var(--muted)" }}>
+                {email || "-"}
+              </span>
+              {tableNo ? (
+                <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 8px", borderRadius: 999, background: "var(--input-bg)", border: "1px solid var(--border)", fontSize: 11, fontWeight: 600, color: "var(--muted)" }}>
+                  Meja: {tableNo}
+                </span>
+              ) : null}
             </div>
             <div className="small" style={{ marginTop: 6 }}>
               Shift: <b>{shiftAccessBlocked ? "Belum aktif di rules" : activeShift ? `OPEN - ${activeShift.openedByEmail || "-"}` : "Belum dibuka"}</b>

@@ -86,7 +86,7 @@ export default function DashboardPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
-  const { canAccess } = useLevel();
+  const { canAccess, level } = useLevel();
 
   const roleLower = (role || "").toString().toLowerCase();
   const isOwner = roleLower === "owner" || roleLower === "developer";
@@ -967,7 +967,7 @@ export default function DashboardPage() {
                 <button className="sidebtn" onClick={() => r.push("/settings/receipt")}>Pengaturan Struk</button>
                 <button className="sidebtn" onClick={() => r.push("/printer")}>Printer</button>
                 <button className="sidebtn" onClick={() => r.push("/refund-pin")}>PIN Refund</button>
-                <button className="sidebtn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
+                {level === "orbit" && <button className="sidebtn" onClick={() => r.push("/setup")}>Ganti Tenant</button>}
                 <button className="sidebtn" onClick={() => signOut(auth).then(() => r.push("/login"))}>
                   Logout
                 </button>
@@ -981,11 +981,11 @@ export default function DashboardPage() {
             <div className="hero-top">
               <div>
                 <div className="hero-title">Dashboard Premium</div>
-                <div className="hero-sub">
-                  Tenant <b>{tenantId}</b> • User <b>{email || "-"}</b> • Role <b>{role || "-"}</b>
-                </div>
-                <div style={{ marginTop: 8 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 8 }}>
                   <LevelBadge />
+                  <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 8px", borderRadius: 999, background: "var(--input-bg)", border: "1px solid var(--border)", fontSize: 11, fontWeight: 600, color: "var(--muted)" }}>
+                    {email || "-"}
+                  </span>
                 </div>
               </div>
 
