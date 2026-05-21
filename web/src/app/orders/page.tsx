@@ -853,6 +853,44 @@ export default function OrdersPage() {
           text-overflow:ellipsis;
           white-space:nowrap;
         }
+
+        /* Payment popup: desktop modal vs mobile bottom sheet */
+        .order-pay-desktop{ display:grid; }
+        .order-pay-mobile-overlay{ display:none; }
+        .order-pay-mobile{ display:none !important; }
+        @keyframes orderFadeIn{from{opacity:0;}to{opacity:1;}}
+        @keyframes orderSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+        @media (max-width: 980px){
+          .order-pay-desktop{ display:none !important; }
+          .order-pay-mobile-overlay{
+            display:block;
+            position:fixed;inset:0;z-index:50;
+            background:rgba(0,0,0,0.5);
+            animation:orderFadeIn 0.2s ease;
+          }
+          .order-pay-mobile{
+            display:block !important;
+            position:fixed;bottom:0;left:0;right:0;z-index:51;
+            background:var(--panel);
+            border-radius:20px 20px 0 0;
+            max-height:85vh;
+            overflow-y:auto;
+            padding:20px 16px 32px;
+            animation:orderSlideUp 0.25s ease;
+            box-shadow:0 -8px 30px rgba(0,0,0,0.2);
+          }
+          .order-pay-mobile .pay-method-btn{
+            flex:1;min-height:50px;justify-content:center;
+            font-size:16px;font-weight:800;letter-spacing:0.3px;
+          }
+          .order-pay-mobile .pay-nom-grid{
+            display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;
+          }
+          .order-pay-mobile .pay-nom-grid .btn{
+            padding:8px 10px;font-size:12px;font-weight:500;
+            font-family:var(--font-mono);letter-spacing:-0.3px;
+          }
+        }
       `}</style>
 
       <div className="card">
@@ -1113,13 +1151,14 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* PAYMENT POPUP - DESKTOP (centered modal) */}
       {payOpen && payOrder && (
         <div
+          className="order-pay-desktop"
           style={{
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.5)",
-            display: "grid",
             placeItems: "center",
             padding: 16,
             zIndex: 50,
@@ -1201,6 +1240,88 @@ export default function OrdersPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* PAYMENT POPUP - MOBILE (bottom sheet) */}
+      {payOpen && payOrder && (
+        <>
+          <div className="order-pay-mobile-overlay" onClick={() => setPayOpen(false)} />
+          <div className="order-pay-mobile">
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 16px" }} />
+            <div className="row" style={{ marginBottom: 12 }}>
+              <div className="h1">Bayar Order</div>
+              <div className="spacer" />
+              <button className="btn" onClick={() => setPayOpen(false)}>Tutup</button>
+            </div>
+
+            <div className="small" style={{ marginTop: 4 }}>
+              Order: <b>{payOrder.orderNo}</b> • Meja: <b>{payOrder.tableNo || "-"}</b>
+            </div>
+
+            <div className="row" style={{ marginTop: 10, gap: 10 }}>
+              <button className={"btn pay-method-btn " + (paymentMethod === "CASH" ? "btn-primary" : "")} onClick={() => setPaymentMethod("CASH")}>
+                CASH
+              </button>
+              <button className={"btn pay-method-btn " + (paymentMethod === "QRIS" ? "btn-primary" : "")} onClick={() => setPaymentMethod("QRIS")}>
+                QRIS
+              </button>
+            </div>
+
+            <div className="row" style={{ justifyContent: "space-between", marginTop: 14 }}>
+              <span className="small">Total</span>
+              <b style={{ fontSize: 18 }}>Rp {rupiah(payOrder.total)}</b>
+            </div>
+
+            {paymentMethod === "CASH" && (
+              <>
+                <div style={{ marginTop: 10 }}>
+                  <div className="small">Uang dibayar</div>
+                  <input
+                    className="input"
+                    style={{ fontSize: 16 }}
+                    type="number"
+                    value={paidAmount}
+                    onChange={(e) => setPaidAmount(Number(e.target.value || 0))}
+                  />
+                </div>
+                <div className="pay-nom-grid">
+                  {[1000, 2000, 5000, 10000, 20000, 50000, 100000].map((nom) => (
+                    <button
+                      key={nom}
+                      className="btn"
+                      onClick={() => setPaidAmount((prev) => prev + nom)}
+                    >
+                      +{rupiah(nom)}
+                    </button>
+                  ))}
+                  <button
+                    className="btn"
+                    onClick={() => setPaidAmount(payOrder.total)}
+                  >
+                    Uang Pas
+                  </button>
+                  <button
+                    className="btn"
+                    style={{ color: "var(--danger)" }}
+                    onClick={() => setPaidAmount(0)}
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div className="row" style={{ justifyContent: "space-between", marginTop: 12 }}>
+                  <span className="small">Kembalian</span>
+                  <b style={{ fontSize: 16 }}>Rp {rupiah(Math.max(0, paidAmount - payOrder.total))}</b>
+                </div>
+              </>
+            )}
+
+            {err && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{err}</div>}
+
+            <button className="btn btn-primary" style={{ width: "100%", marginTop: 14, padding: "14px 0", fontSize: 15 }} onClick={payAndPrint}>
+              Bayar & Print Struk
+            </button>
+          </div>
+        </>
       )}
 
       {refundOpen && refundOrder && (
