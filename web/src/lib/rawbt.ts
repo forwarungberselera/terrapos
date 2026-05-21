@@ -22,6 +22,7 @@ export type RawBtReceiptData = {
   isCopy?: boolean;
   qrText?: string;
   showQR?: boolean;
+  showWatermark?: boolean;
 };
 
 function rupiah(n: number) {
@@ -102,6 +103,11 @@ export function buildPlainReceipt(d: RawBtReceiptData) {
     } else {
       rows.push(qr);
     }
+  }
+
+  if (d.showWatermark !== false) {
+    rows.push("");
+    rows.push(center("Powered by TerraPOS"));
   }
 
   rows.push("");

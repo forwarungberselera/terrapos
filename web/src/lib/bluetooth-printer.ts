@@ -197,6 +197,7 @@ export type BluetoothReceiptData = {
   items: { name: string; qty: number; price: number; notes?: string }[];
   qrText?: string;
   showQR?: boolean;
+  showWatermark?: boolean;
 };
 
 /**
@@ -303,6 +304,13 @@ export async function printReceipt(data: BluetoothReceiptData) {
     bytes.push(...textToBytes("Scan / Kunjungi:"));
     bytes.push(LF);
     bytes.push(...textToBytes(data.qrText.trim()));
+    bytes.push(LF);
+  }
+
+  // Watermark
+  if (data.showWatermark !== false) {
+    bytes.push(LF);
+    bytes.push(...textToBytes("Powered by TerraPOS"));
     bytes.push(LF);
   }
 

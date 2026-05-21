@@ -25,6 +25,7 @@ export type ReceiptData = {
   qrText?: string;
   showLogo?: boolean;
   showQR?: boolean;
+  showWatermark?: boolean;
 };
 
 function rupiah(n: number) {
@@ -63,6 +64,7 @@ export function receiptHTML(d: ReceiptData) {
 
   const showLogo = d.showLogo !== false && !!d.logoBase64;
   const showQR = d.showQR !== false && !!d.qrText;
+  const showWatermark = d.showWatermark !== false;
 
   const logoHtml = showLogo
     ? `<div style="text-align:center;margin-bottom:8px;">
@@ -295,6 +297,8 @@ export function receiptHTML(d: ReceiptData) {
     <div class="center" style="padding:4px 0;">
       <div style="font-size:12px;opacity:0.8;">${escapeHtml(footerText)}</div>
     </div>
+
+    ${showWatermark ? `<div class="center" style="padding:2px 0;margin-top:4px;"><div style="font-size:10px;opacity:0.45;">Powered by TerraPOS</div></div>` : ``}
   </div>
 
   ${qrScript}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useToast } from "@/components/Toast";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
@@ -24,6 +24,7 @@ type ReceiptConfig = {
   showOrderNo: boolean;
   showDateTime: boolean;
   showPaymentMethod: boolean;
+  showWatermark: boolean;
   logoBase64: string;
   qrText: string;
 };
@@ -42,6 +43,7 @@ const DEFAULT_CONFIG: ReceiptConfig = {
   showOrderNo: true,
   showDateTime: true,
   showPaymentMethod: true,
+  showWatermark: true,
   logoBase64: "",
   qrText: "",
 };
@@ -62,8 +64,24 @@ export default function ReceiptSettingsPage() {
   const [config, setConfig] = useState<ReceiptConfig>(DEFAULT_CONFIG);
   const [busy, setBusy] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string>("");
+  const [userLevel, setUserLevel] = useState<string>("free");
 
   const canEdit = ["owner", "developer"].includes((role || "").toString().toLowerCase());
+  const isFreeUser = userLevel === "free";
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      if (!u) return;
+      try {
+        const userSnap = await getDoc(doc(db, `users/${u.uid}`));
+        if (userSnap.exists()) {
+          const data = userSnap.data() as any;
+          setUserLevel(data.level || "free");
+        }
+      } catch {}
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -87,6 +105,7 @@ export default function ReceiptSettingsPage() {
             showOrderNo: d.receiptShowOrderNo ?? DEFAULT_CONFIG.showOrderNo,
             showDateTime: d.receiptShowDateTime ?? DEFAULT_CONFIG.showDateTime,
             showPaymentMethod: d.receiptShowPaymentMethod ?? DEFAULT_CONFIG.showPaymentMethod,
+            showWatermark: d.receiptShowWatermark ?? DEFAULT_CONFIG.showWatermark,
             logoBase64: logoData,
             qrText: d.receiptQrText || "",
           });
@@ -118,6 +137,7 @@ export default function ReceiptSettingsPage() {
           receiptShowOrderNo: config.showOrderNo,
           receiptShowDateTime: config.showDateTime,
           receiptShowPaymentMethod: config.showPaymentMethod,
+          receiptShowWatermark: isFreeUser ? true : config.showWatermark,
           receiptLogoBase64: config.logoBase64 || "",
           receiptQrText: config.qrText.trim() || "",
           updatedAt: serverTimestamp(),
@@ -580,6 +600,19 @@ export default function ReceiptSettingsPage() {
               value={config.showPaymentMethod}
               onChange={(v) => update("showPaymentMethod", v)}
             />
+            <ToggleItem
+              label="Watermark TerraPOS"
+              desc={isFreeUser ? "Upgrade ke Basic atau lebih tinggi untuk menonaktifkan" : "Tampilkan 'Powered by TerraPOS' di bawah struk"}
+              value={isFreeUser ? true : config.showWatermark}
+              onChange={(v) => {
+                if (isFreeUser) {
+                  toast.warning("Upgrade ke Basic atau lebih tinggi untuk menonaktifkan watermark.");
+                  return;
+                }
+                update("showWatermark", v);
+              }}
+              locked={isFreeUser}
+            />
           </div>
 
           {/* Save */}
@@ -743,6 +776,12 @@ export default function ReceiptSettingsPage() {
             <div className="center muted" style={{ fontSize: config.fontSize - 1 }}>
               {config.footer || "Terima kasih."}
             </div>
+
+            {(isFreeUser || config.showWatermark) && (
+              <div className="center" style={{ fontSize: config.fontSize - 3, opacity: 0.5, marginTop: 6 }}>
+                Powered by TerraPOS
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -755,23 +794,29 @@ function ToggleItem({
   desc,
   value,
   onChange,
+  locked,
 }: {
   label: string;
   desc: string;
   value: boolean;
   onChange: (v: boolean) => void;
+  locked?: boolean;
 }) {
   return (
     <div className="toggle-row">
       <div>
-        <div className="toggle-label">{label}</div>
+        <div className="toggle-label">
+          {label}
+          {locked && <span style={{ marginLeft: 6, fontSize: 11, color: "var(--brand)", fontWeight: 600 }}>🔒 FREE</span>}
+        </div>
         <div className="toggle-desc">{desc}</div>
       </div>
       <div
-        className={`toggle-switch ${value ? "active" : ""}`}
+        className={`toggle-switch ${value ? "active" : ""} ${locked ? "locked" : ""}`}
         onClick={() => onChange(!value)}
         role="switch"
         aria-checked={value}
+        style={locked ? { opacity: 0.5, cursor: "not-allowed" } : {}}
       />
     </div>
   );

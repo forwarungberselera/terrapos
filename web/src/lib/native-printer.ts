@@ -132,6 +132,7 @@ export type ReceiptData = {
   items: { name: string; qty: number; price: number; notes?: string }[];
   qrText?: string;
   showQR?: boolean;
+  showWatermark?: boolean;
 };
 
 /**
@@ -190,6 +191,11 @@ export async function printReceipt(data: ReceiptData): Promise<void> {
     output += LF;
     output += "Scan / Kunjungi:" + LF;
     output += data.qrText.trim() + LF;
+  }
+
+  if (data.showWatermark !== false) {
+    output += LF;
+    output += "Powered by TerraPOS" + LF;
   }
 
   output += CMD.FEED;
