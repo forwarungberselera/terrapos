@@ -69,6 +69,11 @@ export default function ShiftsPage() {
   const [closingCashActual, setClosingCashActual] = useState("0");
   const [closingNote, setClosingNote] = useState("");
 
+  // Confirmation dialogs
+  const [showOpenConfirm, setShowOpenConfirm] = useState(false);
+  const [closeSuccessDialog, setCloseSuccessDialog] = useState<{shiftId: string} | null>(null);
+  const [pendingPrintData, setPendingPrintData] = useState<{data: any; products: any} | null>(null);
+
   useEffect(() => {
     if (!tenantId) return;
     const qy = query(collection(db, `tenants/${tenantId}/shifts`), orderBy("openedAt", "desc"), limit(20));
@@ -227,22 +232,26 @@ export default function ShiftsPage() {
         },
       });
 
-      // Auto-print laporan tutup shift
+      // Store print data and show success dialog instead of auto-printing
       const products = showProductBreakdown ? getShiftProducts(activeShift.id) : undefined;
-      printShiftReport({
-        openedByEmail: activeShift.openedByEmail || "-",
-        openedAt: toDateSafe(activeShift.openedAt),
-        closedAt: new Date(),
-        openingCash: Number(activeShift.openingCash || 0),
-        cashSales: activeSummary.cashSales,
-        qrisSales: activeSummary.qrisSales,
-        totalSales: activeSummary.totalSales,
-        orderCount: activeSummary.orderCount,
-        expectedCash: expected,
-        actualCash: actual,
-        variance: actual - expected,
-        closingNote: closingNote.trim(),
-      }, products);
+      setPendingPrintData({
+        data: {
+          openedByEmail: activeShift.openedByEmail || "-",
+          openedAt: toDateSafe(activeShift.openedAt),
+          closedAt: new Date(),
+          openingCash: Number(activeShift.openingCash || 0),
+          cashSales: activeSummary.cashSales,
+          qrisSales: activeSummary.qrisSales,
+          totalSales: activeSummary.totalSales,
+          orderCount: activeSummary.orderCount,
+          expectedCash: expected,
+          actualCash: actual,
+          variance: actual - expected,
+          closingNote: closingNote.trim(),
+        },
+        products,
+      });
+      setCloseSuccessDialog({ shiftId: activeShift.id });
     } catch (e: any) {
       setMsg(e?.message || "Gagal tutup shift.");
     } finally {
@@ -525,7 +534,7 @@ export default function ShiftsPage() {
                 />
               </div>
 
-              <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={openShift} disabled={saving}>
+              <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => setShowOpenConfirm(true)} disabled={saving}>
                 {saving ? "Menyimpan..." : "Buka Shift"}
               </button>
             </div>
@@ -586,6 +595,53 @@ export default function ShiftsPage() {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Modal: Konfirmasi Buka Shift */}
+      {showOpenConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div className="card" style={{ maxWidth: 400, width: "90%", padding: 24 }}>
+            <div className="h1">Konfirmasi Buka Shift</div>
+            <div style={{ marginTop: 12, fontSize: 14 }}>
+              <div><b>Kas Awal:</b> Rp {rupiah(Number(openingCash || 0))}</div>
+              {openingNote.trim() && <div style={{ marginTop: 6 }}><b>Catatan:</b> {openingNote.trim()}</div>}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { setShowOpenConfirm(false); openShift(); }} disabled={saving}>
+                Konfirmasi
+              </button>
+              <button className="btn" style={{ flex: 1 }} onClick={() => setShowOpenConfirm(false)}>
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Shift Berhasil Ditutup */}
+      {closeSuccessDialog && pendingPrintData && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div className="card" style={{ maxWidth: 420, width: "90%", padding: 24 }}>
+            <div style={{ textAlign: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 40 }}>✓</span>
+            </div>
+            <div className="h1" style={{ textAlign: "center" }}>Shift Berhasil Ditutup</div>
+            <div style={{ marginTop: 14, fontSize: 13, lineHeight: 1.8 }}>
+              <div><b>Total Sales:</b> Rp {rupiah(pendingPrintData.data.totalSales)}</div>
+              <div><b>Jumlah Order:</b> {pendingPrintData.data.orderCount}</div>
+              <div><b>Selisih (Variance):</b> Rp {rupiah(pendingPrintData.data.variance)}</div>
+            </div>
+            <div style={{ marginTop: 14, fontSize: 13, fontWeight: 700, textAlign: "center" }}>Cetak laporan shift?</div>
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { printShiftReport(pendingPrintData.data, pendingPrintData.products); setCloseSuccessDialog(null); setPendingPrintData(null); }}>
+                Cetak Laporan
+              </button>
+              <button className="btn" style={{ flex: 1 }} onClick={() => { setCloseSuccessDialog(null); setPendingPrintData(null); }}>
+                Lewati
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </TerraPage>
   );

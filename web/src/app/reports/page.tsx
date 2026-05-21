@@ -87,6 +87,8 @@ export default function ReportsPage() {
   const canAccess = ["owner", "developer"].includes((role || "").toString().toLowerCase());
 
   const [tab, setTab] = useState<TabType>("ringkasan");
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   const [rangeMode, setRangeMode] = useState<"preset" | "custom">("preset");
   const [preset, setPreset] = useState<"daily" | "weekly" | "monthly">("daily");
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
@@ -107,6 +109,9 @@ export default function ReportsPage() {
     if (preset === "weekly") return { start: getStartOfWeek(d), end: getEndOfWeek(d) };
     return { start: getStartOfMonth(d), end: getEndOfMonth(d) };
   }, [rangeMode, preset, selectedDate, customStart, customEnd]);
+
+  // Reset page when date range changes
+  useEffect(() => { setPage(1); }, [dateRange]);
 
 
   // Fetch orders
@@ -289,11 +294,11 @@ export default function ReportsPage() {
 
         {/* TABS */}
         <div className="rp-tabs">
-          <button className={"rp-tab " + (tab === "ringkasan" ? "active" : "")} onClick={() => setTab("ringkasan")}>Ringkasan</button>
-          <button className={"rp-tab " + (tab === "harian" ? "active" : "")} onClick={() => setTab("harian")}>Breakdown Harian</button>
-          <button className={"rp-tab " + (tab === "shift" ? "active" : "")} onClick={() => setTab("shift")}>Per Shift</button>
-          <button className={"rp-tab " + (tab === "refund" ? "active" : "")} onClick={() => setTab("refund")}>Refund ({stats.refundCount})</button>
-          <button className={"rp-tab " + (tab === "export" ? "active" : "")} onClick={() => setTab("export")}>Export</button>
+          <button className={"rp-tab " + (tab === "ringkasan" ? "active" : "")} onClick={() => { setTab("ringkasan"); setPage(1); }}>Ringkasan</button>
+          <button className={"rp-tab " + (tab === "harian" ? "active" : "")} onClick={() => { setTab("harian"); setPage(1); }}>Breakdown Harian</button>
+          <button className={"rp-tab " + (tab === "shift" ? "active" : "")} onClick={() => { setTab("shift"); setPage(1); }}>Per Shift</button>
+          <button className={"rp-tab " + (tab === "refund" ? "active" : "")} onClick={() => { setTab("refund"); setPage(1); }}>Refund ({stats.refundCount})</button>
+          <button className={"rp-tab " + (tab === "export" ? "active" : "")} onClick={() => { setTab("export"); setPage(1); }}>Export</button>
         </div>
       </div>
 
@@ -329,18 +334,29 @@ export default function ReportsPage() {
 
       {/* TAB: BREAKDOWN HARIAN */}
       {tab === "harian" && (<>
-        {stats.dailyBreakdown.length > 0 ? (
+        {stats.dailyBreakdown.length > 0 ? (() => {
+          const totalPages = Math.ceil(stats.dailyBreakdown.length / ITEMS_PER_PAGE);
+          const paginatedDaily = stats.dailyBreakdown.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+          return (
           <div className="card" style={{ marginTop: 14 }}>
             <div className="h1">Breakdown per Hari</div>
             <div className="small" style={{ marginTop: 4 }}>Merge semua transaksi dalam range yang dipilih, dikelompokkan per hari.</div>
             <table className="rp-table"><thead><tr><th>Tanggal</th><th>Trx</th><th>Cash</th><th>QRIS</th><th>Total</th><th>Grafik</th></tr></thead><tbody>
-              {stats.dailyBreakdown.map((d) => { const max = Math.max(...stats.dailyBreakdown.map((x) => x.total), 1); return (
+              {paginatedDaily.map((d) => { const max = Math.max(...stats.dailyBreakdown.map((x) => x.total), 1); return (
                 <tr key={d.date}><td>{formatDate(new Date(d.date + "T00:00:00"))}</td><td>{d.count}</td><td>{rupiah(d.cash)}</td><td>{rupiah(d.qris)}</td><td><b>{rupiah(d.total)}</b></td><td><div className="rp-bar" style={{ width: `${Math.round((d.total / max) * 100)}%` }} /></td></tr>
               ); })}
               <tr style={{ fontWeight: 900 }}><td>TOTAL</td><td>{stats.dailyBreakdown.reduce((a, d) => a + d.count, 0)}</td><td>{rupiah(stats.dailyBreakdown.reduce((a, d) => a + d.cash, 0))}</td><td>{rupiah(stats.dailyBreakdown.reduce((a, d) => a + d.qris, 0))}</td><td>{rupiah(stats.totalOmzet)}</td><td></td></tr>
             </tbody></table>
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 14 }}>
+                <button className="btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Sebelumnya</button>
+                <span style={{ padding: "8px 12px", fontSize: 13, fontWeight: 700 }}>Hal {page} / {totalPages}</span>
+                <button className="btn" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Selanjutnya</button>
+              </div>
+            )}
           </div>
-        ) : <div className="card" style={{ marginTop: 14 }}><div className="small">Tidak ada data di periode ini.</div></div>}
+          );
+        })() : <div className="card" style={{ marginTop: 14 }}><div className="small">Tidak ada data di periode ini.</div></div>}
       </>)}
 
 
@@ -351,7 +367,11 @@ export default function ReportsPage() {
           <div className="small" style={{ marginTop: 4 }}>Rekap penjualan per sesi shift dalam periode yang dipilih.</div>
         </div>
 
-        {shiftsData.length > 0 ? shiftsData.map((shift) => {
+        {shiftsData.length > 0 ? (() => {
+          const totalPages = Math.ceil(shiftsData.length / ITEMS_PER_PAGE);
+          const paginatedShifts = shiftsData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+          return (<>
+            {paginatedShifts.map((shift) => {
           const shiftOpenedAt = toDate(shift.openedAt);
           const shiftClosedAt = toDate(shift.closedAt);
           const products = getShiftProducts(shift.id);
@@ -407,7 +427,16 @@ export default function ReportsPage() {
               )}
             </div>
           );
-        }) : (
+        })}
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 14 }}>
+                <button className="btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Sebelumnya</button>
+                <span style={{ padding: "8px 12px", fontSize: 13, fontWeight: 700 }}>Hal {page} / {totalPages}</span>
+                <button className="btn" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Selanjutnya</button>
+              </div>
+            )}
+          </>);
+        })() : (
           <div className="card" style={{ marginTop: 14 }}><div className="small">Tidak ada shift di periode ini.</div></div>
         )}
       </>)}
@@ -429,13 +458,24 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {refunds.length > 0 ? (
+          {refunds.length > 0 ? (() => {
+            const totalPages = Math.ceil(refunds.length / ITEMS_PER_PAGE);
+            const paginatedRefunds = refunds.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+            return (<>
             <table className="rp-table"><thead><tr><th>#</th><th>Order</th><th>Tanggal</th><th>Total</th><th>Alasan</th><th>Oleh</th></tr></thead><tbody>
-              {refunds.map((rf, i) => { const d = toDate(rf.createdAt); return (
-                <tr key={rf.id}><td>{i + 1}</td><td><b>{rf.orderNo}</b></td><td>{d ? formatDateTime(d) : "-"}</td><td style={{ color: "var(--danger)", fontWeight: 800 }}>{rupiah(rf.total)}</td><td>{rf.reason || "-"}</td><td>{rf.refundedBy || "-"}</td></tr>
+              {paginatedRefunds.map((rf, i) => { const d = toDate(rf.createdAt); return (
+                <tr key={rf.id}><td>{(page - 1) * ITEMS_PER_PAGE + i + 1}</td><td><b>{rf.orderNo}</b></td><td>{d ? formatDateTime(d) : "-"}</td><td style={{ color: "var(--danger)", fontWeight: 800 }}>{rupiah(rf.total)}</td><td>{rf.reason || "-"}</td><td>{rf.refundedBy || "-"}</td></tr>
               ); })}
             </tbody></table>
-          ) : <div className="small" style={{ marginTop: 14 }}>Tidak ada refund di periode ini.</div>}
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 14 }}>
+                <button className="btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Sebelumnya</button>
+                <span style={{ padding: "8px 12px", fontSize: 13, fontWeight: 700 }}>Hal {page} / {totalPages}</span>
+                <button className="btn" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Selanjutnya</button>
+              </div>
+            )}
+            </>);
+          })() : <div className="small" style={{ marginTop: 14 }}>Tidak ada refund di periode ini.</div>}
         </div>
       </>)}
 
