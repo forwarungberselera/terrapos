@@ -13,6 +13,8 @@ import {
 /**
  * MaintenanceGuard - Block seluruh app saat maintenance mode aktif.
  * Developer tetap bisa akses (bypass).
+ * 
+ * Fix: Wait for BOTH auth AND maintenance status before deciding.
  */
 export default function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   const [maintenance, setMaintenance] = useState<MaintenanceStatus>({
@@ -22,23 +24,21 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
     enabledBy: "",
   });
   const [isDev, setIsDev] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
+  const [maintenanceReady, setMaintenanceReady] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Subscribe maintenance status (realtime)
   useEffect(() => {
     // Safety timeout: jika Firestore gagal, jangan stuck selamanya
-    // Setelah 8 detik, anggap maintenance off (let user through)
     timeoutRef.current = setTimeout(() => {
-      setChecking(false);
-    }, 8000);
+      setMaintenanceReady(true);
+    }, 5000);
 
     const unsub = subscribeMaintenanceStatus((status) => {
       setMaintenance(status);
-      // Jika maintenance off, clear timeout & stop checking immediately
-      if (!status.enabled) {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        setChecking(false);
-      }
+      setMaintenanceReady(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     });
 
     return () => {
@@ -47,45 +47,51 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
     };
   }, []);
 
+  // Check auth & developer status
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setIsDev(false);
-        setChecking(false);
+        setAuthReady(true);
         return;
       }
 
       // Quick check: hardcoded email
       if (user.email && DEVELOPER_EMAILS.includes(user.email.toLowerCase())) {
         setIsDev(true);
-        setChecking(false);
+        setAuthReady(true);
         return;
       }
 
-      // Fallback: Firestore check (with timeout protection)
+      // Fallback: Firestore check
       try {
         const devStatus = await checkIsDeveloper(user.uid, user.email || "");
         setIsDev(devStatus);
       } catch {
-        // If Firestore fails, assume not developer but don't block
         setIsDev(false);
       }
-      setChecking(false);
+      setAuthReady(true);
     });
     return () => unsub();
   }, []);
 
-  // Jangan block kalau maintenance off, atau user adalah developer
-  if (!maintenance.enabled || isDev) {
+  // Still loading — render children to avoid blank screen flash
+  // But only for max ~5 seconds (timeout above)
+  if (!authReady || !maintenanceReady) {
     return <>{children}</>;
   }
 
-  // Masih loading auth — render children (jangan blank screen)
-  if (checking) {
+  // Developer always bypasses
+  if (isDev) {
     return <>{children}</>;
   }
 
-  // BLOCK: tampilkan halaman maintenance
+  // Maintenance OFF — let through
+  if (!maintenance.enabled) {
+    return <>{children}</>;
+  }
+
+  // BLOCK: maintenance ON + user is NOT developer
   return (
     <div
       style={{
