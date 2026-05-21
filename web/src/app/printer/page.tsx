@@ -274,23 +274,22 @@ export default function PrinterPage() {
     }
   }
 
-  function changeMode(mode: "browser" | "rawbt" | "bluetooth") {
+  function changeMode(mode: "rawbt" | "bluetooth") {
     setPrintModeState(mode);
     setPrintMode(mode);
-    toast.success(`Mode: ${mode === "bluetooth" ? "Bluetooth" : mode === "rawbt" ? "RawBT" : "Browser"}`);
+    toast.success(`Mode: ${mode === "bluetooth" ? "Bluetooth" : "RawBT"}`);
   }
 
   function getStatusColor() {
     if (!printerEnabled) return "#9ca3af";
     if (printMode === "bluetooth") return btConnected ? "#22c55e" : "#ef4444";
-    return "#22c55e"; // browser & rawbt always "ready"
+    return "#22c55e"; // rawbt always "ready"
   }
 
   function getStatusText() {
     if (!printerEnabled) return "Sistem Printer Nonaktif";
     if (printMode === "bluetooth") return btConnected ? `Terhubung: ${btPrinterName}` : "Bluetooth — Belum Terhubung";
-    if (printMode === "rawbt") return "RawBT — Siap";
-    return "Browser Print — Siap";
+    return "RawBT — Siap";
   }
 
   if (loading || loadingRole)
@@ -465,9 +464,7 @@ export default function PrinterPage() {
               ? isNative
                 ? "APK mode — Bluetooth Classic (SPP)"
                 : "Browser mode — Web Bluetooth BLE"
-              : printMode === "rawbt"
-              ? "Memerlukan aplikasi RawBT terinstall"
-              : "Dialog print browser standar"}
+              : "Memerlukan aplikasi RawBT terinstall"}
           </div>
         </div>
       </div>
@@ -492,14 +489,6 @@ export default function PrinterPage() {
               <div className="mode-icon">&#128196;</div>
               <div className="mode-title">RawBT</div>
               <div className="mode-desc">Via app RawBT</div>
-            </div>
-            <div
-              className={`mode-card ${printMode === "browser" ? "selected" : ""}`}
-              onClick={() => changeMode("browser")}
-            >
-              <div className="mode-icon">&#128424;</div>
-              <div className="mode-title">Browser</div>
-              <div className="mode-desc">Dialog print standar</div>
             </div>
           </div>
         </div>

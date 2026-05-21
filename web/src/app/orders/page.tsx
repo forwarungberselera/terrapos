@@ -528,39 +528,52 @@ export default function OrdersPage() {
     });
   }
 
-  async function printBySelectedMode(html: string, text: string) {
+  function buildBtData(o: Order, title: string, payMethod: string | null, paid: number | null): any {
+    return {
+      storeName: receiptSettings.storeName || "TerraPOS",
+      address: receiptSettings.address || "",
+      footer: receiptSettings.footer || "Terima kasih.",
+      title,
+      orderNo: o.orderNo,
+      dateText: new Date().toLocaleString("id-ID"),
+      tableNo: o.tableNo || null,
+      cashierName: receiptSettings.cashierName || email || "",
+      paymentMethod: payMethod,
+      subtotal: o.subtotal,
+      discount: o.discount,
+      total: o.total,
+      paidAmount: paid,
+      items: o.items.map((it) => ({ name: it.name, qty: it.qty, price: it.price, notes: it.notes || "" })),
+      qrText: receiptSettings.qrText || "",
+      showQR: receiptSettings.showQR ?? false,
+    };
+  }
+
+  async function printBySelectedMode(html: string, text: string, btData?: { storeName: string; address?: string; footer?: string; title?: string; orderNo: string; dateText: string; tableNo?: string | null; cashierName?: string; paymentMethod?: string | null; subtotal: number; discount: number; total: number; paidAmount?: number | null; items: { name: string; qty: number; price: number; notes?: string }[]; qrText?: string; showQR?: boolean }) {
     const mode = getPrintMode();
 
-    if (mode === "bluetooth") {
+    if (mode === "bluetooth" && btData) {
       try {
         showPrinting("Mencetak via Bluetooth...");
         const NativePrinter = await import("@/lib/native-printer");
         if (NativePrinter.isNative()) {
           const status = await NativePrinter.isConnected();
           if (!status.connected) { await NativePrinter.autoReconnect(); }
-          await NativePrinter.printText(text);
+          await NativePrinter.printReceipt(btData);
           toast.success("Struk berhasil dicetak!");
         } else {
           const WebBT = await import("@/lib/bluetooth-printer");
           if (!WebBT.isPrinterConnected()) { toast.error("Printer belum terkonek. Buka halaman Printer dulu."); return; }
-          await WebBT.printText(text);
+          await WebBT.printReceipt(btData);
           toast.success("Struk berhasil dicetak!");
         }
       } catch (e: any) { toast.error("Gagal print: " + (e?.message || "")); } finally { hidePrinting(); }
       return;
     }
 
-    if (mode === "rawbt") {
-      sendToRawBT(text);
-      toast.success("Dikirim ke RawBT.");
-      return;
-    }
-
-    const w = window.open("", "_blank", "width=420,height=800");
-    if (!w) { toast.error("Pop-up print diblokir browser."); return; }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+    // RawBT mode (default fallback)
+    sendToRawBT(text);
+    toast.success("Dikirim ke RawBT.");
   }
 
   async function payAndPrint() {
@@ -591,7 +604,7 @@ export default function OrdersPage() {
       const text = buildReceiptText(payOrder, "STRUK", paymentMethod, paidAmount);
 
       localStorage.setItem("terrapos_last_receipt_html", html);
-      await printBySelectedMode(html, text);
+      await printBySelectedMode(html, text, buildBtData(payOrder, "STRUK", paymentMethod, paymentMethod === "CASH" ? paidAmount : payOrder.total));
 
       setPayOpen(false);
       setPayOrder(null);
@@ -695,7 +708,7 @@ export default function OrdersPage() {
     const text = buildReceiptText(o, "STRUK", payMethod, paid, { isCopy: true, originalDate });
 
     localStorage.setItem("terrapos_last_receipt_html", html);
-    void printBySelectedMode(html, text);
+    void printBySelectedMode(html, text, buildBtData(o, "STRUK", payMethod, paid));
   }
 
   function printOpenBill(o: Order) {
@@ -703,7 +716,7 @@ export default function OrdersPage() {
     const text = buildReceiptText(o, "BILL", null);
 
     localStorage.setItem("terrapos_last_receipt_html", html);
-    void printBySelectedMode(html, text);
+    void printBySelectedMode(html, text, buildBtData(o, "BILL", null, null));
   }
 
   function addItemToOpenBill(o: Order) {

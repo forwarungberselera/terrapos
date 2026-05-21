@@ -462,39 +462,49 @@ export default function POSPage() {
     });
   }
 
-  async function printBySelectedMode(html: string, text: string) {
+  async function printBySelectedMode(html: string, text: string, receiptDataForBT?: { title?: string; orderNo?: string; payMethod?: string | null; paid?: number | null }) {
     const mode = getPrintMode();
 
     if (mode === "bluetooth") {
       try {
         showPrinting("Mencetak via Bluetooth...");
+        const btData = {
+          storeName: receiptSettings.storeName || "TerraPOS",
+          address: receiptSettings.address || "",
+          footer: receiptSettings.footer || "Terima kasih.",
+          title: receiptDataForBT?.title || "STRUK",
+          orderNo: receiptDataForBT?.orderNo || "",
+          dateText: new Date().toLocaleString("id-ID"),
+          tableNo: tableNo.trim() || null,
+          cashierName: receiptSettings.cashierName || email || "",
+          paymentMethod: receiptDataForBT?.payMethod ?? paymentMethod,
+          subtotal,
+          discount: totalDiscount,
+          total,
+          paidAmount: receiptDataForBT?.paid ?? (paymentMethod === "CASH" ? paidAmount : null),
+          items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price, notes: c.notes || "" })),
+          qrText: receiptSettings.qrText || "",
+          showQR: receiptSettings.showQR ?? false,
+        };
         const NativePrinter = await import("@/lib/native-printer");
         if (NativePrinter.isNative()) {
           const status = await NativePrinter.isConnected();
           if (!status.connected) { await NativePrinter.autoReconnect(); }
-          await NativePrinter.printText(text);
+          await NativePrinter.printReceipt(btData);
           toast.success("Struk berhasil dicetak!");
         } else {
           const WebBT = await import("@/lib/bluetooth-printer");
           if (!WebBT.isPrinterConnected()) { toast.error("Printer belum terkonek. Buka halaman Printer dulu."); hidePrinting(); return; }
-          await WebBT.printText(text);
+          await WebBT.printReceipt(btData);
           toast.success("Struk berhasil dicetak!");
         }
       } catch (e: any) { toast.error("Gagal print: " + (e?.message || "")); } finally { hidePrinting(); }
       return;
     }
 
-    if (mode === "rawbt") {
-      sendToRawBT(text);
-      toast.success("Dikirim ke RawBT.");
-      return;
-    }
-
-    const printWin = window.open("", "_blank", "width=420,height=800");
-    if (!printWin) { toast.error("Pop-up print diblokir browser."); return; }
-    printWin.document.open();
-    printWin.document.write(html);
-    printWin.document.close();
+    // RawBT mode (default fallback)
+    sendToRawBT(text);
+    toast.success("Dikirim ke RawBT.");
   }
 
   async function findOpenOrderIdForTable(tNo: string) {
@@ -595,7 +605,7 @@ export default function POSPage() {
       localStorage.setItem("terrapos_last_receipt_html", html);
 
       const text = buildReceiptText(billNo, "BILL");
-      void printBySelectedMode(html, text);
+      void printBySelectedMode(html, text, { title: "BILL", orderNo: billNo, payMethod: null, paid: null });
 
       resetCart();
 
@@ -648,7 +658,7 @@ export default function POSPage() {
       localStorage.setItem("terrapos_last_receipt_html", html);
 
       const text = buildReceiptText(orderNo, "STRUK");
-      void printBySelectedMode(html, text);
+      void printBySelectedMode(html, text, { title: "STRUK", orderNo, payMethod: paymentMethod, paid: paymentMethod === "CASH" ? paidAmount : total });
 
       logAudit(tenantId!, {
         action: "ORDER_PAID",

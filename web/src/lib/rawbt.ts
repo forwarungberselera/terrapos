@@ -130,11 +130,11 @@ export function sendToRawBT(text: string) {
 }
 
 export function getPrintMode(): "browser" | "rawbt" | "bluetooth" {
-  if (typeof window === "undefined") return "browser";
+  if (typeof window === "undefined") return "rawbt";
   const mode = localStorage.getItem("terrapos_print_mode");
   if (mode === "rawbt") return "rawbt";
   if (mode === "bluetooth") return "bluetooth";
-  return "browser";
+  return "rawbt";
 }
 
 export function setPrintMode(mode: "browser" | "rawbt" | "bluetooth") {
