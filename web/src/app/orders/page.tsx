@@ -817,9 +817,34 @@ export default function OrdersPage() {
         @media (max-width: 768px){
           .order-card{ padding:12px; }
           .order-card .row{ flex-direction:column; align-items:stretch; }
-          .order-actions{ min-width:unset !important; text-align:left !important; display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
-          .order-actions .btn{ flex:1; min-width:0; }
-          .order-actions .pill{ flex:none; }
+          .order-actions{
+            min-width:unset !important;
+            text-align:left !important;
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap:8px;
+            margin-top:12px;
+          }
+          .order-actions .pill{
+            grid-column: 1 / -1;
+            text-align:center;
+            margin-bottom:4px;
+          }
+          .order-actions .btn{
+            width:100%;
+            min-width:0;
+            font-size:12px;
+            padding:10px 8px;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+          }
+          .order-actions .btn-primary{
+            grid-column: 1 / -1;
+          }
+          .order-actions .btn-danger{
+            grid-column: 1 / -1;
+          }
         }
         .meta{
           display:grid;
@@ -1007,14 +1032,14 @@ export default function OrdersPage() {
                               style={{ marginTop: 10, width: "100%" }}
                               onClick={() => addItemToOpenBill(o)}
                             >
-                              Tambah Item
+                              + Item
                             </button>
                             <button
                               className="btn"
                               style={{ marginTop: 10, width: "100%" }}
                               onClick={() => printOpenBill(o)}
                             >
-                              Print Struk
+                              Cetak
                             </button>
                             <button
                               className="btn btn-danger"
