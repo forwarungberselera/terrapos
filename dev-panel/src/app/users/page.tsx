@@ -33,14 +33,14 @@ interface MembershipDoc {
   role: string;
 }
 
-const LEVEL_OPTIONS = ["free", "basic", "premium", "owner"] as const;
+const LEVEL_OPTIONS = ["free", "seed", "core", "orbit"] as const;
 const ROLE_OPTIONS = ["staff", "admin", "owner"] as const;
 
 const LEVEL_COLORS: Record<string, string> = {
   free: "#6b7280",
-  basic: "#3b82f6",
-  premium: "#f59e0b",
-  owner: "#10b981",
+  seed: "#22c55e",
+  core: "#3b82f6",
+  orbit: "#a855f7",
 };
 
 export default function UsersPage() {

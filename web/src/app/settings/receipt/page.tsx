@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
+import { useLevel } from "@/hooks/useLevel";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useToast } from "@/components/Toast";
@@ -64,24 +65,11 @@ export default function ReceiptSettingsPage() {
   const [config, setConfig] = useState<ReceiptConfig>(DEFAULT_CONFIG);
   const [busy, setBusy] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string>("");
-  const [userLevel, setUserLevel] = useState<string>("free");
+
+  const { canDisableWatermark } = useLevel();
+  const isFreeUser = !canDisableWatermark();
 
   const canEdit = ["owner", "developer"].includes((role || "").toString().toLowerCase());
-  const isFreeUser = userLevel === "free";
-
-  useEffect(() => {
-    const unsub = auth.onAuthStateChanged(async (u) => {
-      if (!u) return;
-      try {
-        const userSnap = await getDoc(doc(db, `users/${u.uid}`));
-        if (userSnap.exists()) {
-          const data = userSnap.data() as any;
-          setUserLevel(data.level || "free");
-        }
-      } catch {}
-    });
-    return () => unsub();
-  }, []);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -602,11 +590,11 @@ export default function ReceiptSettingsPage() {
             />
             <ToggleItem
               label="Watermark TerraPOS"
-              desc={isFreeUser ? "Upgrade ke Basic atau lebih tinggi untuk menonaktifkan" : "Tampilkan 'Powered by TerraPOS' di bawah struk"}
+              desc={isFreeUser ? "Upgrade ke Seed atau lebih tinggi untuk menonaktifkan" : "Tampilkan 'Powered by TerraPOS' di bawah struk"}
               value={isFreeUser ? true : config.showWatermark}
               onChange={(v) => {
                 if (isFreeUser) {
-                  toast.warning("Upgrade ke Basic atau lebih tinggi untuk menonaktifkan watermark.");
+                  toast.warning("Upgrade ke Seed atau lebih tinggi untuk menonaktifkan watermark.");
                   return;
                 }
                 update("showWatermark", v);

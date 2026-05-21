@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
+import { useLevel } from "@/hooks/useLevel";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, orderBy, query, limit, startAfter, DocumentSnapshot } from "firebase/firestore";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
@@ -57,6 +58,7 @@ export default function AuditPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const { canAccess: canAccessLevel } = useLevel();
 
   const canAccess = ["owner", "developer"].includes((role || "").toString().toLowerCase());
 
@@ -120,6 +122,24 @@ export default function AuditPage() {
 
   if (loading || loadingRole) {
     return <TerraPage><SkeletonStyles /><PageSkeleton cards={3} /></TerraPage>;
+  }
+
+  if (!canAccessLevel("audit")) {
+    return (
+      <TerraPage>
+        <div className="card" style={{ textAlign: "center", padding: 32 }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>&#128274;</div>
+          <div className="h1">Fitur Premium</div>
+          <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+            Fitur ini tersedia untuk paket <b>Core</b> atau lebih tinggi.
+            Upgrade paket Anda untuk mengakses fitur ini.
+          </div>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => r.push("/dashboard")}>
+            Kembali ke Dashboard
+          </button>
+        </div>
+      </TerraPage>
+    );
   }
 
   if (!canAccess) {

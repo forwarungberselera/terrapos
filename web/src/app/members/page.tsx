@@ -7,6 +7,7 @@ import { auth, db } from "@/lib/firebase";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
+import { useLevel } from "@/hooks/useLevel";
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
 
 type Member = { id: string; name: string; phone: string; points: number };
@@ -15,6 +16,7 @@ export default function MembersPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const { canAccess: canAccessLevel } = useLevel();
 
   const [members, setMembers] = useState<Member[]>([]);
   const [qText, setQText] = useState("");
@@ -75,6 +77,24 @@ export default function MembersPage() {
   }
 
   if (loading || loadingRole) return <TerraPage><div className="card">Loading...</div></TerraPage>;
+
+  if (!canAccessLevel("members")) {
+    return (
+      <TerraPage>
+        <div className="card" style={{ textAlign: "center", padding: 32 }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>&#128274;</div>
+          <div className="h1">Fitur Premium</div>
+          <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+            Fitur ini tersedia untuk paket <b>Orbit</b>.
+            Upgrade paket Anda untuk mengakses fitur ini.
+          </div>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => r.push("/dashboard")}>
+            Kembali ke Dashboard
+          </button>
+        </div>
+      </TerraPage>
+    );
+  }
 
   if (role !== "owner" && role !== "developer") {
     return (

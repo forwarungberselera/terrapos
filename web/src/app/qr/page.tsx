@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
+import { useLevel } from "@/hooks/useLevel";
 import dynamic from "next/dynamic";
 import { useToast } from "@/components/Toast";
 
@@ -17,6 +18,7 @@ export default function QRPage() {
   const router = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const { canAccess: canAccessLevel } = useLevel();
   const toast = useToast();
 
   const roleLower = (role || "").toString().toLowerCase();
@@ -40,6 +42,24 @@ export default function QRPage() {
     return (
       <TerraPage>
         <div className="card">Loading...</div>
+      </TerraPage>
+    );
+  }
+
+  if (!canAccessLevel("qr")) {
+    return (
+      <TerraPage>
+        <div className="card" style={{ textAlign: "center", padding: 32 }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>&#128274;</div>
+          <div className="h1">Fitur Premium</div>
+          <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+            Fitur ini tersedia untuk paket <b>Core</b> atau lebih tinggi.
+            Upgrade paket Anda untuk mengakses fitur ini.
+          </div>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => router.push("/dashboard")}>
+            Kembali ke Dashboard
+          </button>
+        </div>
       </TerraPage>
     );
   }

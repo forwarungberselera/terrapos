@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
+import { useLevel } from "@/hooks/useLevel";
 import { auth, db, functions } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import {
@@ -84,6 +85,7 @@ export default function DashboardPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const { canAccess } = useLevel();
 
   const roleLower = (role || "").toString().toLowerCase();
   const isOwner = roleLower === "owner" || roleLower === "developer";
@@ -927,7 +929,7 @@ export default function DashboardPage() {
               <div className="sidecategory-inner">
                 <button className="sidebtn" onClick={() => r.push("/orders")}>Orders</button>
                 <button className="sidebtn" onClick={() => r.push("/shifts")}>Shift</button>
-                <button className="sidebtn" onClick={() => r.push("/qr")}>QR Meja</button>
+                {canAccess("qr") && <button className="sidebtn" onClick={() => r.push("/qr")}>QR Meja</button>}
               </div>
             </div>
 
@@ -938,8 +940,9 @@ export default function DashboardPage() {
             <div className={`sidecategory ${!sideOpen.management ? "collapsed" : ""}`}>
               <div className="sidecategory-inner">
                 <button className="sidebtn" onClick={() => r.push("/products")}>Products</button>
-                <button className="sidebtn" onClick={() => r.push("/staff")}>Staff</button>
-                <button className="sidebtn" onClick={() => r.push("/promos")}>Promo</button>
+                {canAccess("staff") && <button className="sidebtn" onClick={() => r.push("/staff")}>Staff</button>}
+                {canAccess("promos") && <button className="sidebtn" onClick={() => r.push("/promos")}>Promo</button>}
+                {canAccess("members") && <button className="sidebtn" onClick={() => r.push("/members")}>Members</button>}
               </div>
             </div>
 
@@ -950,7 +953,7 @@ export default function DashboardPage() {
             <div className={`sidecategory ${!sideOpen.laporan ? "collapsed" : ""}`}>
               <div className="sidecategory-inner">
                 <button className="sidebtn" onClick={() => r.push("/reports")}>Reports</button>
-                <button className="sidebtn" onClick={() => r.push("/audit")}>Audit Log</button>
+                {canAccess("audit") && <button className="sidebtn" onClick={() => r.push("/audit")}>Audit Log</button>}
               </div>
             </div>
 
