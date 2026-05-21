@@ -96,6 +96,7 @@ export default function POSPage() {
   const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
 
   const [showTableWarning, setShowTableWarning] = useState(false);
+  const [successDialog, setSuccessDialog] = useState<{ orderNo: string; change: number; html: string; text: string; btData: any } | null>(null);
 
   const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
@@ -658,7 +659,15 @@ export default function POSPage() {
       localStorage.setItem("terrapos_last_receipt_html", html);
 
       const text = buildReceiptText(orderNo, "STRUK");
-      void printBySelectedMode(html, text, { title: "STRUK", orderNo, payMethod: paymentMethod, paid: paymentMethod === "CASH" ? paidAmount : total });
+
+      const change = paymentMethod === "CASH" ? Math.max(0, paidAmount - total) : 0;
+
+      const btData = {
+        title: "STRUK",
+        orderNo,
+        payMethod: paymentMethod,
+        paid: paymentMethod === "CASH" ? paidAmount : total,
+      };
 
       logAudit(tenantId!, {
         action: "ORDER_PAID",
@@ -667,10 +676,23 @@ export default function POSPage() {
         metadata: { orderNo, paymentMethod, total, itemCount: cart.length },
       });
 
-      resetCart();
+      setSuccessDialog({ orderNo, change, html, text, btData });
+      setPayOpen(false);
     } catch (e: any) {
       setErr(e?.message ?? "Gagal checkout");
     }
+  }
+
+  function handleSuccessPrint() {
+    if (!successDialog) return;
+    void printBySelectedMode(successDialog.html, successDialog.text, successDialog.btData);
+    setSuccessDialog(null);
+    resetCart();
+  }
+
+  function handleSuccessSkip() {
+    setSuccessDialog(null);
+    resetCart();
   }
 
   if (loading || loadingRole) {
@@ -1237,6 +1259,58 @@ export default function POSPage() {
               </button>
               <button className="btn" onClick={() => r.push("/dashboard")}>
                 Ke Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {successDialog && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            zIndex: 90,
+          }}
+        >
+          <div className="card" style={{ width: 440, maxWidth: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
+            <div className="h1" style={{ color: "var(--brand)" }}>Transaksi Berhasil</div>
+            <div className="small" style={{ marginTop: 8, lineHeight: 1.6 }}>
+              Pembayaran telah tercatat. Order <b>{successDialog.orderNo}</b> selesai.
+            </div>
+
+            {successDialog.change > 0 && (
+              <div style={{ marginTop: 12, padding: "12px 16px", borderRadius: 12, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
+                <div className="small" style={{ fontWeight: 700 }}>Kembalian</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "var(--brand)", fontFamily: "var(--font-mono)", marginTop: 4 }}>
+                  Rp {rupiah(successDialog.change)}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: 16, fontSize: 13, color: "var(--muted)" }}>
+              Cetak struk untuk pelanggan?
+            </div>
+
+            <div className="row" style={{ marginTop: 12, justifyContent: "center", gap: 10 }}>
+              <button
+                className="btn btn-primary"
+                style={{ padding: "12px 24px", fontSize: 14, fontWeight: 800 }}
+                onClick={handleSuccessPrint}
+              >
+                Cetak Struk
+              </button>
+              <button
+                className="btn"
+                style={{ padding: "12px 24px", fontSize: 14 }}
+                onClick={handleSuccessSkip}
+              >
+                Lewati
               </button>
             </div>
           </div>
