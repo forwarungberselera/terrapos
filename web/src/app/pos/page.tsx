@@ -95,8 +95,7 @@ export default function POSPage() {
   const [shiftPromptOpen, setShiftPromptOpen] = useState(false);
   const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
 
-  const [customerName, setCustomerName] = useState("");
-  const [showNameWarning, setShowNameWarning] = useState(false);
+  const [showTableWarning, setShowTableWarning] = useState(false);
 
   const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
@@ -406,7 +405,6 @@ export default function POSPage() {
     setEditingOrderNo(null);
     setPromoCodeInput("");
     setRedeemedCode("");
-    setCustomerName("");
   }
 
   function buildReceiptHtml(orderNo: string, title: "STRUK" | "BILL") {
@@ -512,13 +510,7 @@ export default function POSPage() {
 
       const tNo = tableNo.trim();
       if (!tNo) {
-        setErr("Mode Bayar Nanti wajib isi Meja.");
-        return;
-      }
-
-      // Show warning if no customer name
-      if (!customerName.trim()) {
-        setShowNameWarning(true);
+        setShowTableWarning(true);
         return;
       }
 
@@ -556,7 +548,6 @@ export default function POSPage() {
             status: "OPEN" as OrderStatus,
             mode: "PAY_LATER" as OrderMode,
             tableNo: tNo,
-            customerName: customerName.trim() || null,
             discount: totalDiscount,
             subtotal,
             total,
@@ -873,15 +864,6 @@ export default function POSPage() {
               onChange={(e) => setTableNo(e.target.value)}
               placeholder="No. Meja"
             />
-            {mode === "PAY_LATER" && (
-              <input
-                className="input"
-                style={{ width: 140, flexShrink: 0 }}
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Nama Pelanggan"
-              />
-            )}
           </div>
 
           <div className="pos-categories">
@@ -1150,7 +1132,7 @@ export default function POSPage() {
         </div>
       )}
 
-      {showNameWarning && (
+      {showTableWarning && (
         <div
           style={{
             position: "fixed",
@@ -1164,17 +1146,14 @@ export default function POSPage() {
         >
           <div className="card" style={{ width: 420, maxWidth: "100%", textAlign: "center" }}>
             <div style={{ fontSize: 36, marginBottom: 8 }}>&#9888;&#65039;</div>
-            <div className="h1">Nama Pelanggan Kosong</div>
+            <div className="h1">No. Meja Belum Diisi</div>
             <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
-              Anda belum mengisi nama pelanggan untuk order Bayar Nanti. Lanjutkan tanpa nama?
+              Mode Bayar Nanti wajib mengisi No. Meja atau nama pelanggan agar order bisa diidentifikasi.
             </div>
 
             <div className="row" style={{ marginTop: 16, justifyContent: "center", gap: 10 }}>
-              <button className="btn btn-primary" onClick={() => { setShowNameWarning(false); }}>
-                Isi Nama Dulu
-              </button>
-              <button className="btn" onClick={async () => { setShowNameWarning(false); await doSavePayLater(); }}>
-                Lanjut Tanpa Nama
+              <button className="btn btn-primary" onClick={() => { setShowTableWarning(false); }}>
+                OK, Isi Sekarang
               </button>
             </div>
           </div>
