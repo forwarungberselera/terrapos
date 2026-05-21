@@ -23,6 +23,7 @@ import { httpsCallable } from "firebase/functions";
 import { isShiftPermissionError, normalizeShift, ShiftRecord } from "@/lib/shifts";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
+import { LevelBadge } from "@/components/LevelBadge";
 
 type OrderItem = {
   name: string;
@@ -982,6 +983,9 @@ export default function DashboardPage() {
                 <div className="hero-title">Dashboard Premium</div>
                 <div className="hero-sub">
                   Tenant <b>{tenantId}</b> • User <b>{email || "-"}</b> • Role <b>{role || "-"}</b>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <LevelBadge />
                 </div>
               </div>
 

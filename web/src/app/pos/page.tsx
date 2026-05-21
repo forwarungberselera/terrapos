@@ -28,6 +28,7 @@ import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
 import { logAudit } from "@/lib/audit";
+import { LevelBadge } from "@/components/LevelBadge";
 
 type Product = { id: string; name: string; category: string; price: number; isActive?: boolean };
 type CartItem = {
@@ -856,6 +857,9 @@ export default function POSPage() {
             <div className="small">
               User: {email || "-"} | Role: <b>{role || "-"}</b>
               {tableNo ? <> | Meja: <b>{tableNo}</b></> : null}
+            </div>
+            <div style={{ marginTop: 4 }}>
+              <LevelBadge size="small" />
             </div>
             <div className="small" style={{ marginTop: 6 }}>
               Shift: <b>{shiftAccessBlocked ? "Belum aktif di rules" : activeShift ? `OPEN - ${activeShift.openedByEmail || "-"}` : "Belum dibuka"}</b>
