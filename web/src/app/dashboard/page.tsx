@@ -960,6 +960,7 @@ export default function DashboardPage() {
             </div>
             <div className={`sidecategory ${!sideOpen.settings ? "collapsed" : ""}`}>
               <div className="sidecategory-inner">
+                <button className="sidebtn" onClick={() => r.push("/settings/receipt")}>Pengaturan Struk</button>
                 <button className="sidebtn" onClick={() => r.push("/printer")}>Printer</button>
                 <button className="sidebtn" onClick={() => r.push("/refund-pin")}>PIN Refund</button>
                 <button className="sidebtn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
