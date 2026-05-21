@@ -145,6 +145,7 @@ export default function OrdersPage() {
   const [payOpen, setPayOpen] = useState(false);
   const [payOrder, setPayOrder] = useState<Order | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS">("CASH");
+  const [paySuccessDialog, setPaySuccessDialog] = useState<{ orderNo: string; change: number; html: string; text: string; btData: any } | null>(null);
   const [paidAmount, setPaidAmount] = useState<number>(0);
   const [shiftPromptOpen, setShiftPromptOpen] = useState(false);
   const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
@@ -407,7 +408,7 @@ export default function OrdersPage() {
     }
     setPayOrder(o);
     setPaymentMethod("CASH");
-    setPaidAmount(o.total);
+    setPaidAmount(0);
     setPayOpen(true);
     setErr(null);
   }
@@ -602,18 +603,32 @@ export default function OrdersPage() {
 
       const html = buildReceiptHtml(payOrder, "STRUK", paymentMethod, paidAmount);
       const text = buildReceiptText(payOrder, "STRUK", paymentMethod, paidAmount);
+      const btData = buildBtData(payOrder, "STRUK", paymentMethod, paymentMethod === "CASH" ? paidAmount : payOrder.total);
 
       localStorage.setItem("terrapos_last_receipt_html", html);
-      await printBySelectedMode(html, text, buildBtData(payOrder, "STRUK", paymentMethod, paymentMethod === "CASH" ? paidAmount : payOrder.total));
 
+      const change = paymentMethod === "CASH" ? Math.max(0, paidAmount - payOrder.total) : 0;
+
+      setPaySuccessDialog({ orderNo: payOrder.orderNo, change, html, text, btData });
       setPayOpen(false);
       setPayOrder(null);
       setErr(null);
-      toast.success("Pembayaran berhasil!");
     } catch (e: any) {
       setErr(e?.message ?? "Gagal bayar");
       toast.error(e?.message ?? "Gagal bayar");
     }
+  }
+
+  function handlePaySuccessPrint() {
+    if (!paySuccessDialog) return;
+    void printBySelectedMode(paySuccessDialog.html, paySuccessDialog.text, paySuccessDialog.btData);
+    setPaySuccessDialog(null);
+    toast.success("Pembayaran berhasil!");
+  }
+
+  function handlePaySuccessSkip() {
+    setPaySuccessDialog(null);
+    toast.success("Pembayaran berhasil!");
   }
 
   async function confirmRefund() {
@@ -1146,6 +1161,32 @@ export default function OrdersPage() {
                     onChange={(e) => setPaidAmount(Number(e.target.value || 0))}
                   />
                 </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                  {[1000, 2000, 5000, 10000, 20000, 50000, 100000].map((nom) => (
+                    <button
+                      key={nom}
+                      className="btn"
+                      style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500, fontFamily: "var(--font-mono)", letterSpacing: -0.3 }}
+                      onClick={() => setPaidAmount((prev) => prev + nom)}
+                    >
+                      +{rupiah(nom)}
+                    </button>
+                  ))}
+                  <button
+                    className="btn"
+                    style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500 }}
+                    onClick={() => setPaidAmount(payOrder.total)}
+                  >
+                    Uang Pas
+                  </button>
+                  <button
+                    className="btn"
+                    style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500, color: "var(--danger)" }}
+                    onClick={() => setPaidAmount(0)}
+                  >
+                    Reset
+                  </button>
+                </div>
                 <div className="row" style={{ justifyContent: "space-between", marginTop: 10 }}>
                   <span className="small">Kembalian</span>
                   <b>Rp {rupiah(Math.max(0, paidAmount - payOrder.total))}</b>
@@ -1334,6 +1375,40 @@ export default function OrdersPage() {
               </button>
               <button className="btn" onClick={() => setShiftPromptOpen(false)}>
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paySuccessDialog && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", padding: 16, zIndex: 90 }}>
+          <div className="card" style={{ width: 440, maxWidth: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
+            <div className="h1" style={{ color: "var(--brand)" }}>Pembayaran Berhasil</div>
+            <div className="small" style={{ marginTop: 8, lineHeight: 1.6 }}>
+              Order <b>{paySuccessDialog.orderNo}</b> telah lunas.
+            </div>
+
+            {paySuccessDialog.change > 0 && (
+              <div style={{ marginTop: 12, padding: "12px 16px", borderRadius: 12, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
+                <div className="small" style={{ fontWeight: 700 }}>Kembalian</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "var(--brand)", fontFamily: "var(--font-mono)", marginTop: 4 }}>
+                  Rp {rupiah(paySuccessDialog.change)}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: 16, fontSize: 13, color: "var(--muted)" }}>
+              Cetak struk untuk pelanggan?
+            </div>
+
+            <div className="row" style={{ marginTop: 12, justifyContent: "center", gap: 10 }}>
+              <button className="btn btn-primary" style={{ padding: "12px 24px", fontSize: 14, fontWeight: 800 }} onClick={handlePaySuccessPrint}>
+                Cetak Struk
+              </button>
+              <button className="btn" style={{ padding: "12px 24px", fontSize: 14 }} onClick={handlePaySuccessSkip}>
+                Lewati
               </button>
             </div>
           </div>
