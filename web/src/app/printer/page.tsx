@@ -432,6 +432,7 @@ export default function PrinterPage() {
             <div className="small">Kelola printer & mode cetak struk</div>
           </div>
           <div className="spacer" />
+          <button className="btn" onClick={() => r.push("/settings/receipt")}>Pengaturan Struk</button>
           <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
         </div>
       </div>

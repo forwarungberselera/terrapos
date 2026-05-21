@@ -388,6 +388,7 @@ export default function ReceiptSettingsPage() {
             <div className="small">Atur tampilan struk / bill belanja</div>
           </div>
           <div className="spacer" />
+          <button className="btn" onClick={() => r.push("/printer")}>Printer</button>
           <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
         </div>
       </div>
