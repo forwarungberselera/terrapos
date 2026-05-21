@@ -13,10 +13,13 @@ interface PricingPlan {
   name: string;
   price: string;
   period: string;
+  yearlyPrice: string;
+  yearlyPeriod: string;
   description: string;
   features: string[];
   highlighted: boolean;
   ctaText: string;
+  ctaLink: string;
 }
 
 interface LandingData {
@@ -29,9 +32,9 @@ const EMPTY_LANDING: LandingData = {
   hero: { title: "", subtitle: "" },
   features: [],
   pricing: [
-    { name: "Seed", price: "Segera Hadir", period: "", description: "Untuk memulai bisnis kecil", features: ["Point of Sales", "Management Product", "Laporan Penjualan", "Shift System", "Single Outlet", "1 User"], highlighted: false, ctaText: "Hubungi Kami" },
-    { name: "Core", price: "Segera Hadir", period: "", description: "Untuk bisnis yang berkembang", features: ["Semua fitur Seed", "Promo & Discount", "Staff Management (3-5 user)", "Audit Log", "QR Meja"], highlighted: true, ctaText: "Hubungi Kami" },
-    { name: "Orbit", price: "Segera Hadir", period: "", description: "Untuk enterprise & multi-outlet", features: ["Semua fitur Core", "Multi-outlet management", "Unlimited user", "Priority support", "Custom branding", "API access", "Dedicated account manager"], highlighted: false, ctaText: "Hubungi Kami" },
+    { name: "Seed", price: "Segera Hadir", period: "", yearlyPrice: "Segera Hadir", yearlyPeriod: "", description: "Untuk memulai bisnis kecil", features: ["Point of Sales", "Management Product", "Laporan Penjualan", "Shift System", "Single Outlet", "1 User"], highlighted: false, ctaText: "Hubungi Kami", ctaLink: "/setup" },
+    { name: "Core", price: "Segera Hadir", period: "", yearlyPrice: "Segera Hadir", yearlyPeriod: "", description: "Untuk bisnis yang berkembang", features: ["Semua fitur Seed", "Promo & Discount", "Staff Management (3-5 user)", "Audit Log", "QR Meja"], highlighted: true, ctaText: "Hubungi Kami", ctaLink: "/setup" },
+    { name: "Orbit", price: "Segera Hadir", period: "", yearlyPrice: "Segera Hadir", yearlyPeriod: "", description: "Untuk enterprise & multi-outlet", features: ["Semua fitur Core", "Multi-outlet management", "Unlimited user", "Priority support", "Custom branding", "API access", "Dedicated account manager"], highlighted: false, ctaText: "Hubungi Kami", ctaLink: "/setup" },
   ],
 };
 
@@ -54,10 +57,13 @@ export default function LandingPage() {
               name: p.name || "",
               price: p.price || "Segera Hadir",
               period: p.period || "",
+              yearlyPrice: p.yearlyPrice || "Segera Hadir",
+              yearlyPeriod: p.yearlyPeriod || "",
               description: p.description || "",
               features: Array.isArray(p.features) ? p.features : [],
               highlighted: p.highlighted ?? false,
               ctaText: p.ctaText || "Hubungi Kami",
+              ctaLink: p.ctaLink || "/setup",
             })),
           });
         }
@@ -116,7 +122,7 @@ export default function LandingPage() {
   const addPricing = () => {
     setData((prev) => ({
       ...prev,
-      pricing: [...prev.pricing, { name: "", price: "Segera Hadir", period: "", description: "", features: [], highlighted: false, ctaText: "Hubungi Kami" }],
+      pricing: [...prev.pricing, { name: "", price: "Segera Hadir", period: "", yearlyPrice: "Segera Hadir", yearlyPeriod: "", description: "", features: [], highlighted: false, ctaText: "Hubungi Kami", ctaLink: "/setup" }],
     }));
     setSaved(false);
   };
@@ -259,19 +265,34 @@ export default function LandingPage() {
                         <input className="input" value={p.name} onChange={(e) => updatePricing(i, "name", e.target.value)} placeholder="Seed / Core / Orbit" />
                       </div>
                       <div>
-                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Harga</label>
+                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Harga (Bulanan)</label>
                         <input className="input" value={p.price} onChange={(e) => updatePricing(i, "price", e.target.value)} placeholder="Rp 99.000 atau Segera Hadir" />
                       </div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                       <div>
-                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Periode</label>
+                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Periode (Bulanan)</label>
                         <input className="input" value={p.period} onChange={(e) => updatePricing(i, "period", e.target.value)} placeholder="/bulan atau kosong" />
+                      </div>
+                      <div>
+                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Harga (Tahunan)</label>
+                        <input className="input" value={p.yearlyPrice} onChange={(e) => updatePricing(i, "yearlyPrice", e.target.value)} placeholder="Rp 999.000 atau Segera Hadir" />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                      <div>
+                        <label className="small" style={{ display: "block", marginBottom: 4 }}>Periode (Tahunan)</label>
+                        <input className="input" value={p.yearlyPeriod} onChange={(e) => updatePricing(i, "yearlyPeriod", e.target.value)} placeholder="/tahun atau kosong" />
                       </div>
                       <div>
                         <label className="small" style={{ display: "block", marginBottom: 4 }}>Teks Tombol (CTA)</label>
                         <input className="input" value={p.ctaText} onChange={(e) => updatePricing(i, "ctaText", e.target.value)} placeholder="Hubungi Kami" />
                       </div>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <label className="small" style={{ display: "block", marginBottom: 4 }}>Link Tombol CTA</label>
+                      <input className="input" value={p.ctaLink} onChange={(e) => updatePricing(i, "ctaLink", e.target.value)} placeholder="/setup atau https://wa.me/628xxx" />
+                      <span className="small" style={{ color: "#888", marginTop: 2, display: "block" }}>Internal (/setup, /login) atau external (https://...)</span>
                     </div>
                     <div style={{ marginBottom: 8 }}>
                       <label className="small" style={{ display: "block", marginBottom: 4 }}>Deskripsi</label>

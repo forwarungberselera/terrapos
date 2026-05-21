@@ -35,6 +35,7 @@ export default function HomePage() {
   }, []);
 
   const { hero, features, featuresTitle, pricing, pricingTitle, pricingSubtitle, ctaTitle, ctaSubtitle, footerText } = config;
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
   return (
     <main>
@@ -188,6 +189,33 @@ export default function HomePage() {
         .lp-feature-card p{font-size:13px;line-height:1.6;color:#777;margin:0;}
 
         /* PRICING */
+        .lp-pricing-toggle{
+          display:flex;align-items:center;justify-content:center;gap:12px;
+          margin-bottom:32px;
+        }
+        .lp-pricing-toggle-label{
+          font-size:14px;font-weight:600;color:#888;
+          transition:color 0.2s ease;
+        }
+        .lp-pricing-toggle-label.active{color:#1a1a1a;}
+        .lp-pricing-toggle-switch{
+          position:relative;width:52px;height:28px;
+          background:#e5e7eb;border-radius:999px;cursor:pointer;
+          transition:background 0.2s ease;border:none;padding:0;
+        }
+        .lp-pricing-toggle-switch.yearly{background:var(--brand,#d59567);}
+        .lp-pricing-toggle-switch::after{
+          content:"";position:absolute;top:3px;left:3px;
+          width:22px;height:22px;border-radius:50%;
+          background:#fff;transition:transform 0.2s ease;
+          box-shadow:0 1px 3px rgba(0,0,0,0.15);
+        }
+        .lp-pricing-toggle-switch.yearly::after{transform:translateX(24px);}
+        .lp-pricing-save-badge{
+          display:inline-block;padding:3px 8px;border-radius:999px;
+          background:#ecfdf5;color:#059669;font-size:11px;font-weight:700;
+          margin-left:4px;
+        }
         .lp-pricing-grid{
           display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start;
         }
@@ -354,28 +382,57 @@ export default function HomePage() {
           <div className="lp-section-inner">
             <h2 className="lp-section-title">{pricingTitle}</h2>
             <p className="lp-section-sub">{pricingSubtitle}</p>
+
+            {/* Toggle Bulanan / Tahunan */}
+            <div className="lp-pricing-toggle">
+              <span className={`lp-pricing-toggle-label ${billingCycle === "monthly" ? "active" : ""}`}>Bulanan</span>
+              <button
+                className={`lp-pricing-toggle-switch ${billingCycle === "yearly" ? "yearly" : ""}`}
+                onClick={() => setBillingCycle(billingCycle === "monthly" ? "yearly" : "monthly")}
+                aria-label="Toggle billing cycle"
+              />
+              <span className={`lp-pricing-toggle-label ${billingCycle === "yearly" ? "active" : ""}`}>
+                Tahunan
+                <span className="lp-pricing-save-badge">Hemat</span>
+              </span>
+            </div>
+
             <div className="lp-pricing-grid">
-              {pricing.map((plan, i) => (
-                <div key={i} className={`lp-price-card ${plan.highlighted ? "highlighted" : ""}`}>
-                  <div className="lp-price-name">{plan.name}</div>
-                  <div className="lp-price-desc">{plan.description}</div>
-                  <div>
-                    <span className="lp-price-amount">{plan.price}</span>
-                    {plan.period && <span className="lp-price-period">{plan.period}</span>}
+              {pricing.map((plan, i) => {
+                const displayPrice = billingCycle === "yearly" ? (plan.yearlyPrice || plan.price) : plan.price;
+                const displayPeriod = billingCycle === "yearly" ? (plan.yearlyPeriod || plan.period) : plan.period;
+
+                const handleCtaClick = () => {
+                  const link = plan.ctaLink || "/setup";
+                  if (link.startsWith("http://") || link.startsWith("https://")) {
+                    window.open(link, "_blank", "noopener,noreferrer");
+                  } else {
+                    r.push(link);
+                  }
+                };
+
+                return (
+                  <div key={i} className={`lp-price-card ${plan.highlighted ? "highlighted" : ""}`}>
+                    <div className="lp-price-name">{plan.name}</div>
+                    <div className="lp-price-desc">{plan.description}</div>
+                    <div>
+                      <span className="lp-price-amount">{displayPrice}</span>
+                      {displayPeriod && <span className="lp-price-period">{displayPeriod}</span>}
+                    </div>
+                    <div className="lp-price-features">
+                      {plan.features.map((feat, j) => (
+                        <div key={j} className="lp-price-feat">{feat}</div>
+                      ))}
+                    </div>
+                    <button
+                      className={`lp-btn ${plan.highlighted ? "lp-btn-fill" : "lp-btn-ghost"}`}
+                      onClick={handleCtaClick}
+                    >
+                      {plan.ctaText}
+                    </button>
                   </div>
-                  <div className="lp-price-features">
-                    {plan.features.map((feat, j) => (
-                      <div key={j} className="lp-price-feat">{feat}</div>
-                    ))}
-                  </div>
-                  <button
-                    className={`lp-btn ${plan.highlighted ? "lp-btn-fill" : "lp-btn-ghost"}`}
-                    onClick={() => r.push("/setup")}
-                  >
-                    {plan.ctaText}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

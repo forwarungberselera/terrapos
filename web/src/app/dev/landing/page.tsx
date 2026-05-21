@@ -138,7 +138,7 @@ export default function DevLandingPage() {
       ...prev,
       pricing: [
         ...prev.pricing,
-        { name: "New Plan", price: "Rp0", period: "/bulan", description: "Deskripsi", features: ["Fitur 1"], highlighted: false, ctaText: "Pilih" },
+        { name: "New Plan", price: "Rp0", period: "/bulan", yearlyPrice: "Rp0", yearlyPeriod: "/tahun", description: "Deskripsi", features: ["Fitur 1"], highlighted: false, ctaText: "Pilih", ctaLink: "/setup" },
       ],
     }));
   }

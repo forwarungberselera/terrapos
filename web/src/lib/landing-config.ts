@@ -30,10 +30,13 @@ export type PricingPlan = {
   name: string;
   price: string;
   period: string;
+  yearlyPrice: string;
+  yearlyPeriod: string;
   description: string;
   features: string[];
   highlighted: boolean;
   ctaText: string;
+  ctaLink: string;
 };
 
 export type LandingConfig = {
@@ -77,28 +80,37 @@ export const DEFAULT_LANDING_CONFIG: LandingConfig = {
       name: "Seed",
       price: "Segera Hadir",
       period: "",
+      yearlyPrice: "Segera Hadir",
+      yearlyPeriod: "",
       description: "Untuk memulai bisnis kecil",
       features: ["Point of Sales", "Management Product", "Laporan Penjualan", "Shift System", "Single Outlet", "1 User"],
       highlighted: false,
       ctaText: "Hubungi Kami",
+      ctaLink: "/setup",
     },
     {
       name: "Core",
       price: "Segera Hadir",
       period: "",
+      yearlyPrice: "Segera Hadir",
+      yearlyPeriod: "",
       description: "Untuk bisnis yang berkembang",
       features: ["Semua fitur Seed", "Promo & Discount", "Staff Management (3-5 user)", "Audit Log", "QR Meja"],
       highlighted: true,
       ctaText: "Hubungi Kami",
+      ctaLink: "/setup",
     },
     {
       name: "Orbit",
       price: "Segera Hadir",
       period: "",
+      yearlyPrice: "Segera Hadir",
+      yearlyPeriod: "",
       description: "Untuk enterprise & multi-outlet",
       features: ["Semua fitur Core", "Multi-outlet management", "Unlimited user", "Priority support", "Custom branding", "API access", "Dedicated account manager"],
       highlighted: false,
       ctaText: "Hubungi Kami",
+      ctaLink: "/setup",
     },
   ],
   ctaTitle: "Siap digitalisasi outlet kamu?",
