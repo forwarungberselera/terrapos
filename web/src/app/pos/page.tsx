@@ -750,22 +750,20 @@ export default function POSPage() {
           align-items:start;
         }
         @media (max-width: 1080px){ .pos-grid{ grid-template-columns: 1fr 320px; } }
-        @media (max-width: 980px){ .pos-grid{ grid-template-columns: 1fr !important; padding-bottom:70px; } }
+        @media (max-width: 980px){ .pos-grid{ grid-template-columns: 1fr !important; padding-bottom:80px; } }
         .product-grid{
           margin-top:12px;
           display:grid;
           grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
           gap:10px;
+          overflow:hidden;
         }
         @media (max-width: 640px){
           .product-grid{ grid-template-columns: repeat(2, 1fr); gap:6px; }
-          .product-btn{ padding:10px 12px; }
-          .product-name{ font-size:13px; }
+          .product-btn{ padding:10px; }
+          .product-name{ font-size:12px; }
           .product-meta{ font-size:10px; margin-top:2px; }
-          .product-price{ margin-top:5px; font-size:13px; }
-        }
-        @media (max-width: 380px){
-          .product-grid{ grid-template-columns: repeat(2, 1fr); }
+          .product-price{ margin-top:4px; font-size:12px; }
         }
         .product-btn{
           text-align:left;
@@ -776,6 +774,8 @@ export default function POSPage() {
           cursor:pointer;
           transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
           touch-action: manipulation;
+          overflow:hidden;
+          word-break:break-word;
         }
         .product-btn:hover{
           background: var(--brandSoft);
@@ -859,13 +859,14 @@ export default function POSPage() {
           .pos-mobile-sheet{ display:none !important; }
         }
         .pos-mobile-bar{
-          position:fixed;bottom:0;left:0;right:0;z-index:40;
-          padding:12px 16px;
+          position:fixed;bottom:16px;left:16px;right:16px;z-index:40;
+          padding:14px 18px;
           background:var(--brand,#d59567);
           color:#fff;
           display:flex;align-items:center;gap:12px;
           cursor:pointer;
-          box-shadow:0 -4px 20px rgba(0,0,0,0.15);
+          border-radius:16px;
+          box-shadow:0 4px 24px rgba(0,0,0,0.2);
           transition:transform 0.2s ease;
           touch-action:manipulation;
         }
