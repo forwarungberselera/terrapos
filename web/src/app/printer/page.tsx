@@ -39,6 +39,7 @@ export default function PrinterPage() {
   const [btConnected, setBtConnected] = useState(false);
   const [btPrinterName, setBtPrinterName] = useState("");
   const [btLoading, setBtLoading] = useState(false);
+  const [btConnecting, setBtConnecting] = useState(false);
   const [pairedDevices, setPairedDevices] = useState<PairedDevice[]>([]);
   const [showDevices, setShowDevices] = useState(false);
 
@@ -127,6 +128,7 @@ export default function PrinterPage() {
 
   async function handleListDevices() {
     setBtLoading(true);
+    setBtConnecting(true);
     setMsg(null);
     try {
       if (isNative) {
@@ -144,11 +146,13 @@ export default function PrinterPage() {
       setMsg(e?.message || "Gagal.");
     } finally {
       setBtLoading(false);
+      setBtConnecting(false);
     }
   }
 
   async function handleConnectDevice(device: PairedDevice) {
     setBtLoading(true);
+    setBtConnecting(true);
     setMsg(null);
     try {
       const result = await NativePrinter.connect(device.address);
@@ -160,6 +164,7 @@ export default function PrinterPage() {
       setMsg(e?.message || "Gagal konek.");
     } finally {
       setBtLoading(false);
+      setBtConnecting(false);
     }
   }
 
@@ -500,9 +505,22 @@ export default function PrinterPage() {
         <div className="card" style={{ marginTop: 14 }}>
           <div style={{ fontWeight: 900, fontSize: 14 }}>Koneksi Bluetooth</div>
           <div className="bt-panel">
-            <div className="row">
-              <div>
-                <div style={{ fontWeight: 900 }}>
+            <div className="row" style={{ gap: 12 }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 14,
+                display: "grid",
+                placeItems: "center",
+                fontSize: 22,
+                background: btConnected ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.1)",
+                border: `2px solid ${btConnected ? "#22c55e" : "#ef4444"}`,
+                flexShrink: 0,
+              }}>
+                {btConnected ? "\u2713" : "\u2022"}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 900, fontSize: 15 }}>
                   {btConnected ? `Terhubung: ${btPrinterName}` : "Belum terhubung"}
                 </div>
                 <div className="small">
@@ -513,15 +531,6 @@ export default function PrinterPage() {
                     : "Klik konek untuk pilih printer."}
                 </div>
               </div>
-              <div className="spacer" />
-              <div
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: 999,
-                  background: btConnected ? "#22c55e" : "#ef4444",
-                }}
-              />
             </div>
 
             <div className="row" style={{ marginTop: 12 }}>
@@ -587,12 +596,6 @@ export default function PrinterPage() {
             >
               Test Print Struk
             </button>
-            <div className="small" style={{ marginTop: 14, lineHeight: 1.7 }}>
-              <b>Bluetooth (APK)</b> — Bluetooth Classic, paling stabil.<br />
-              <b>Bluetooth (Browser)</b> — Web Bluetooth BLE. Hanya Chrome.<br />
-              <b>RawBT</b> — Perlu app RawBT di Android.<br />
-              <b>Browser</b> — Dialog print biasa.
-            </div>
           </div>
 
           <div className="card">
@@ -611,6 +614,16 @@ export default function PrinterPage() {
             <button className="btn" style={{ width: "100%", marginTop: 10 }} onClick={printCustom}>
               Print Teks Custom
             </button>
+          </div>
+        </div>
+      )}
+
+      {btConnecting && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "grid", placeItems: "center", padding: 16, zIndex: 90 }}>
+          <div className="card" style={{ width: 360, maxWidth: "100%", textAlign: "center", padding: 32 }}>
+            <div style={{ fontSize: 36, marginBottom: 12, animation: "pulse 1.5s ease-in-out infinite" }}>&#128246;</div>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>Menghubungkan Printer...</div>
+            <div className="small" style={{ marginTop: 8 }}>Pastikan printer dalam keadaan menyala dan berada dalam jangkauan.</div>
           </div>
         </div>
       )}

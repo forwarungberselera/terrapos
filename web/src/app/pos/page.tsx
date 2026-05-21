@@ -97,6 +97,7 @@ export default function POSPage() {
 
   const [showTableWarning, setShowTableWarning] = useState(false);
   const [successDialog, setSuccessDialog] = useState<{ orderNo: string; change: number; html: string; text: string; btData: any } | null>(null);
+  const [billSuccessDialog, setBillSuccessDialog] = useState<{ orderNo: string; html: string; text: string; btData: any; wasEditing: boolean } | null>(null);
 
   const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
@@ -606,13 +607,14 @@ export default function POSPage() {
       localStorage.setItem("terrapos_last_receipt_html", html);
 
       const text = buildReceiptText(billNo, "BILL");
-      void printBySelectedMode(html, text, { title: "BILL", orderNo: billNo, payMethod: null, paid: null });
 
-      resetCart();
-
-      if (editingOrderId) {
-        r.push("/orders");
-      }
+      setBillSuccessDialog({
+        orderNo: billNo,
+        html,
+        text,
+        btData: { title: "BILL", orderNo: billNo, payMethod: null, paid: null },
+        wasEditing: !!editingOrderId,
+      });
     } catch (e: any) {
       setErr(e?.message ?? "Gagal simpan order bayar nanti");
     }
@@ -693,6 +695,23 @@ export default function POSPage() {
   function handleSuccessSkip() {
     setSuccessDialog(null);
     resetCart();
+  }
+
+  function handleBillPrint() {
+    if (!billSuccessDialog) return;
+    const wasEditing = billSuccessDialog.wasEditing;
+    void printBySelectedMode(billSuccessDialog.html, billSuccessDialog.text, billSuccessDialog.btData);
+    setBillSuccessDialog(null);
+    resetCart();
+    if (wasEditing) r.push("/orders");
+  }
+
+  function handleBillSkip() {
+    if (!billSuccessDialog) return;
+    const wasEditing = billSuccessDialog.wasEditing;
+    setBillSuccessDialog(null);
+    resetCart();
+    if (wasEditing) r.push("/orders");
   }
 
   if (loading || loadingRole) {
@@ -1317,6 +1336,29 @@ export default function POSPage() {
                 style={{ padding: "12px 24px", fontSize: 14 }}
                 onClick={handleSuccessSkip}
               >
+                Lewati
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {billSuccessDialog && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", padding: 16, zIndex: 90 }}>
+          <div className="card" style={{ width: 440, maxWidth: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
+            <div className="h1" style={{ color: "var(--brand)" }}>Order Tersimpan</div>
+            <div className="small" style={{ marginTop: 8, lineHeight: 1.6 }}>
+              Order <b>{billSuccessDialog.orderNo}</b> berhasil disimpan sebagai open bill.
+            </div>
+            <div style={{ marginTop: 16, fontSize: 13, color: "var(--muted)" }}>
+              Cetak bill untuk pelanggan?
+            </div>
+            <div className="row" style={{ marginTop: 12, justifyContent: "center", gap: 10 }}>
+              <button className="btn btn-primary" style={{ padding: "12px 24px", fontSize: 14, fontWeight: 800 }} onClick={handleBillPrint}>
+                Cetak Bill
+              </button>
+              <button className="btn" style={{ padding: "12px 24px", fontSize: 14 }} onClick={handleBillSkip}>
                 Lewati
               </button>
             </div>
