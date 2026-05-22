@@ -74,6 +74,9 @@ export default function DevConsolePage() {
   const [savingColors, setSavingColors] = useState(false);
   const [reloading, setReloading] = useState(false);
 
+  // User management state
+  const [devUsers, setDevUsers] = useState<{uid: string; email: string; name: string; level: string}[]>([]);
+
   const systemInfo = getSystemInfo();
 
   // Auth check - TANPA redirect ke /setup
@@ -740,10 +743,90 @@ export default function DevConsolePage() {
 
       {/* ACCOUNT MANAGEMENT */}
       <div className="card" style={{ marginTop: 14 }}>
-        <div className="h1">Account Management</div>
+        <div className="h1">Account & User Management</div>
         <div className="small" style={{ marginTop: 4 }}>
-          Buat akun baru atau hapus akun user. Akun yang dihapus dari sini hanya dihapus data Firestore-nya (users collection).
-          Untuk hapus dari Firebase Auth, gunakan Firebase Console.
+          Buat akun baru, ubah level user, assign/unassign tenant, atau hapus akun.
+        </div>
+
+        {/* USER LIST WITH LEVEL MANAGEMENT */}
+        <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--border)", borderRadius: 12 }}>
+          <div className="row">
+            <div style={{ fontWeight: 800, fontSize: 13 }}>Daftar User & Level</div>
+            <div className="spacer" />
+            <button className="btn" style={{ fontSize: 11, padding: "6px 10px" }} onClick={async () => {
+              try {
+                const snap = await getDocs(collection(db, "users"));
+                const arr = snap.docs.map((d) => {
+                  const data = d.data() as any;
+                  return { uid: d.id, email: data.email || "-", name: data.name || "-", level: data.level || "free" };
+                });
+                (window as any).__devUsers = arr;
+                setDevUsers(arr);
+              } catch (e: any) { toast.error("Gagal load: " + (e?.message || "")); }
+            }}>
+              Load Users
+            </button>
+          </div>
+          <div className="small" style={{ marginTop: 4 }}>Klik "Load Users" untuk melihat semua user dan mengatur level mereka.</div>
+
+          {devUsers.length > 0 && (
+            <div style={{ marginTop: 10, maxHeight: 400, overflowY: "auto", display: "grid", gap: 8 }}>
+              {devUsers.map((u) => (
+                <div key={u.uid} style={{ padding: 10, border: "1px solid var(--border)", borderRadius: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 150 }}>
+                    <div style={{ fontWeight: 800, fontSize: 13 }}>{u.name}</div>
+                    <div className="small">{u.email}</div>
+                  </div>
+                  <select
+                    className="input"
+                    style={{ width: 100, fontSize: 12, padding: "6px 8px" }}
+                    value={u.level}
+                    onChange={async (e) => {
+                      const newLevel = e.target.value;
+                      try {
+                        const { updateDoc: updFn, doc: docRef, serverTimestamp: ts } = await import("firebase/firestore");
+                        await updFn(docRef(db, `users/${u.uid}`), { level: newLevel, updatedAt: ts() });
+                        setDevUsers((prev) => prev.map((x) => x.uid === u.uid ? { ...x, level: newLevel } : x));
+                        toast.success(`Level ${u.email} diubah ke ${newLevel}`);
+                      } catch (err: any) { toast.error("Gagal: " + (err?.message || "")); }
+                    }}
+                  >
+                    <option value="free">Free</option>
+                    <option value="seed">Seed</option>
+                    <option value="core">Core</option>
+                    <option value="orbit">Orbit</option>
+                  </select>
+                  <button className="btn" style={{ fontSize: 11, padding: "6px 10px" }} onClick={async () => {
+                    const tid = prompt(`Assign "${u.email}" ke tenant ID:`);
+                    if (!tid) return;
+                    const role = prompt("Role (owner/admin/staff):", "admin");
+                    if (!role) return;
+                    try {
+                      const { setDoc: setDocFn, doc: docRef, serverTimestamp: ts, getDoc: getDocFn } = await import("firebase/firestore");
+                      const tenantSnap = await getDocFn(docRef(db, `tenants/${tid}`));
+                      const tenantName = tenantSnap.exists() ? ((tenantSnap.data() as any).name || tid) : tid;
+                      await setDocFn(docRef(db, `users/${u.uid}/tenantMemberships/${tid}`), { tenantId: tid, name: tenantName, role, assignedBy: email, createdAt: ts(), updatedAt: ts() });
+                      await setDocFn(docRef(db, `tenants/${tid}/staff/${u.uid}`), { uid: u.uid, email: u.email, name: u.name, role, assignedBy: email, createdAt: ts(), updatedAt: ts() });
+                      toast.success(`${u.email} assigned ke ${tenantName} sebagai ${role}`);
+                    } catch (err: any) { toast.error("Gagal assign: " + (err?.message || "")); }
+                  }}>
+                    Assign Tenant
+                  </button>
+                  <button className="btn btn-danger" style={{ fontSize: 11, padding: "6px 10px" }} onClick={async () => {
+                    if (!confirm(`Hapus data Firestore untuk "${u.email}"?`)) return;
+                    try {
+                      const { deleteDoc: delFn, doc: docRef } = await import("firebase/firestore");
+                      await delFn(docRef(db, `users/${u.uid}`));
+                      setDevUsers((prev) => prev.filter((x) => x.uid !== u.uid));
+                      toast.success(`Data "${u.email}" dihapus.`);
+                    } catch (err: any) { toast.error("Gagal: " + (err?.message || "")); }
+                  }}>
+                    Hapus
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* CREATE ACCOUNT */}
