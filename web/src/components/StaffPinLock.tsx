@@ -120,9 +120,10 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
           display:flex;
           flex-wrap:wrap;
           justify-content:center;
-          gap:10px;
-          margin-bottom:24px;
-          max-height:200px;
+          align-items:center;
+          gap:12px;
+          margin:0 auto 24px auto;
+          max-height:220px;
           overflow-y:auto;
           padding:4px;
         }
@@ -130,14 +131,16 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
           display:flex;
           flex-direction:column;
           align-items:center;
+          justify-content:center;
           gap:6px;
-          padding:12px 8px;
+          padding:14px 10px;
           border-radius:14px;
           border:2px solid var(--border);
           background:var(--panel);
           cursor:pointer;
           transition:all 0.15s ease;
           width:100px;
+          min-height:90px;
         }
         .staff-chip:hover{
           border-color:var(--brand);
@@ -257,10 +260,12 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
         @media(max-width:640px){
           .pin-lock-title{font-size:20px;}
           .staff-selector{
-            gap:8px;
+            gap:10px;
+            justify-content:center;
           }
           .staff-chip{
-            width:85px;
+            width:90px;
+            min-height:85px;
           }
           .numpad{
             max-width:260px;
