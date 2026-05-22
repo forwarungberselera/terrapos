@@ -12,6 +12,7 @@ import {
   getActiveStaffSession,
   clearActiveStaffSession,
   hasActiveStaff,
+  migrateStaffSessionStorage,
 } from "@/lib/staff-session";
 
 /**
@@ -34,8 +35,12 @@ export function useStaff() {
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [error, setError] = useState<string>("");
 
-  // Load active staff from localStorage on mount
+  // Load active staff from sessionStorage on mount
+  // Staff session hilang saat tab/app ditutup → harus login PIN lagi
   useEffect(() => {
+    // Migrasi: hapus sisa session dari localStorage (versi lama)
+    migrateStaffSessionStorage();
+
     const saved = getActiveStaffSession();
     if (saved) {
       setActiveStaff(saved);
