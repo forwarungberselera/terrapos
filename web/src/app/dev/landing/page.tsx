@@ -292,12 +292,20 @@ export default function DevLandingPage() {
                     <input value={plan.name} onChange={(e) => updatePlan(i, "name", e.target.value)} />
                   </div>
                   <div className="field">
-                    <label>Harga</label>
-                    <input value={plan.price} onChange={(e) => updatePlan(i, "price", e.target.value)} />
+                    <label>Harga (Bulanan)</label>
+                    <input value={plan.price} onChange={(e) => updatePlan(i, "price", e.target.value)} placeholder="Rp49.000" />
                   </div>
                   <div className="field">
-                    <label>Periode</label>
+                    <label>Periode Bulanan</label>
                     <input value={plan.period} onChange={(e) => updatePlan(i, "period", e.target.value)} placeholder="/bulan" />
+                  </div>
+                  <div className="field">
+                    <label>Harga (Tahunan)</label>
+                    <input value={plan.yearlyPrice || ""} onChange={(e) => updatePlan(i, "yearlyPrice", e.target.value)} placeholder="Rp490.000" />
+                  </div>
+                  <div className="field">
+                    <label>Periode Tahunan</label>
+                    <input value={plan.yearlyPeriod || ""} onChange={(e) => updatePlan(i, "yearlyPeriod", e.target.value)} placeholder="/tahun" />
                   </div>
                   <div className="field">
                     <label>CTA Button</label>
@@ -307,6 +315,10 @@ export default function DevLandingPage() {
                 <div className="field">
                   <label>Deskripsi</label>
                   <input value={plan.description} onChange={(e) => updatePlan(i, "description", e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>CTA Link</label>
+                  <input value={plan.ctaLink || ""} onChange={(e) => updatePlan(i, "ctaLink", e.target.value)} placeholder="/setup" />
                 </div>
                 <div className="field">
                   <label style={{ marginBottom: 8 }}>
