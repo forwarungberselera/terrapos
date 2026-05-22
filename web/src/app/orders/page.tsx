@@ -40,6 +40,7 @@ type Order = {
   discount: number;
   total: number;
   items: { name: string; qty: number; price: number; notes?: string }[];
+  staffName?: string | null;
   createdAt?: any;
   updatedAt?: any;
   paidAt?: any;
@@ -213,6 +214,7 @@ export default function OrdersPage() {
             discount: Number(x.discount || 0),
             total: Number(x.total || 0),
             items: Array.isArray(x.items) ? x.items : [],
+            staffName: x.staffName || null,
             createdAt: x.createdAt,
             updatedAt: x.updatedAt,
             paidAt: x.paidAt,
@@ -479,7 +481,7 @@ export default function OrdersPage() {
       orderNo: o.orderNo,
       dateText,
       tableNo: o.tableNo || null,
-      cashierEmail: receiptSettings.cashierName || email || "",
+      cashierEmail: o.staffName || receiptSettings.cashierName || email || "",
       paymentMethod: payMethod,
       subtotal: o.subtotal,
       discount: o.discount,
@@ -512,7 +514,7 @@ export default function OrdersPage() {
       orderNo: o.orderNo,
       dateText,
       tableNo: o.tableNo || null,
-      cashierEmail: receiptSettings.cashierName || email || "",
+      cashierEmail: o.staffName || receiptSettings.cashierName || email || "",
       paymentMethod: payMethod,
       subtotal: o.subtotal,
       discount: o.discount,
