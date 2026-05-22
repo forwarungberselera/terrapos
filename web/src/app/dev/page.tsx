@@ -18,13 +18,13 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  { title: "System Info", description: "App version, environment, build marker", icon: "🖥️", href: "/dev/system", color: "#6366f1" },
-  { title: "Maintenance", description: "Toggle maintenance mode untuk semua user", icon: "🔧", href: "/dev/maintenance", color: "#ef4444" },
-  { title: "Brand Colors", description: "Ubah tema warna app, force reload clients", icon: "🎨", href: "/dev/brand-colors", color: "#f59e0b" },
-  { title: "Tenant Management", description: "Browse, switch, hapus tenant", icon: "🏪", href: "/dev/tenants", color: "#10b981" },
-  { title: "User Management", description: "Kelola akun, ubah level, assign tenant", icon: "👥", href: "/dev/users", color: "#8b5cf6" },
-  { title: "Landing Page", description: "Edit hero, fitur, pricing, footer", icon: "🌐", href: "/dev/landing", color: "#0ea5e9" },
-  { title: "Notifikasi", description: "Broadcast notifikasi in-app ke user", icon: "🔔", href: "/dev/notifications", color: "#ec4899" },
+  { title: "System Info", description: "Version, environment, build marker", icon: "🖥️", href: "/dev/system", color: "#6366f1" },
+  { title: "Maintenance", description: "Toggle maintenance mode", icon: "🔧", href: "/dev/maintenance", color: "#ef4444" },
+  { title: "Brand Colors", description: "Tema warna & force reload", icon: "🎨", href: "/dev/brand-colors", color: "#f59e0b" },
+  { title: "Tenants", description: "Browse, switch, hapus tenant", icon: "🏪", href: "/dev/tenants", color: "#10b981" },
+  { title: "Users", description: "Akun, level, assign tenant", icon: "👥", href: "/dev/users", color: "#8b5cf6" },
+  { title: "Landing Page", description: "Hero, fitur, pricing, footer", icon: "🌐", href: "/dev/landing", color: "#0ea5e9" },
+  { title: "Notifikasi", description: "Broadcast in-app ke user", icon: "🔔", href: "/dev/notifications", color: "#ec4899" },
 ];
 
 export default function DevConsolePage() {
@@ -63,40 +63,56 @@ export default function DevConsolePage() {
   return (
     <TerraPage maxWidth={900}>
       <style>{`
-        .dev-hub-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-        .dev-hub-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:#1e1b4b;color:#a5b4fc;font-size:11px;font-weight:900;letter-spacing:0.5px;}
-        .dev-hub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:16px;}
-        .dev-hub-card{
-          padding:20px;border:1px solid var(--border);border-radius:16px;
+        .dev-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+        .dev-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:#1e1b4b;color:#a5b4fc;font-size:10px;font-weight:900;letter-spacing:0.5px;}
+        .dev-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);}
+        .dev-meta span{padding:4px 8px;background:var(--input-bg);border-radius:6px;border:1px solid var(--border);}
+        .dev-meta b{color:var(--text);}
+        .dev-nav{display:flex;gap:6px;flex-wrap:wrap;}
+        .dev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:14px;}
+        .dev-card{
+          padding:16px 18px;border:1px solid var(--border);border-radius:14px;
           background:var(--panel);cursor:pointer;transition:all 0.2s ease;
-          display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;
+          display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;
         }
-        .dev-hub-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.08);border-color:var(--brand);}
-        .dev-hub-card-icon{font-size:28px;}
-        .dev-hub-card-title{font-size:15px;font-weight:900;color:var(--text);}
-        .dev-hub-card-desc{font-size:12px;color:var(--muted);line-height:1.5;}
-        .dev-hub-card-stripe{position:absolute;top:0;left:0;right:0;height:3px;}
-        .dev-hub-info{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted);}
-        .dev-hub-info b{color:var(--text);}
-        .dev-hub-nav{display:flex;gap:8px;flex-wrap:wrap;}
+        .dev-card:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,0.06);border-color:var(--brand);}
+        .dev-card:active{transform:scale(0.98);}
+        .dev-card-icon{font-size:26px;flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--input-bg);}
+        .dev-card-text{flex:1;min-width:0;}
+        .dev-card-title{font-size:14px;font-weight:900;color:var(--text);}
+        .dev-card-desc{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;}
+        .dev-card-stripe{position:absolute;top:0;left:0;bottom:0;width:3px;}
+        .dev-quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin-top:10px;}
+        .dev-quick button{font-size:12px;padding:10px 8px;text-align:center;}
+
+        @media(max-width:640px){
+          .dev-grid{grid-template-columns:1fr;}
+          .dev-card{padding:14px;}
+          .dev-card-icon{width:38px;height:38px;font-size:22px;}
+          .dev-header{flex-direction:column;gap:10px;}
+          .dev-nav{width:100%;}
+          .dev-nav button{flex:1;font-size:12px;padding:8px 6px;}
+          .dev-quick{grid-template-columns:repeat(3,1fr);}
+          .dev-quick button{font-size:11px;padding:8px 4px;}
+        }
       `}</style>
 
       {/* HEADER */}
       <div className="card">
-        <div className="dev-hub-header">
+        <div className="dev-header">
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div className="h1">Developer Console</div>
-              <span className="dev-hub-badge">DEV</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="h1" style={{ fontSize: 18 }}>Dev Console</div>
+              <span className="dev-badge">DEV</span>
             </div>
-            <div className="dev-hub-info">
-              <span>{email}</span>
-              <span>v<b>{APP_VERSION}</b></span>
+            <div className="dev-meta">
+              <span><b>{email.split("@")[0]}</b></span>
+              <span>v{APP_VERSION}</span>
               <span>{BUILD_ENV}</span>
-              <span>Tenant: <b>{tenantId || "—"}</b></span>
+              <span>T: <b>{tenantId || "—"}</b></span>
             </div>
           </div>
-          <div className="dev-hub-nav">
+          <div className="dev-nav">
             <button className="btn" onClick={() => r.push("/pos")}>POS</button>
             <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
             <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>Logout</button>
@@ -105,28 +121,30 @@ export default function DevConsolePage() {
       </div>
 
       {/* MENU GRID */}
-      <div className="dev-hub-grid">
+      <div className="dev-grid">
         {MENU_ITEMS.map((item) => (
-          <div key={item.href} className="dev-hub-card" onClick={() => r.push(item.href)}>
-            <div className="dev-hub-card-stripe" style={{ background: item.color }} />
-            <div className="dev-hub-card-icon">{item.icon}</div>
-            <div className="dev-hub-card-title">{item.title}</div>
-            <div className="dev-hub-card-desc">{item.description}</div>
+          <div key={item.href} className="dev-card" onClick={() => r.push(item.href)}>
+            <div className="dev-card-stripe" style={{ background: item.color }} />
+            <div className="dev-card-icon">{item.icon}</div>
+            <div className="dev-card-text">
+              <div className="dev-card-title">{item.title}</div>
+              <div className="dev-card-desc">{item.description}</div>
+            </div>
           </div>
         ))}
       </div>
 
       {/* QUICK LINKS */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 10 }}>Quick Links</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button className="btn" onClick={() => r.push("/setup")}>Setup Tenant</button>
+      <div className="card" style={{ marginTop: 14 }}>
+        <div style={{ fontWeight: 800, fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Quick Links</div>
+        <div className="dev-quick">
+          <button className="btn" onClick={() => r.push("/setup")}>Setup</button>
           <button className="btn" onClick={() => r.push("/orders")}>Orders</button>
           <button className="btn" onClick={() => r.push("/products")}>Products</button>
           <button className="btn" onClick={() => r.push("/shifts")}>Shifts</button>
           <button className="btn" onClick={() => r.push("/reports")}>Reports</button>
           <button className="btn" onClick={() => r.push("/settings")}>Settings</button>
-          <button className="btn" onClick={() => { if (typeof window !== "undefined") window.location.reload(); }}>Reload App</button>
+          <button className="btn" onClick={() => { if (typeof window !== "undefined") window.location.reload(); }}>Reload</button>
           <button className="btn" onClick={() => { if (typeof window !== "undefined") { caches.keys().then((n) => n.forEach((k) => caches.delete(k))); } }}>Clear Cache</button>
         </div>
       </div>
