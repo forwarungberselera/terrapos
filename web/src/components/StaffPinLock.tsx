@@ -117,8 +117,9 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
 
         /* Staff selector */
         .staff-selector{
-          display:grid;
-          grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));
+          display:flex;
+          flex-wrap:wrap;
+          justify-content:center;
           gap:10px;
           margin-bottom:24px;
           max-height:200px;
@@ -136,6 +137,7 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
           background:var(--panel);
           cursor:pointer;
           transition:all 0.15s ease;
+          width:100px;
         }
         .staff-chip:hover{
           border-color:var(--brand);
@@ -255,8 +257,10 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
         @media(max-width:640px){
           .pin-lock-title{font-size:20px;}
           .staff-selector{
-            grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));
             gap:8px;
+          }
+          .staff-chip{
+            width:85px;
           }
           .numpad{
             max-width:260px;
