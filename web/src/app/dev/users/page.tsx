@@ -34,6 +34,12 @@ export default function DevUsersPage() {
   const [assignRole, setAssignRole] = useState("admin");
   const [assigning, setAssigning] = useState(false);
 
+  // Unassign modal state
+  const [unassignModal, setUnassignModal] = useState<UserItem | null>(null);
+  const [userMemberships, setUserMemberships] = useState<{ tenantId: string; name: string; role: string }[]>([]);
+  const [loadingMemberships, setLoadingMemberships] = useState(false);
+  const [unassigning, setUnassigning] = useState("");
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) { r.push("/login"); return; }
@@ -99,6 +105,35 @@ export default function DevUsersPage() {
       setUsers((prev) => prev.filter((x) => x.uid !== u.uid));
       toast.success(`"${u.email}" dihapus.`);
     } catch (e: any) { toast.error("Gagal: " + (e?.message || "")); }
+  }
+
+  async function openUnassignModal(u: UserItem) {
+    setUnassignModal(u);
+    setLoadingMemberships(true);
+    setUserMemberships([]);
+    try {
+      const snap = await getDocs(collection(db, `users/${u.uid}/tenantMemberships`));
+      setUserMemberships(snap.docs.map((d) => {
+        const data = d.data() as any;
+        return { tenantId: d.id, name: data.name || d.id, role: data.role || "-" };
+      }));
+    } catch (e: any) { toast.error("Gagal load memberships: " + (e?.message || "")); }
+    finally { setLoadingMemberships(false); }
+  }
+
+  async function handleUnassign(tenantId: string) {
+    if (!unassignModal) return;
+    if (!confirm(`Unassign "${unassignModal.email}" dari tenant "${tenantId}"?`)) return;
+    setUnassigning(tenantId);
+    try {
+      // Hapus membership dari user
+      await deleteDoc(doc(db, `users/${unassignModal.uid}/tenantMemberships/${tenantId}`));
+      // Hapus staff dari tenant
+      await deleteDoc(doc(db, `tenants/${tenantId}/staff/${unassignModal.uid}`));
+      setUserMemberships((prev) => prev.filter((m) => m.tenantId !== tenantId));
+      toast.success(`${unassignModal.email} di-unassign dari ${tenantId}`);
+    } catch (e: any) { toast.error("Gagal: " + (e?.message || "")); }
+    finally { setUnassigning(""); }
   }
 
   async function createAccount() {
@@ -196,7 +231,8 @@ export default function DevUsersPage() {
                 <option value="orbit">Orbit</option>
               </select>
               <div className="usr-actions">
-                <button className="btn" style={{ fontSize: 11, padding: "6px 10px" }} onClick={() => openAssignModal(u)}>Assign Tenant</button>
+                <button className="btn" style={{ fontSize: 11, padding: "6px 10px" }} onClick={() => openAssignModal(u)}>Assign</button>
+                <button className="btn" style={{ fontSize: 11, padding: "6px 10px", background: "var(--input-bg)", borderColor: "var(--border)" }} onClick={() => openUnassignModal(u)}>Unassign</button>
                 <button className="btn btn-danger" style={{ fontSize: 11, padding: "6px 10px" }} onClick={() => deleteUser(u)}>Hapus</button>
               </div>
             </div>
@@ -241,6 +277,47 @@ export default function DevUsersPage() {
               </button>
               <button className="btn" style={{ flex: 1 }} onClick={() => setAssignModal(null)}>Batal</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* UNASSIGN TENANT MODAL */}
+      {unassignModal && (
+        <div className="assign-overlay" onClick={() => setUnassignModal(null)}>
+          <div className="assign-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="h1">Unassign Tenant</div>
+            <div className="small" style={{ marginTop: 6 }}>
+              Tenant yang di-assign ke <b>{unassignModal.name}</b> ({unassignModal.email}):
+            </div>
+
+            <div style={{ marginTop: 16, display: "grid", gap: 8 }}>
+              {loadingMemberships ? (
+                <div className="small">Memuat...</div>
+              ) : userMemberships.length === 0 ? (
+                <div style={{ padding: 16, textAlign: "center", border: "1px solid var(--border)", borderRadius: 10, color: "var(--muted)", fontSize: 13 }}>
+                  User ini belum di-assign ke tenant manapun.
+                </div>
+              ) : (
+                userMemberships.map((m) => (
+                  <div key={m.tenantId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 10, background: "var(--input-bg)" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 13 }}>{m.name}</div>
+                      <div className="small">ID: {m.tenantId} &bull; Role: <b>{m.role}</b></div>
+                    </div>
+                    <button
+                      className="btn btn-danger"
+                      style={{ fontSize: 11, padding: "6px 12px" }}
+                      onClick={() => handleUnassign(m.tenantId)}
+                      disabled={unassigning === m.tenantId}
+                    >
+                      {unassigning === m.tenantId ? "..." : "Unassign"}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={() => setUnassignModal(null)}>Tutup</button>
           </div>
         </div>
       )}
