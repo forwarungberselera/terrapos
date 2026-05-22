@@ -66,15 +66,13 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
     setLoading(false);
   }, [selectedStaff, pin, onLogin]);
 
-  // Auto-submit when PIN reaches 4-6 digits (submit on 4th digit if no more input after 600ms)
+  // Auto-submit when PIN reaches 4-6 digits
   useEffect(() => {
     if (pin.length < 4 || !selectedStaff) return;
     if (pin.length === 6) {
-      // Max length, auto submit
       handleSubmit();
       return;
     }
-    // For 4-5 digit, wait briefly then auto-submit
     const timer = setTimeout(() => {
       handleSubmit();
     }, 800);
@@ -97,85 +95,103 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
           justify-content:center;
           padding:20px;
           animation:fadeIn 0.25s ease;
+          overflow-y:auto;
         }
         .pin-lock-card{
           width:100%;
-          max-width:380px;
+          max-width:420px;
           text-align:center;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
         }
         .pin-lock-title{
-          font-size:22px;
+          font-size:26px;
           font-weight:900;
           font-family:var(--font-primary);
-          margin-bottom:6px;
+          margin-bottom:8px;
         }
         .pin-lock-subtitle{
-          font-size:13px;
+          font-size:14px;
           color:var(--muted);
-          margin-bottom:24px;
+          margin-bottom:28px;
         }
 
-        /* Staff selector */
+        /* Staff selector - centered grid */
         .staff-selector{
-          display:grid;
-          grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));
-          gap:10px;
-          margin-bottom:24px;
-          max-height:200px;
+          display:flex;
+          flex-wrap:wrap;
+          justify-content:center;
+          gap:14px;
+          margin-bottom:28px;
+          max-height:280px;
           overflow-y:auto;
-          padding:4px;
+          padding:8px;
+          width:100%;
         }
         .staff-chip{
           display:flex;
           flex-direction:column;
           align-items:center;
-          gap:6px;
-          padding:12px 8px;
-          border-radius:14px;
+          gap:8px;
+          padding:16px 14px;
+          border-radius:16px;
           border:2px solid var(--border);
           background:var(--panel);
           cursor:pointer;
           transition:all 0.15s ease;
+          width:110px;
         }
         .staff-chip:hover{
           border-color:var(--brand);
-          transform:scale(1.02);
+          transform:scale(1.04);
+          box-shadow:0 4px 16px rgba(0,0,0,0.08);
+        }
+        .staff-chip:active{
+          transform:scale(0.96);
         }
         .staff-chip.selected{
           border-color:var(--brand);
           background:rgba(213,149,103,0.1);
+          box-shadow:0 0 0 3px rgba(213,149,103,0.2);
         }
         .staff-chip-avatar{
-          width:36px;
-          height:36px;
+          width:48px;
+          height:48px;
           border-radius:50%;
           background:var(--brand);
           color:#fff;
           display:grid;
           place-items:center;
           font-weight:900;
-          font-size:16px;
+          font-size:20px;
         }
         .staff-chip-name{
-          font-size:11px;
-          font-weight:700;
+          font-size:12px;
+          font-weight:800;
           white-space:nowrap;
           overflow:hidden;
           text-overflow:ellipsis;
-          max-width:80px;
+          max-width:90px;
+          color:var(--text);
+        }
+        .staff-chip-role{
+          font-size:10px;
+          color:var(--muted);
+          text-transform:capitalize;
         }
 
         /* PIN display */
         .pin-dots{
           display:flex;
           justify-content:center;
-          gap:12px;
-          margin:20px 0;
+          gap:14px;
+          margin:24px 0;
           min-height:32px;
         }
         .pin-dot{
-          width:16px;
-          height:16px;
+          width:18px;
+          height:18px;
           border-radius:50%;
           border:2px solid var(--border);
           transition:all 0.15s ease;
@@ -183,7 +199,7 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
         .pin-dot.filled{
           background:var(--brand);
           border-color:var(--brand);
-          transform:scale(1.1);
+          transform:scale(1.15);
         }
         .pin-dots.shake{
           animation:pinShake 0.4s ease;
@@ -200,16 +216,16 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
         .numpad{
           display:grid;
           grid-template-columns:repeat(3,1fr);
-          gap:10px;
-          max-width:280px;
-          margin:0 auto;
+          gap:12px;
+          width:100%;
+          max-width:300px;
         }
         .numpad-btn{
-          height:60px;
-          border-radius:14px;
+          height:64px;
+          border-radius:16px;
           border:1px solid var(--border);
           background:var(--panel);
-          font-size:24px;
+          font-size:26px;
           font-weight:800;
           cursor:pointer;
           display:grid;
@@ -217,9 +233,10 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
           transition:all 0.1s ease;
           user-select:none;
           -webkit-tap-highlight-color:transparent;
+          color:var(--text);
         }
         .numpad-btn:active{
-          transform:scale(0.92);
+          transform:scale(0.9);
           background:var(--brand);
           color:#fff;
           border-color:var(--brand);
@@ -232,38 +249,92 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
         .numpad-btn.action:active{
           background:var(--input-bg);
           color:var(--text);
+          transform:scale(0.9);
         }
 
         .pin-error{
           color:var(--danger);
           font-size:13px;
           font-weight:800;
-          margin-top:12px;
+          margin-top:14px;
           min-height:20px;
         }
 
         .pin-back-btn{
-          margin-top:16px;
-          font-size:13px;
+          margin-top:20px;
+          font-size:14px;
           color:var(--muted);
           cursor:pointer;
           background:none;
           border:none;
           text-decoration:underline;
+          padding:8px 16px;
+        }
+        .pin-back-btn:active{
+          color:var(--text);
+        }
+
+        .pin-selected-avatar{
+          width:64px;
+          height:64px;
+          border-radius:50%;
+          background:var(--brand);
+          color:#fff;
+          display:grid;
+          place-items:center;
+          font-weight:900;
+          font-size:28px;
+          margin:0 auto 12px;
         }
 
         @media(max-width:640px){
-          .pin-lock-title{font-size:20px;}
+          .pin-lock-title{font-size:22px;}
+          .pin-lock-subtitle{font-size:13px; margin-bottom:20px;}
           .staff-selector{
-            grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));
-            gap:8px;
+            gap:10px;
+            max-height:220px;
+          }
+          .staff-chip{
+            width:90px;
+            padding:12px 10px;
+            border-radius:14px;
+          }
+          .staff-chip-avatar{
+            width:40px;
+            height:40px;
+            font-size:17px;
+          }
+          .staff-chip-name{
+            font-size:11px;
+            max-width:70px;
           }
           .numpad{
-            max-width:260px;
+            max-width:270px;
+            gap:10px;
+          }
+          .numpad-btn{
+            height:58px;
+            font-size:24px;
+            border-radius:14px;
+          }
+          .pin-selected-avatar{
+            width:56px;
+            height:56px;
+            font-size:24px;
+          }
+        }
+
+        @media(max-width:380px){
+          .staff-chip{
+            width:80px;
+            padding:10px 8px;
+          }
+          .numpad{
+            max-width:240px;
             gap:8px;
           }
           .numpad-btn{
-            height:54px;
+            height:52px;
             font-size:22px;
           }
         }
@@ -290,6 +361,7 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
                       {s.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="staff-chip-name">{s.name}</div>
+                    <div className="staff-chip-role">{s.role}</div>
                   </div>
                 ))}
               </div>
@@ -297,6 +369,9 @@ export default function StaffPinLock({ staffAccounts, onLogin, error }: Props) {
           ) : (
             <>
               {/* Step 2: Masukkan PIN */}
+              <div className="pin-selected-avatar">
+                {selectedStaff.name.charAt(0).toUpperCase()}
+              </div>
               <div className="pin-lock-subtitle">
                 Masukkan PIN untuk <b>{selectedStaff.name}</b>
               </div>
