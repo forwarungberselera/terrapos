@@ -950,6 +950,22 @@ export default function POSPage() {
         .bill-success-desktop{ display:grid; }
         .bill-success-mobile-overlay{ display:none; }
         .bill-success-mobile{ display:none !important; }
+
+        /* Table warning modal: desktop vs mobile */
+        .table-warn-desktop{ display:grid; }
+        .table-warn-mobile-overlay{ display:none; }
+        .table-warn-mobile{ display:none !important; }
+
+        /* Shift prompt modal (POS): desktop vs mobile */
+        .pos-shift-desktop{ display:grid; }
+        .pos-shift-mobile-overlay{ display:none; }
+        .pos-shift-mobile{ display:none !important; }
+
+        /* Success dialog (Pay Now): desktop vs mobile */
+        .pos-success-desktop{ display:grid; }
+        .pos-success-mobile-overlay{ display:none; }
+        .pos-success-mobile{ display:none !important; }
+
         @media (max-width: 980px){
           .bill-success-desktop{ display:none !important; }
           .bill-success-mobile-overlay{
@@ -959,6 +975,62 @@ export default function POSPage() {
             animation:fadeIn 0.2s ease;
           }
           .bill-success-mobile{
+            display:block !important;
+            position:fixed;bottom:0;left:0;right:0;z-index:91;
+            background:var(--panel);
+            border-radius:24px 24px 0 0;
+            padding:20px 20px 40px;
+            animation:slideUp 0.25s ease;
+            box-shadow:0 -12px 40px rgba(0,0,0,0.25);
+          }
+
+          /* Table warning mobile bottom sheet */
+          .table-warn-desktop{ display:none !important; }
+          .table-warn-mobile-overlay{
+            display:block;
+            position:fixed;inset:0;z-index:80;
+            background:rgba(0,0,0,0.55);
+            animation:fadeIn 0.2s ease;
+          }
+          .table-warn-mobile{
+            display:block !important;
+            position:fixed;bottom:0;left:0;right:0;z-index:81;
+            background:var(--panel);
+            border-radius:20px 20px 0 0;
+            padding:20px 16px 40px;
+            animation:slideUp 0.25s ease;
+            box-shadow:0 -12px 40px rgba(0,0,0,0.25);
+          }
+
+          /* Shift prompt (POS) mobile bottom sheet */
+          .pos-shift-desktop{ display:none !important; }
+          .pos-shift-mobile-overlay{
+            display:block;
+            position:fixed;inset:0;z-index:70;
+            background:rgba(0,0,0,0.55);
+            animation:fadeIn 0.2s ease;
+          }
+          .pos-shift-mobile{
+            display:block !important;
+            position:fixed;bottom:0;left:0;right:0;z-index:71;
+            background:var(--panel);
+            border-radius:20px 20px 0 0;
+            max-height:85vh;
+            overflow-y:auto;
+            padding:20px 16px 40px;
+            animation:slideUp 0.25s ease;
+            box-shadow:0 -12px 40px rgba(0,0,0,0.25);
+          }
+
+          /* Success dialog (Pay Now) mobile bottom sheet */
+          .pos-success-desktop{ display:none !important; }
+          .pos-success-mobile-overlay{
+            display:block;
+            position:fixed;inset:0;z-index:90;
+            background:rgba(0,0,0,0.6);
+            animation:fadeIn 0.2s ease;
+          }
+          .pos-success-mobile{
             display:block !important;
             position:fixed;bottom:0;left:0;right:0;z-index:91;
             background:var(--panel);
@@ -1549,13 +1621,14 @@ export default function POSPage() {
         </>
       )}
 
+      {/* TABLE WARNING - DESKTOP */}
       {showTableWarning && (
         <div
+          className="table-warn-desktop"
           style={{
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.55)",
-            display: "grid",
             placeItems: "center",
             padding: 16,
             zIndex: 80,
@@ -1577,13 +1650,35 @@ export default function POSPage() {
         </div>
       )}
 
+      {/* TABLE WARNING - MOBILE (bottom sheet) */}
+      {showTableWarning && (
+        <>
+          <div className="table-warn-mobile-overlay" onClick={() => setShowTableWarning(false)} />
+          <div className="table-warn-mobile">
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 16px" }} />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 44, marginBottom: 10 }}>&#9888;&#65039;</div>
+              <div className="h1" style={{ fontSize: 20 }}>No. Meja Belum Diisi</div>
+              <div className="small" style={{ marginTop: 12, lineHeight: 1.7, fontSize: 14 }}>
+                Mode Bayar Nanti wajib mengisi No. Meja atau nama pelanggan agar order bisa diidentifikasi.
+              </div>
+
+              <button className="btn btn-primary" style={{ width: "100%", marginTop: 18, padding: "14px 0", fontSize: 15, fontWeight: 800 }} onClick={() => { setShowTableWarning(false); }}>
+                OK, Isi Sekarang
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* SHIFT PROMPT (POS) - DESKTOP */}
       {shiftPromptOpen && !activeShift && (
         <div
+          className="pos-shift-desktop"
           style={{
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.55)",
-            display: "grid",
             placeItems: "center",
             padding: 16,
             zIndex: 70,
@@ -1621,13 +1716,51 @@ export default function POSPage() {
         </div>
       )}
 
+      {/* SHIFT PROMPT (POS) - MOBILE (bottom sheet) */}
+      {shiftPromptOpen && !activeShift && (
+        <>
+          <div className="pos-shift-mobile-overlay" />
+          <div className="pos-shift-mobile">
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 16px" }} />
+            <div className="h1" style={{ fontSize: 20 }}>Shift Belum Dibuka</div>
+            <div className="small" style={{ marginTop: 12, lineHeight: 1.7, fontSize: 14 }}>
+              Sebelum kasir mulai transaksi, shift harus dibuka dulu agar semua pembayaran tercatat ke sesi kasir yang aktif.
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid var(--border)",
+                background: "var(--brandSoft)",
+                fontSize: 14,
+                lineHeight: 1.6,
+              }}
+            >
+              Buka shift dulu di halaman <b>Shift</b>, lalu kembali ke POS untuk lanjut transaksi.
+            </div>
+
+            <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
+              <button className="btn btn-primary" style={{ width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 800 }} onClick={() => r.push("/shifts")}>
+                Buka Halaman Shift
+              </button>
+              <button className="btn" style={{ width: "100%", padding: "12px 0", fontSize: 14 }} onClick={() => r.push("/dashboard")}>
+                Ke Dashboard
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* SUCCESS DIALOG (PAY NOW) - DESKTOP */}
       {successDialog && (
         <div
+          className="pos-success-desktop"
           style={{
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.6)",
-            display: "grid",
             placeItems: "center",
             padding: 16,
             zIndex: 90,
@@ -1671,6 +1804,45 @@ export default function POSPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* SUCCESS DIALOG (PAY NOW) - MOBILE (bottom sheet) */}
+      {successDialog && (
+        <>
+          <div className="pos-success-mobile-overlay" />
+          <div className="pos-success-mobile">
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 20px" }} />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 56, marginBottom: 8 }}>&#10003;</div>
+              <div className="h1" style={{ color: "var(--brand)", fontSize: 22 }}>Transaksi Berhasil</div>
+              <div className="small" style={{ marginTop: 10, lineHeight: 1.7, fontSize: 14 }}>
+                Pembayaran telah tercatat. Order <b>{successDialog.orderNo}</b> selesai.
+              </div>
+
+              {successDialog.change > 0 && (
+                <div style={{ marginTop: 14, padding: "14px 16px", borderRadius: 14, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
+                  <div className="small" style={{ fontWeight: 700 }}>Kembalian</div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: "var(--brand)", fontFamily: "var(--font-mono)", marginTop: 6 }}>
+                    Rp {rupiah(successDialog.change)}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginTop: 20, fontSize: 14, color: "var(--muted)" }}>
+                Cetak struk untuk pelanggan?
+              </div>
+
+              <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+                <button className="btn btn-primary" style={{ width: "100%", padding: "16px 0", fontSize: 16, fontWeight: 800 }} onClick={handleSuccessPrint}>
+                  Cetak Struk
+                </button>
+                <button className="btn" style={{ width: "100%", padding: "14px 0", fontSize: 15 }} onClick={handleSuccessSkip}>
+                  Lewati
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* BILL SUCCESS - DESKTOP (centered modal) */}
