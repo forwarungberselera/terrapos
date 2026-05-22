@@ -6,6 +6,7 @@ import TerraPage from "@/components/TerraPage";
 import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
+import { useLevel } from "@/hooks/useLevel";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, orderBy, query, where, Timestamp } from "firebase/firestore";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
@@ -85,7 +86,9 @@ export default function ReportsPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const { level, loadingLevel: loadingLvl, canAdvancedReports } = useLevel();
   const canAccess = ["owner", "developer"].includes((role || "").toString().toLowerCase());
+  const isAdvanced = canAdvancedReports();
 
   const [tab, setTab] = useState<TabType>("ringkasan");
   const [page, setPage] = useState(1);
@@ -235,9 +238,75 @@ export default function ReportsPage() {
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `laporan-${rangeMode === "custom" ? customStart + "_" + customEnd : preset + "-" + selectedDate}.csv`; a.click(); URL.revokeObjectURL(url);
   }
 
-  if (loading || loadingRole) return <TerraPage><SkeletonStyles /><PageSkeleton cards={3} /></TerraPage>;
+  if (loading || loadingRole || loadingLvl) return <TerraPage><SkeletonStyles /><PageSkeleton cards={3} /></TerraPage>;
   if (!canAccess) return (<TerraPage><div className="card"><div className="h1">Akses ditolak</div><div className="small">Halaman laporan hanya untuk owner.</div><button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>Kembali ke Dashboard</button></div></TerraPage>);
 
+  // === BASIC REPORTS (Free & Seed) ===
+  if (!isAdvanced) {
+    return (
+      <TerraPage>
+        <style>{`
+          .rp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:14px;}
+          .rp-stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;}
+          .rp-stat-val{font-size:20px;font-weight:900;margin-top:6px;}
+          .rp-stat-label{font-size:11px;color:var(--muted);font-weight:700;}
+          .rp-upgrade{margin-top:20px;padding:20px;border:1px solid var(--brand);border-radius:14px;background:var(--brandSoft);text-align:center;}
+        `}</style>
+
+        <PageHeader title="Laporan" subtitle={`Periode: ${formatDate(dateRange.start)} — ${formatDate(dateRange.end)}`}>
+          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+        </PageHeader>
+
+        <div className="card">
+          {/* Simple date selector */}
+          <div className="row" style={{ marginTop: 14, gap: 8, flexWrap: "wrap" }}>
+            <button className={"rp-tab " + (preset === "daily" ? "active" : "")} style={{ padding: "9px 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, border: "1px solid var(--border)", background: preset === "daily" ? "var(--brand)" : "var(--panel)", color: preset === "daily" ? "#fff" : "inherit", cursor: "pointer" }} onClick={() => { setRangeMode("preset"); setPreset("daily"); }}>Harian</button>
+            <button className={"rp-tab " + (preset === "weekly" ? "active" : "")} style={{ padding: "9px 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, border: "1px solid var(--border)", background: preset === "weekly" ? "var(--brand)" : "var(--panel)", color: preset === "weekly" ? "#fff" : "inherit", cursor: "pointer" }} onClick={() => { setRangeMode("preset"); setPreset("weekly"); }}>Mingguan</button>
+            <button className={"rp-tab " + (preset === "monthly" ? "active" : "")} style={{ padding: "9px 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, border: "1px solid var(--border)", background: preset === "monthly" ? "var(--brand)" : "var(--panel)", color: preset === "monthly" ? "#fff" : "inherit", cursor: "pointer" }} onClick={() => { setRangeMode("preset"); setPreset("monthly"); }}>Bulanan</button>
+            <input type="date" className="input" style={{ width: 160 }} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+          </div>
+        </div>
+
+        {fetching ? <div style={{ marginTop: 14 }}><SkeletonStyles /><PageSkeleton cards={2} /></div> : (
+          <>
+            <div className="rp-grid">
+              <div className="rp-stat"><div className="rp-stat-label">Total Omzet</div><div className="rp-stat-val" style={{ color: "var(--brand)" }}>{rupiah(stats.totalOmzet)}</div></div>
+              <div className="rp-stat"><div className="rp-stat-label">Transaksi Lunas</div><div className="rp-stat-val">{stats.paidCount}</div></div>
+              <div className="rp-stat"><div className="rp-stat-label">Rata-rata / Trx</div><div className="rp-stat-val">{rupiah(stats.avgTransaction)}</div></div>
+              <div className="rp-stat"><div className="rp-stat-label">CASH</div><div className="rp-stat-val">{rupiah(stats.cashTotal)}</div><div className="rp-stat-label">{stats.cashCount} trx</div></div>
+              <div className="rp-stat"><div className="rp-stat-label">QRIS</div><div className="rp-stat-val">{rupiah(stats.qrisTotal)}</div><div className="rp-stat-label">{stats.qrisCount} trx</div></div>
+              <div className="rp-stat"><div className="rp-stat-label">Dibatalkan</div><div className="rp-stat-val" style={{ color: "var(--danger)" }}>{stats.cancelledCount}</div></div>
+            </div>
+
+            {/* Top 5 Products (basic) */}
+            {stats.topProducts.length > 0 && (
+              <div className="card" style={{ marginTop: 14 }}>
+                <div className="h1">Top 5 Produk</div>
+                <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12, fontSize: 13 }}>
+                  <thead><tr><th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid var(--border)", fontWeight: 700, color: "var(--muted)", fontSize: 11, textTransform: "uppercase" }}>#</th><th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid var(--border)", fontWeight: 700, color: "var(--muted)", fontSize: 11, textTransform: "uppercase" }}>Produk</th><th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid var(--border)", fontWeight: 700, color: "var(--muted)", fontSize: 11, textTransform: "uppercase" }}>Qty</th><th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid var(--border)", fontWeight: 700, color: "var(--muted)", fontSize: 11, textTransform: "uppercase" }}>Revenue</th></tr></thead>
+                  <tbody>
+                    {stats.topProducts.slice(0, 5).map((p, i) => (<tr key={p.name}><td style={{ padding: "8px 10px", borderBottom: "1px solid var(--border)" }}>{i + 1}</td><td style={{ padding: "8px 10px", borderBottom: "1px solid var(--border)", fontWeight: 700 }}>{p.name}</td><td style={{ padding: "8px 10px", borderBottom: "1px solid var(--border)" }}>{p.qty}</td><td style={{ padding: "8px 10px", borderBottom: "1px solid var(--border)" }}>{rupiah(p.revenue)}</td></tr>))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Upgrade CTA */}
+            <div className="rp-upgrade">
+              <div style={{ fontSize: 18, fontWeight: 900 }}>Upgrade ke Core</div>
+              <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
+                Dapatkan laporan lengkap: breakdown harian, laporan per shift,<br />
+                riwayat refund, export CSV, dan custom date range.
+              </div>
+              <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => r.push("/settings")}>Lihat Paket</button>
+            </div>
+          </>
+        )}
+      </TerraPage>
+    );
+  }
+
+  // === ADVANCED REPORTS (Core & Orbit) ===
   return (
     <TerraPage>
       <style>{`

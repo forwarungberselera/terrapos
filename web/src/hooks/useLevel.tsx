@@ -74,5 +74,10 @@ export function useLevel() {
     return level === "core" || level === "orbit";
   }
 
-  return { level, loadingLevel, canAccess, canDisableWatermark, getStaffLimit, canUsePromos };
+  /** Check if user can access advanced reports (Core+ only) */
+  function canAdvancedReports(): boolean {
+    return level === "core" || level === "orbit";
+  }
+
+  return { level, loadingLevel, canAccess, canDisableWatermark, getStaffLimit, canUsePromos, canAdvancedReports };
 }
