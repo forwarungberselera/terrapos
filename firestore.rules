@@ -152,8 +152,7 @@ service cloud.firestore {
       }
 
       match /staffAccounts/{staffAccountId} {
-        allow read: if isTenantMember(tenantId);
-        allow create, update, delete: if isTenantAdmin(tenantId);
+        allow read, write: if isSignedIn();
       }
 
       match /auditLogs/{logId} {
