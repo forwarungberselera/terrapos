@@ -1,14 +1,36 @@
-# TerraPOS Mobile UX - Konteks untuk Session Berikutnya
+# TerraPOS - Konteks untuk Session Berikutnya
 
-## Tujuan
-Mengubah semua popup/modal yang masih berupa "centered modal" menjadi **bottom sheet** khusus mobile (<980px), sambil tetap mempertahankan tampilan desktop.
+## Status Mobile UX: ✅ SELESAI (Semua 7 modal sudah dikonversi)
 
-## Pattern yang Sudah Diterapkan (Contoh Referensi)
+Semua popup/modal yang tadinya "centered modal" sudah diubah menjadi **bottom sheet** khusus mobile (<980px). Desktop tetap centered modal.
 
-### File: `web/src/app/pos/page.tsx`
-Sudah ada contoh implementasi yang benar:
-- **Payment Popup**: `pos-pay-desktop` (centered modal) + `pos-pay-mobile` (bottom sheet)
-- **Bill Success**: `bill-success-desktop` (centered modal) + `bill-success-mobile` (bottom sheet)
+### Modal yang Sudah Selesai
+
+| # | File | Modal | CSS Class |
+|---|------|-------|-----------|
+| 1 | `orders/page.tsx` | Refund | `refund-desktop` / `refund-mobile` |
+| 2 | `orders/page.tsx` | Void/Cancel | `void-desktop` / `void-mobile` |
+| 3 | `orders/page.tsx` | Shift Prompt | `shift-prompt-desktop` / `shift-prompt-mobile` |
+| 4 | `orders/page.tsx` | Pay Success | `pay-success-desktop` / `pay-success-mobile` |
+| 5 | `pos/page.tsx` | Table Warning | `table-warn-desktop` / `table-warn-mobile` |
+| 6 | `pos/page.tsx` | Shift Prompt | `pos-shift-desktop` / `pos-shift-mobile` |
+| 7 | `pos/page.tsx` | Success Dialog (Pay Now) | `pos-success-desktop` / `pos-success-mobile` |
+
+### Modal yang sudah OK sebelumnya (tidak diubah)
+
+| Modal | Alasan |
+|-------|--------|
+| Payment Popup (pos) | `pos-pay-desktop` / `pos-pay-mobile` — sudah dari awal |
+| Bill Success (pos) | `bill-success-desktop` / `bill-success-mobile` — sudah dari awal |
+| Payment Popup (orders) | `order-pay-desktop` / `order-pay-mobile` — sudah dari awal |
+| Shift Confirm (shifts) | Sudah `width:"90%"` + `maxWidth:400`, cukup OK |
+| Shift Closed (shifts) | Sudah `width:"90%"` + `maxWidth:420`, cukup OK |
+| BT Connecting (printer) | Kecil, hanya spinner |
+| PrintingOverlay | Kecil, hanya spinner |
+
+---
+
+## Pattern yang Dipakai (Referensi untuk Fitur Baru)
 
 ### CSS Pattern:
 ```css
@@ -41,7 +63,7 @@ Sudah ada contoh implementasi yang benar:
 ```jsx
 {/* DESKTOP */}
 {dialog && (
-  <div className="xxx-desktop" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"grid", placeItems:"center", padding:16, zIndex:90 }}>
+  <div className="xxx-desktop" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", placeItems:"center", padding:16, zIndex:90 }}>
     <div className="card" style={{ width:440, maxWidth:"100%", textAlign:"center" }}>
       {/* content */}
     </div>
@@ -51,9 +73,9 @@ Sudah ada contoh implementasi yang benar:
 {/* MOBILE */}
 {dialog && (
   <>
-    <div className="xxx-mobile-overlay" />
+    <div className="xxx-mobile-overlay" onClick={closeHandler} />
     <div className="xxx-mobile">
-      <div style={{ width:40, height:4, borderRadius:2, background:"var(--border)", margin:"0 auto 20px" }} />
+      <div style={{ width:40, height:4, borderRadius:2, background:"var(--border)", margin:"0 auto 16px" }} />
       <div style={{ textAlign:"center" }}>
         {/* same content but with larger fonts/buttons */}
       </div>
@@ -64,94 +86,10 @@ Sudah ada contoh implementasi yang benar:
 
 ---
 
-## 7 Modal yang PERLU Diubah
+## Hal yang Masih PERLU Dikerjakan
 
-### 1. `/web/src/app/orders/page.tsx` — Refund Modal
-- **Trigger**: `refundOpen && refundOrder`
-- **Konten**: Input PIN + textarea alasan + tombol "Konfirmasi Refund"
-- **Prioritas**: TINGGI (sering dipakai kasir di HP)
-
-### 2. `/web/src/app/orders/page.tsx` — Void/Cancel Modal
-- **Trigger**: `voidOpen && voidOrder`
-- **Konten**: Textarea alasan + tombol "Konfirmasi Batalkan"
-- **Prioritas**: TINGGI
-
-### 3. `/web/src/app/orders/page.tsx` — Shift Prompt Modal
-- **Trigger**: `shiftPromptOpen && !activeShift`
-- **Konten**: Info text + 2 tombol (Buka Shift / Tutup)
-- **Prioritas**: MEDIUM
-
-### 4. `/web/src/app/orders/page.tsx` — Pay Success Dialog
-- **Trigger**: `paySuccessDialog`
-- **Konten**: Checkmark + info order + tombol Cetak/Lewati
-- **Prioritas**: TINGGI (muncul setelah setiap pembayaran)
-
-### 5. `/web/src/app/pos/page.tsx` — Table Warning Modal
-- **Trigger**: `showTableWarning`
-- **Konten**: Warning icon + text + tombol OK
-- **Prioritas**: MEDIUM (jarang muncul)
-
-### 6. `/web/src/app/pos/page.tsx` — Shift Prompt Modal
-- **Trigger**: `shiftPromptOpen && !activeShift`
-- **Konten**: Info text + 2 tombol (Buka Shift / Ke Dashboard)
-- **Prioritas**: MEDIUM
-
-### 7. `/web/src/app/pos/page.tsx` — Success Dialog (Pay Now)
-- **Trigger**: `successDialog`
-- **Konten**: Checkmark + kembalian + tombol Cetak/Lewati
-- **Prioritas**: TINGGI (muncul setelah setiap transaksi bayar sekarang)
-
----
-
-## Modal yang TIDAK PERLU Diubah (sudah OK atau terlalu kecil)
-
-| Modal | Alasan |
-|-------|--------|
-| Shift Confirm (shifts/page.tsx) | Sudah pakai `width:"90%"` + `maxWidth:400`, cukup OK |
-| Shift Closed (shifts/page.tsx) | Sudah pakai `width:"90%"` + `maxWidth:420`, cukup OK |
-| BT Connecting (printer/page.tsx) | Kecil (360px), hanya spinner, tidak ada interaksi |
-| PrintingOverlay | Kecil (320px), hanya spinner, tidak ada interaksi |
-
----
-
-## Cara Implementasi yang Direkomendasikan
-
-### Opsi A: Per-file (Lebih bersih, lebih banyak kode)
-- Tambah CSS class baru di `<style>` tag masing-masing halaman
-- Render 2 versi: desktop class + mobile class (hidden/shown via CSS)
-- Ini yang sudah dilakukan untuk payment popup & bill success
-
-### Opsi B: Global CSS override (Lebih cepat, 1 file)
-- Tambah di `globals.css` media query yang target semua modal `position:fixed` centered
-- Override jadi bottom-aligned pada mobile
-- **TIDAK DISARANKAN** karena bisa break layout lain
-
-### **REKOMENDASI: Opsi A** — ikuti pattern yang sudah ada.
-
----
-
-## Struktur File yang Relevan
-
-```
-web/src/app/
-├── pos/page.tsx          → 2 modal perlu fix (Table Warning, Success Dialog, Shift Prompt)
-├── orders/page.tsx       → 4 modal perlu fix (Refund, Void, Shift Prompt, Pay Success)
-├── shifts/page.tsx       → 2 modal (sudah OK, optional upgrade)
-├── printer/page.tsx      → 1 modal (sudah OK, skip)
-└── ...
-
-web/src/components/
-├── NotificationBell.tsx  → ✅ Sudah mobile
-├── MaintenanceGuard.tsx  → ✅ Full screen, sudah OK
-├── PrintingOverlay.tsx   → ⚠️ Kecil, skip
-└── ...
-```
-
----
-
-## Firestore Rules Reminder
-
-Jangan lupa: **Firestore rules** (`firestore.rules`) perlu di-deploy terpisah ke Firebase Console agar collection `notifications` bisa dibaca oleh user biasa. Ini belum dilakukan dan menyebabkan notifikasi tidak muncul ke user.
+### 1. Firestore Rules Deploy
+**Firestore rules** (`firestore.rules`) perlu di-deploy terpisah ke Firebase Console agar collection `notifications` bisa dibaca oleh user biasa. Ini belum dilakukan dan menyebabkan notifikasi tidak muncul ke user.
 
 Deploy rules via:
 ```bash
@@ -160,25 +98,79 @@ firebase deploy --only firestore:rules
 
 Atau copy-paste isi `firestore.rules` ke Firebase Console → Firestore → Rules → Publish.
 
+### 2. PR Merge (jika belum)
+PR #14 perlu di-merge di GitHub:
+- Branch: `mobile-ux/refund-void-bottom-sheet`
+- Target: `main`
+- URL: https://github.com/forwarungberselera/terrapos/pull/14
+
+Setelah merge, GitHub Action akan auto-deploy ke VPS.
+
 ---
 
-## Status Terakhir (Branch: main)
+## Struktur File yang Relevan
 
-Commit terakhir: `c003e25` — bill success popup mobile bottom sheet
-Semua perubahan sudah di-push ke `main` dan bisa di-deploy ke VPS via:
-```bash
-cd /var/www/terrapos && git fetch origin && git reset --hard origin/main && cd web && npm run build && pm2 restart terrapos
+```
+web/src/app/
+├── pos/page.tsx          → POS kasir (cart, payment, promo)
+├── orders/page.tsx       → Daftar orders (OPEN/PAID/CANCELLED/REFUND)
+├── shifts/page.tsx       → Shift management
+├── printer/page.tsx      → Bluetooth printer setup
+├── dashboard/page.tsx    → Owner dashboard
+├── settings/page.tsx     → Pengaturan toko
+├── products/page.tsx     → CRUD produk/menu
+├── promos/page.tsx       → CRUD promo
+└── ...
+
+web/src/components/
+├── NotificationBell.tsx  → Notifikasi realtime
+├── MaintenanceGuard.tsx  → Maintenance mode guard
+├── PrintingOverlay.tsx   → Loading overlay saat print
+├── Toast.tsx             → Toast notification system
+├── TerraPage.tsx         → Layout wrapper
+├── LevelBadge.tsx        → Badge level tenant
+└── Skeleton.tsx          → Loading skeleton
+
+web/src/lib/
+├── firebase.ts           → Firebase config
+├── receipt.ts            → Generate receipt HTML
+├── rawbt.ts              → RawBT printer integration
+├── bluetooth-printer.ts  → Web Bluetooth API
+├── native-printer.ts     → Native app printer bridge
+├── shifts.ts             → Shift utilities
+├── audit.ts              → Audit logging
+└── ...
 ```
 
 ---
 
-## Catatan Tambahan
+## Tech Stack & Conventions
 
-- App menggunakan **Next.js 16 + React 19**
-- Semua styling inline (no Tailwind classes, hanya CSS variables)
-- `<style>` tag di dalam komponen untuk scoped CSS
-- Breakpoint mobile: `max-width: 980px` (consistent across app)
-- Breakpoint small mobile: `max-width: 640px`
-- Animation keyframes: `fadeIn` dan `slideUp` sudah didefinisikan di pos/page.tsx dan orders/page.tsx
-- TypeScript strict mode aktif (project tsconfig)
-- Bahasa UI: **Bahasa Indonesia**
+- **Next.js 16 + React 19** (App Router)
+- **Firebase**: Firestore, Auth, Hosting rules
+- **Styling**: Inline styles + `<style>` tag scoped CSS (NO Tailwind)
+- **CSS Variables**: `--panel`, `--brand`, `--border`, `--brandSoft`, `--danger`, `--muted`, `--text`, `--input-bg`, `--font-mono`, `--font-primary`, `--radius`, `--shadow`, dll
+- **Breakpoints**: `980px` (mobile), `640px` (small mobile), `768px` (tablet)
+- **Animation keyframes**: `fadeIn`, `slideUp` (pos), `orderFadeIn`, `orderSlideUp` (orders)
+- **TypeScript strict mode** aktif
+- **Bahasa UI**: Bahasa Indonesia
+- **Deploy**: GitHub Actions → SSH ke VPS → `git pull` → `npm run build` → `pm2 restart`
+- **VPS path**: `/var/www/terrapos`
+- **PM2 process name**: `terrapos`
+
+---
+
+## Deploy Command (Manual via PuTTY/SSH)
+
+```bash
+cd /var/www/terrapos && git pull origin main && cd web && npm install --production && npm run build && pm2 restart terrapos
+```
+
+---
+
+## Status Terakhir
+
+- **Branch aktif**: `mobile-ux/refund-void-bottom-sheet` (PR #14 → main)
+- **Commit terakhir**: `4aa5942` — semua 7 modal bottom sheet selesai
+- **TypeScript**: ✅ Pass tanpa error
+- **Fitur terakhir**: Mobile UX bottom sheet untuk semua modal di orders & pos
