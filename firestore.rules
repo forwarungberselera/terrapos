@@ -151,6 +151,11 @@ service cloud.firestore {
         allow create, update, delete: if isTenantAdmin(tenantId);
       }
 
+      match /staffAccounts/{staffAccountId} {
+        allow read: if isTenantAdmin(tenantId);
+        allow create, update, delete: if isTenantOwnerByDoc(tenantId) || isDeveloper();
+      }
+
       match /auditLogs/{logId} {
         allow read: if isTenantAdmin(tenantId);
         allow create: if isTenantAdmin(tenantId);
