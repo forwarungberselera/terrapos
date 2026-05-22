@@ -218,8 +218,8 @@ export default function PromosPage() {
           <div style={{ fontSize: 36, marginBottom: 8 }}>&#128274;</div>
           <div className="h1">Fitur Premium</div>
           <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
-            Fitur ini tersedia untuk paket <b>Core</b> atau lebih tinggi.
-            Upgrade paket Anda untuk mengakses fitur ini.
+            Fitur Diskon & Promo tersedia untuk paket <b>Core</b> atau lebih tinggi.<br />
+            Paket Seed tidak bisa membuat promo atau memberikan diskon di POS.
           </div>
           <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => r.push("/dashboard")}>
             Kembali ke Dashboard

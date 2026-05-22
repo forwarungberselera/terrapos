@@ -9,9 +9,23 @@ export type UserLevel = "free" | "seed" | "core" | "orbit";
 
 const LEVEL_FEATURES: Record<UserLevel, string[]> = {
   free: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin"],
-  seed: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin"],
+  seed: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin", "staff"],
   core: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin", "qr", "staff", "promos", "audit"],
   orbit: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin", "qr", "staff", "promos", "audit", "members"],
+};
+
+/**
+ * Staff account limits per level:
+ * - free: 0 (no staff accounts)
+ * - seed: 1 staff account
+ * - core: 5 staff accounts
+ * - orbit: unlimited
+ */
+const STAFF_LIMITS: Record<UserLevel, number> = {
+  free: 0,
+  seed: 1,
+  core: 5,
+  orbit: 999, // effectively unlimited
 };
 
 export function useLevel() {
@@ -50,5 +64,15 @@ export function useLevel() {
     return level !== "free";
   }
 
-  return { level, loadingLevel, canAccess, canDisableWatermark };
+  /** Get max staff accounts allowed for current level */
+  function getStaffLimit(): number {
+    return STAFF_LIMITS[level];
+  }
+
+  /** Check if user can use promos/discounts (Core+ only) */
+  function canUsePromos(): boolean {
+    return level === "core" || level === "orbit";
+  }
+
+  return { level, loadingLevel, canAccess, canDisableWatermark, getStaffLimit, canUsePromos };
 }

@@ -27,9 +27,11 @@ export default function StaffAccountsPage() {
   const r = useRouter();
   const { tenantId, loading } = useTenant();
   const { role, loadingRole } = useRole();
-  const { canAccess } = useLevel();
+  const { canAccess, getStaffLimit, level } = useLevel();
 
   const isOwner = ["owner", "developer"].includes((role || "").toLowerCase());
+  const staffLimit = getStaffLimit();
+  const isUnlimited = staffLimit >= 999;
 
   const [staff, setStaff] = useState<StaffAccount[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -60,6 +62,12 @@ export default function StaffAccountsPage() {
   }
 
   function openAdd() {
+    // Check staff limit
+    if (!isUnlimited && staff.length >= staffLimit) {
+      setFormMsg(`Limit tercapai! Paket ${level.charAt(0).toUpperCase() + level.slice(1)} maksimal ${staffLimit} staff. Upgrade untuk menambah lebih banyak.`);
+      setShowForm(true);
+      return;
+    }
     resetForm();
     setShowForm(true);
   }
@@ -112,6 +120,12 @@ export default function StaffAccountsPage() {
         await updateStaffAccount(tenantId, editId, updates);
         setFormMsg("Staff berhasil diupdate!");
       } else {
+        // Check limit before adding
+        if (!isUnlimited && staff.length >= staffLimit) {
+          setFormMsg(`Limit tercapai! Paket ${level.charAt(0).toUpperCase() + level.slice(1)} maksimal ${staffLimit} staff.`);
+          setFormLoading(false);
+          return;
+        }
         // Add new
         await addStaffAccount(tenantId, {
           name: formName.trim(),
@@ -159,7 +173,7 @@ export default function StaffAccountsPage() {
           <div style={{ fontSize: 36, marginBottom: 8 }}>&#128274;</div>
           <div className="h1">Fitur Premium</div>
           <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
-            Fitur Staff Account tersedia untuk paket <b>Core</b> atau lebih tinggi.
+            Fitur Staff Account tersedia untuk paket <b>Seed</b> atau lebih tinggi.
           </div>
           <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => r.push("/dashboard")}>
             Kembali ke Dashboard
@@ -275,7 +289,7 @@ export default function StaffAccountsPage() {
       `}</style>
 
       {/* Header */}
-      <PageHeader title="Staff Account" subtitle="Kelola akun staff dengan PIN untuk akses kasir">
+      <PageHeader title="Staff Account" subtitle={`Kelola akun staff dengan PIN untuk akses kasir${!isUnlimited ? ` (${staff.length}/${staffLimit})` : ""}`}>
         <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
       </PageHeader>
 
@@ -284,12 +298,22 @@ export default function StaffAccountsPage() {
         <div className="row">
           <div className="small" style={{ fontWeight: 700 }}>
             Total: {staff.length} staff
+            {!isUnlimited && <span style={{ color: "var(--muted)" }}> / {staffLimit} (paket {level})</span>}
           </div>
           <div className="spacer" />
-          <button className="btn btn-primary" onClick={openAdd}>
+          <button
+            className="btn btn-primary"
+            onClick={openAdd}
+            disabled={!isUnlimited && staff.length >= staffLimit}
+          >
             + Tambah Staff
           </button>
         </div>
+        {!isUnlimited && staff.length >= staffLimit && (
+          <div style={{ marginTop: 10, padding: "10px 14px", borderRadius: 10, background: "rgba(213,149,103,0.1)", border: "1px solid var(--brand)", fontSize: 13, fontWeight: 700, color: "var(--brand)" }}>
+            Limit staff tercapai ({staffLimit}/{staffLimit}). Upgrade ke {level === "seed" ? "Core" : "Orbit"} untuk menambah lebih banyak staff.
+          </div>
+        )}
       </div>
 
       {/* Form (Add/Edit) */}
@@ -430,6 +454,9 @@ export default function StaffAccountsPage() {
           2. Saat buka POS, staff pilih nama mereka lalu masukkan PIN<br />
           3. Transaksi akan tercatat atas nama staff yang aktif<br />
           4. Owner tetap login — staff hanya perlu PIN untuk identifikasi<br />
+          <br />
+          <b>Batas Staff per Paket:</b><br />
+          Seed: 1 staff &bull; Core: 5 staff &bull; Orbit: Unlimited<br />
           <br />
           <span style={{ color: "var(--muted)" }}>
             Tip: Gunakan PIN berbeda untuk setiap staff. PIN bisa diubah kapan saja.

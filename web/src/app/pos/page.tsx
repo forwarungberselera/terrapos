@@ -29,6 +29,7 @@ import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
 import { logAudit } from "@/lib/audit";
 import { LevelBadge } from "@/components/LevelBadge";
+import { useLevel } from "@/hooks/useLevel";
 import { useStaff } from "@/hooks/useStaff";
 import StaffPinLock from "@/components/StaffPinLock";
 
@@ -85,6 +86,7 @@ export default function POSPage() {
   const isDev = (role || "").toString().toLowerCase() === "developer";
 
   const { staffAccounts, activeStaff, isLocked, staffEnabled, loginStaff, logoutStaff, switchStaff, error: staffError } = useStaff();
+  const { canUsePromos } = useLevel();
 
   const [mode, setMode] = useState<OrderMode>("PAY_NOW");
   const [products, setProducts] = useState<Product[]>([]);
@@ -1267,6 +1269,7 @@ export default function POSPage() {
 
             <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}>
               <span className="small">Diskon</span>
+              {canUsePromos() ? (
               <div className="row" style={{ gap: 6 }}>
                 <button
                   className={"btn " + (discountType === "nominal" ? "btn-primary" : "")}
@@ -1290,14 +1293,17 @@ export default function POSPage() {
                   onChange={(e) => setDiscount(Number(e.target.value || 0))}
                 />
               </div>
+              ) : (
+              <span className="small" style={{ color: "var(--muted)" }}>Core+</span>
+              )}
             </div>
-            {discountType === "persen" && discount > 0 && (
+            {canUsePromos() && discountType === "persen" && discount > 0 && (
               <div className="small" style={{ textAlign: "right", marginTop: 4 }}>
                 = Rp {rupiah(discountAmount)}
               </div>
             )}
 
-            {appliedPromo && promoDiscountAmount > 0 && (
+            {canUsePromos() && appliedPromo && promoDiscountAmount > 0 && (
               <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
                 <div className="row" style={{ justifyContent: "space-between" }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}>
@@ -1316,7 +1322,7 @@ export default function POSPage() {
               </div>
             )}
 
-            {!redeemedCode && (
+            {canUsePromos() && !redeemedCode && (
               <div className="row" style={{ marginTop: 8, gap: 6 }}>
                 <input
                   className="input"
@@ -1449,14 +1455,18 @@ export default function POSPage() {
 
                 <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}>
                   <span className="small">Diskon</span>
+                  {canUsePromos() ? (
                   <div className="row" style={{ gap: 6 }}>
                     <button className={"btn " + (discountType === "nominal" ? "btn-primary" : "")} style={{ padding: "4px 8px", fontSize: 11 }} onClick={() => setDiscountType("nominal")}>Rp</button>
                     <button className={"btn " + (discountType === "persen" ? "btn-primary" : "")} style={{ padding: "4px 8px", fontSize: 11 }} onClick={() => setDiscountType("persen")}>%</button>
                     <input className="input" style={{ width: 80, textAlign: "right" }} type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value || 0))} />
                   </div>
+                  ) : (
+                  <span className="small" style={{ color: "var(--muted)" }}>Core+</span>
+                  )}
                 </div>
 
-                {appliedPromo && promoDiscountAmount > 0 && (
+                {canUsePromos() && appliedPromo && promoDiscountAmount > 0 && (
                   <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
                     <div className="row" style={{ justifyContent: "space-between" }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}>Promo: {appliedPromo.name}</span>
@@ -1465,7 +1475,7 @@ export default function POSPage() {
                   </div>
                 )}
 
-                {!redeemedCode && (
+                {canUsePromos() && !redeemedCode && (
                   <div className="row" style={{ marginTop: 8, gap: 6 }}>
                     <input className="input" style={{ flex: 1, textTransform: "uppercase" }} value={promoCodeInput} onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())} placeholder="Kode promo..." />
                     <button className="btn btn-primary" style={{ padding: "10px 14px", fontSize: 12 }} onClick={() => { const code = promoCodeInput.trim().toUpperCase(); if (!code) return; const found = promos.find((p) => p.code === code); if (!found) { toast.error("Kode promo tidak ditemukan"); return; } setRedeemedCode(code); toast.success(`Kode "${code}" berhasil dipakai!`); }}>Pakai</button>
