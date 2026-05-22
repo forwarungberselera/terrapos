@@ -86,6 +86,7 @@ export default function SettingsPage() {
           <button className="btn" onClick={() => r.push("/pos")}>POS</button>
           <button className="btn" onClick={() => r.push("/products")}>Products</button>
           <button className="btn" onClick={() => r.push("/staff")}>Staff</button>
+          <button className="btn" onClick={() => r.push("/staff-accounts")}>Staff PIN</button>
           <button className="btn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
           <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>Logout</button>
         </div>

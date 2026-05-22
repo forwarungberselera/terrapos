@@ -29,6 +29,8 @@ import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
 import { logAudit } from "@/lib/audit";
 import { LevelBadge } from "@/components/LevelBadge";
+import { useStaff } from "@/hooks/useStaff";
+import StaffPinLock from "@/components/StaffPinLock";
 
 type Product = { id: string; name: string; category: string; price: number; isActive?: boolean };
 type CartItem = {
@@ -81,6 +83,8 @@ export default function POSPage() {
   const isOwner = ["owner", "developer"].includes((role || "").toString().toLowerCase());
   const canUse = ["owner", "admin", "developer"].includes((role || "").toString().toLowerCase());
   const isDev = (role || "").toString().toLowerCase() === "developer";
+
+  const { staffAccounts, activeStaff, isLocked, staffEnabled, loginStaff, logoutStaff, switchStaff, error: staffError } = useStaff();
 
   const [mode, setMode] = useState<OrderMode>("PAY_NOW");
   const [products, setProducts] = useState<Product[]>([]);
@@ -579,6 +583,8 @@ export default function POSPage() {
             items: cart,
             paymentMethod: null,
             paidAmount: null,
+            staffName: activeStaff?.staffName || null,
+            staffId: activeStaff?.staffId || null,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
@@ -655,6 +661,8 @@ export default function POSPage() {
         items: cart,
         shiftId: activeShift?.id || null,
         shiftOpenedByEmail: activeShift?.openedByEmail || email || "",
+        staffName: activeStaff?.staffName || null,
+        staffId: activeStaff?.staffId || null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         paidAt: serverTimestamp(),
@@ -677,8 +685,8 @@ export default function POSPage() {
       logAudit(tenantId!, {
         action: "ORDER_PAID",
         userEmail: email || "",
-        description: `Order ${orderNo} dibayar ${paymentMethod} (Rp ${total.toLocaleString("id-ID")})`,
-        metadata: { orderNo, paymentMethod, total, itemCount: cart.length },
+        description: `Order ${orderNo} dibayar ${paymentMethod} (Rp ${total.toLocaleString("id-ID")})${activeStaff ? ` oleh ${activeStaff.staffName}` : ""}`,
+        metadata: { orderNo, paymentMethod, total, itemCount: cart.length, staffName: activeStaff?.staffName || null },
       });
 
       setSuccessDialog({ orderNo, change, html, text, btData });
@@ -737,6 +745,17 @@ export default function POSPage() {
           </button>
         </div>
       </TerraPage>
+    );
+  }
+
+  // Staff PIN Lock Screen - tampil jika staff system aktif tapi belum ada yang login
+  if (isLocked) {
+    return (
+      <StaffPinLock
+        staffAccounts={staffAccounts}
+        onLogin={loginStaff}
+        error={staffError}
+      />
     );
   }
 
@@ -1048,6 +1067,11 @@ export default function POSPage() {
             <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-primary)", lineHeight: 1 }}>terra <span style={{ color: "var(--brand)" }}>POS</span></div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 6 }}>
               <LevelBadge size="small" />
+              {activeStaff && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 999, background: "rgba(213,149,103,0.15)", border: "1px solid var(--brand)", fontSize: 11, fontWeight: 800, color: "var(--brand)", cursor: "pointer" }} onClick={switchStaff} title="Klik untuk ganti staff">
+                  &#128100; {activeStaff.staffName}
+                </span>
+              )}
               <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 8px", borderRadius: 999, background: "var(--input-bg)", border: "1px solid var(--border)", fontSize: 11, fontWeight: 600, color: "var(--muted)" }}>
                 {email || "-"}
               </span>
@@ -1103,6 +1127,11 @@ export default function POSPage() {
             {isDev && (
               <button className="btn" onClick={() => r.push("/dev")} style={{ background: "var(--input-bg)", fontWeight: 700 }}>
                 Dev
+              </button>
+            )}
+            {staffEnabled && activeStaff && (
+              <button className="btn" onClick={switchStaff} style={{ fontSize: 12 }}>
+                Ganti Staff
               </button>
             )}
             <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>
