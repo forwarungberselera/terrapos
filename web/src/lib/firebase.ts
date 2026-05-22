@@ -4,6 +4,7 @@ import {
   setPersistence,
   browserLocalPersistence,
   indexedDBLocalPersistence,
+  signInWithEmailAndPassword,
 } from "firebase/auth";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import {
@@ -71,8 +72,52 @@ if (typeof window !== "undefined") {
     if (user) {
       localStorage.setItem("terrapos_uid", user.uid);
       localStorage.setItem("terrapos_email", user.email || "");
+    } else {
+      // Auth state hilang (app di-kill / cache cleared) → auto re-login dari saved credentials
+      autoReLogin();
     }
   });
+}
+
+/**
+ * Auto re-login dari saved credentials.
+ * Dipanggil saat auth state null tapi credentials tersimpan (app di-kill lalu dibuka lagi).
+ * Ini menjamin owner TIDAK pernah logout meskipun app di-force-close.
+ */
+async function autoReLogin() {
+  if (typeof localStorage === "undefined") return;
+
+  // Cek apakah ada saved credentials (fitur "Ingat Saya")
+  const remember = localStorage.getItem("terrapos_remember_me");
+  const savedEmail = localStorage.getItem("terrapos_saved_email");
+  const savedPass = localStorage.getItem("terrapos_saved_pass");
+
+  if (remember !== "1" || !savedEmail || !savedPass) return;
+
+  // Jangan re-login kalau sudah ada user (race condition guard)
+  if (auth.currentUser) return;
+
+  try {
+    // Decode password (XOR + base64 obfuscation dari saved-credentials.ts)
+    const XOR_KEY = "TerraPOS2024!";
+    let obfuscated: string;
+    if (typeof atob !== "undefined") {
+      obfuscated = decodeURIComponent(escape(atob(savedPass)));
+    } else {
+      obfuscated = Buffer.from(savedPass, "base64").toString("utf-8");
+    }
+    let password = "";
+    for (let i = 0; i < obfuscated.length; i++) {
+      password += String.fromCharCode(
+        obfuscated.charCodeAt(i) ^ XOR_KEY.charCodeAt(i % XOR_KEY.length)
+      );
+    }
+
+    // Silent re-login
+    await signInWithEmailAndPassword(auth, savedEmail, password);
+  } catch {
+    // Gagal re-login (password berubah, akun dihapus, dll) - biarkan redirect ke login page
+  }
 }
 
 export const functions = getFunctions(app);
