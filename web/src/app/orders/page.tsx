@@ -885,6 +885,27 @@ export default function OrdersPage() {
         .order-pay-mobile{ display:none !important; }
         @keyframes orderFadeIn{from{opacity:0;}to{opacity:1;}}
         @keyframes orderSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+
+        /* Refund modal: desktop vs mobile */
+        .refund-desktop{ display:grid; }
+        .refund-mobile-overlay{ display:none; }
+        .refund-mobile{ display:none !important; }
+
+        /* Void modal: desktop vs mobile */
+        .void-desktop{ display:grid; }
+        .void-mobile-overlay{ display:none; }
+        .void-mobile{ display:none !important; }
+
+        /* Shift prompt modal: desktop vs mobile */
+        .shift-prompt-desktop{ display:grid; }
+        .shift-prompt-mobile-overlay{ display:none; }
+        .shift-prompt-mobile{ display:none !important; }
+
+        /* Pay success modal: desktop vs mobile */
+        .pay-success-desktop{ display:grid; }
+        .pay-success-mobile-overlay{ display:none; }
+        .pay-success-mobile{ display:none !important; }
+
         @media (max-width: 980px){
           .order-pay-desktop{ display:none !important; }
           .order-pay-mobile-overlay{
@@ -914,6 +935,84 @@ export default function OrdersPage() {
           .order-pay-mobile .pay-nom-grid .btn{
             padding:8px 10px;font-size:12px;font-weight:500;
             font-family:var(--font-mono);letter-spacing:-0.3px;
+          }
+
+          /* Refund mobile bottom sheet */
+          .refund-desktop{ display:none !important; }
+          .refund-mobile-overlay{
+            display:block;
+            position:fixed;inset:0;z-index:60;
+            background:rgba(0,0,0,0.5);
+            animation:orderFadeIn 0.2s ease;
+          }
+          .refund-mobile{
+            display:block !important;
+            position:fixed;bottom:0;left:0;right:0;z-index:61;
+            background:var(--panel);
+            border-radius:20px 20px 0 0;
+            max-height:85vh;
+            overflow-y:auto;
+            padding:20px 16px 40px;
+            animation:orderSlideUp 0.25s ease;
+            box-shadow:0 -12px 40px rgba(0,0,0,0.25);
+          }
+
+          /* Void mobile bottom sheet */
+          .void-desktop{ display:none !important; }
+          .void-mobile-overlay{
+            display:block;
+            position:fixed;inset:0;z-index:55;
+            background:rgba(0,0,0,0.5);
+            animation:orderFadeIn 0.2s ease;
+          }
+          .void-mobile{
+            display:block !important;
+            position:fixed;bottom:0;left:0;right:0;z-index:56;
+            background:var(--panel);
+            border-radius:20px 20px 0 0;
+            max-height:85vh;
+            overflow-y:auto;
+            padding:20px 16px 40px;
+            animation:orderSlideUp 0.25s ease;
+            box-shadow:0 -12px 40px rgba(0,0,0,0.25);
+          }
+
+          /* Shift prompt mobile bottom sheet */
+          .shift-prompt-desktop{ display:none !important; }
+          .shift-prompt-mobile-overlay{
+            display:block;
+            position:fixed;inset:0;z-index:70;
+            background:rgba(0,0,0,0.55);
+            animation:orderFadeIn 0.2s ease;
+          }
+          .shift-prompt-mobile{
+            display:block !important;
+            position:fixed;bottom:0;left:0;right:0;z-index:71;
+            background:var(--panel);
+            border-radius:20px 20px 0 0;
+            max-height:85vh;
+            overflow-y:auto;
+            padding:20px 16px 40px;
+            animation:orderSlideUp 0.25s ease;
+            box-shadow:0 -12px 40px rgba(0,0,0,0.25);
+          }
+
+          /* Pay success mobile bottom sheet */
+          .pay-success-desktop{ display:none !important; }
+          .pay-success-mobile-overlay{
+            display:block;
+            position:fixed;inset:0;z-index:90;
+            background:rgba(0,0,0,0.6);
+            animation:orderFadeIn 0.2s ease;
+          }
+          .pay-success-mobile{
+            display:block !important;
+            position:fixed;bottom:0;left:0;right:0;z-index:91;
+            background:var(--panel);
+            border-radius:24px 24px 0 0;
+            padding:20px 20px 40px;
+            animation:orderSlideUp 0.25s ease;
+            box-shadow:0 -12px 40px rgba(0,0,0,0.25);
           }
         }
       `}</style>
@@ -1349,13 +1448,14 @@ export default function OrdersPage() {
         </>
       )}
 
+      {/* REFUND MODAL - DESKTOP (centered modal) */}
       {refundOpen && refundOrder && (
         <div
+          className="refund-desktop"
           style={{
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.5)",
-            display: "grid",
             placeItems: "center",
             padding: 16,
             zIndex: 60,
@@ -1422,13 +1522,81 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* REFUND MODAL - MOBILE (bottom sheet) */}
+      {refundOpen && refundOrder && (
+        <>
+          <div className="refund-mobile-overlay" onClick={() => { setRefundOpen(false); setRefundOrder(null); setRefundPinInput(""); setRefundReason(""); }} />
+          <div className="refund-mobile">
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 16px" }} />
+            <div className="row" style={{ marginBottom: 12 }}>
+              <div className="h1">Refund Order</div>
+              <div className="spacer" />
+              <button
+                className="btn"
+                onClick={() => {
+                  setRefundOpen(false);
+                  setRefundOrder(null);
+                  setRefundPinInput("");
+                  setRefundReason("");
+                }}
+              >
+                Tutup
+              </button>
+            </div>
+
+            <div className="small" style={{ marginTop: 4 }}>
+              Order: <b>{refundOrder.orderNo}</b> • Total: <b style={{ fontSize: 15 }}>Rp {rupiah(refundOrder.total)}</b>
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <div className="small" style={{ fontWeight: 700 }}>Masukkan PIN Refund</div>
+              <input
+                className="input"
+                style={{ fontSize: 16, padding: "12px 14px" }}
+                type="password"
+                value={refundPinInput}
+                onChange={(e) => setRefundPinInput(e.target.value)}
+                placeholder="PIN refund"
+              />
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <div className="small" style={{ fontWeight: 700 }}>Alasan Refund (opsional)</div>
+              <textarea
+                className="input"
+                style={{ minHeight: 90, fontSize: 15, padding: "12px 14px" }}
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder="Contoh: salah input, dibatalkan customer"
+              />
+            </div>
+
+            <div className="small" style={{ marginTop: 12, lineHeight: 1.6 }}>
+              Jika refund berhasil, order dihapus dari penjualan utama tetapi tetap masuk ke <b>refund log</b>.
+            </div>
+
+            {err && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{err}</div>}
+
+            <button
+              className="btn btn-danger"
+              style={{ width: "100%", marginTop: 14, padding: "14px 0", fontSize: 15, fontWeight: 800 }}
+              onClick={confirmRefund}
+              disabled={refundLoading}
+            >
+              {refundLoading ? "Memproses Refund..." : "Konfirmasi Refund"}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* VOID MODAL - DESKTOP (centered modal) */}
       {voidOpen && voidOrder && (
         <div
+          className="void-desktop"
           style={{
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.5)",
-            display: "grid",
             placeItems: "center",
             padding: 16,
             zIndex: 55,
@@ -1483,13 +1651,68 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* VOID MODAL - MOBILE (bottom sheet) */}
+      {voidOpen && voidOrder && (
+        <>
+          <div className="void-mobile-overlay" onClick={() => { setVoidOpen(false); setVoidOrder(null); setVoidReason(""); }} />
+          <div className="void-mobile">
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 16px" }} />
+            <div className="row" style={{ marginBottom: 12 }}>
+              <div className="h1">Batalkan Order</div>
+              <div className="spacer" />
+              <button
+                className="btn"
+                onClick={() => {
+                  setVoidOpen(false);
+                  setVoidOrder(null);
+                  setVoidReason("");
+                }}
+              >
+                Tutup
+              </button>
+            </div>
+
+            <div className="small" style={{ marginTop: 4 }}>
+              Order: <b>{voidOrder.orderNo}</b> • Meja: <b>{voidOrder.tableNo || "-"}</b> • Total: <b style={{ fontSize: 15 }}>Rp {rupiah(voidOrder.total)}</b>
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <div className="small" style={{ fontWeight: 700 }}>Alasan Pembatalan (opsional)</div>
+              <textarea
+                className="input"
+                style={{ minHeight: 90, fontSize: 15, padding: "12px 14px" }}
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                placeholder="Contoh: salah input, customer batal pesan"
+              />
+            </div>
+
+            <div className="small" style={{ marginTop: 12, lineHeight: 1.6 }}>
+              Order yang dibatalkan akan berubah status menjadi <b>CANCELLED</b> dan tidak masuk ke laporan penjualan.
+            </div>
+
+            {err && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{err}</div>}
+
+            <button
+              className="btn btn-danger"
+              style={{ width: "100%", marginTop: 14, padding: "14px 0", fontSize: 15, fontWeight: 800 }}
+              onClick={confirmVoid}
+              disabled={voidLoading}
+            >
+              {voidLoading ? "Membatalkan..." : "Konfirmasi Batalkan"}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* SHIFT PROMPT - DESKTOP */}
       {shiftPromptOpen && !activeShift && (
         <div
+          className="shift-prompt-desktop"
           style={{
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.55)",
-            display: "grid",
             placeItems: "center",
             padding: 16,
             zIndex: 70,
@@ -1527,8 +1750,46 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* SHIFT PROMPT - MOBILE (bottom sheet) */}
+      {shiftPromptOpen && !activeShift && (
+        <>
+          <div className="shift-prompt-mobile-overlay" onClick={() => setShiftPromptOpen(false)} />
+          <div className="shift-prompt-mobile">
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 16px" }} />
+            <div className="h1" style={{ fontSize: 20 }}>Shift Belum Dibuka</div>
+            <div className="small" style={{ marginTop: 12, lineHeight: 1.7, fontSize: 14 }}>
+              Open bill belum bisa dibayar karena belum ada shift aktif. Shift perlu dibuka dulu supaya pembayaran masuk ke sesi kasir yang benar.
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid var(--border)",
+                background: "var(--brandSoft)",
+                fontSize: 14,
+                lineHeight: 1.6,
+              }}
+            >
+              Buka shift di halaman <b>Shift</b>, lalu kembali ke Orders untuk melanjutkan pembayaran.
+            </div>
+
+            <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
+              <button className="btn btn-primary" style={{ width: "100%", padding: "14px 0", fontSize: 15, fontWeight: 800 }} onClick={() => r.push("/shifts")}>
+                Buka Halaman Shift
+              </button>
+              <button className="btn" style={{ width: "100%", padding: "12px 0", fontSize: 14 }} onClick={() => setShiftPromptOpen(false)}>
+                Tutup
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* PAY SUCCESS - DESKTOP */}
       {paySuccessDialog && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", padding: 16, zIndex: 90 }}>
+        <div className="pay-success-desktop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", placeItems: "center", padding: 16, zIndex: 90 }}>
           <div className="card" style={{ width: 440, maxWidth: "100%", textAlign: "center" }}>
             <div style={{ fontSize: 48, marginBottom: 4 }}>&#10003;</div>
             <div className="h1" style={{ color: "var(--brand)" }}>Pembayaran Berhasil</div>
@@ -1559,6 +1820,45 @@ export default function OrdersPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* PAY SUCCESS - MOBILE (bottom sheet) */}
+      {paySuccessDialog && (
+        <>
+          <div className="pay-success-mobile-overlay" />
+          <div className="pay-success-mobile">
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 20px" }} />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 56, marginBottom: 8 }}>&#10003;</div>
+              <div className="h1" style={{ color: "var(--brand)", fontSize: 22 }}>Pembayaran Berhasil</div>
+              <div className="small" style={{ marginTop: 10, lineHeight: 1.7, fontSize: 14 }}>
+                Order <b>{paySuccessDialog.orderNo}</b> telah lunas.
+              </div>
+
+              {paySuccessDialog.change > 0 && (
+                <div style={{ marginTop: 14, padding: "14px 16px", borderRadius: 14, background: "var(--brandSoft)", border: "1px solid var(--brand2)" }}>
+                  <div className="small" style={{ fontWeight: 700 }}>Kembalian</div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: "var(--brand)", fontFamily: "var(--font-mono)", marginTop: 6 }}>
+                    Rp {rupiah(paySuccessDialog.change)}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginTop: 20, fontSize: 14, color: "var(--muted)" }}>
+                Cetak struk untuk pelanggan?
+              </div>
+
+              <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+                <button className="btn btn-primary" style={{ width: "100%", padding: "16px 0", fontSize: 16, fontWeight: 800 }} onClick={handlePaySuccessPrint}>
+                  Cetak Struk
+                </button>
+                <button className="btn" style={{ width: "100%", padding: "14px 0", fontSize: 15 }} onClick={handlePaySuccessSkip}>
+                  Lewati
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </TerraPage>
   );
