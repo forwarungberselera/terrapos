@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import TerraPage from "@/components/TerraPage";
+import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
@@ -75,22 +76,14 @@ export default function SettingsPage() {
 
   return (
     <TerraPage maxWidth={720}>
-      <div className="card">
-        <div className="row">
-          <div>
-            <div className="h1">Settings</div>
-            <div className="small">Tenant: {tenantId}</div>
-            <div className="small">User: {email} | Role: <b>{role}</b></div>
-          </div>
-          <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/pos")}>POS</button>
-          <button className="btn" onClick={() => r.push("/products")}>Products</button>
-          <button className="btn" onClick={() => r.push("/staff")}>Staff</button>
-          <button className="btn" onClick={() => r.push("/staff-accounts")}>Staff PIN</button>
-          <button className="btn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
-          <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>Logout</button>
-        </div>
-      </div>
+      <PageHeader title="Settings">
+        <button className="btn" onClick={() => r.push("/pos")}>POS</button>
+        <button className="btn" onClick={() => r.push("/products")}>Products</button>
+        <button className="btn" onClick={() => r.push("/staff")}>Staff</button>
+        <button className="btn" onClick={() => r.push("/staff-accounts")}>Staff PIN</button>
+        <button className="btn" onClick={() => r.push("/setup")}>Ganti Tenant</button>
+        <button className="btn btn-danger" onClick={() => signOut(auth).then(() => r.push("/login"))}>Logout</button>
+      </PageHeader>
 
       <div className="card" style={{ marginTop: 14 }}>
         <div className="small">Nama Warung</div>

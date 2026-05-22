@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
+import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { useLevel } from "@/hooks/useLevel";
@@ -274,16 +275,9 @@ export default function StaffAccountsPage() {
       `}</style>
 
       {/* Header */}
-      <div className="card">
-        <div className="row">
-          <div>
-            <div className="h1">Staff Account</div>
-            <div className="small">Kelola akun staff dengan PIN untuk akses kasir.</div>
-          </div>
-          <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-        </div>
-      </div>
+      <PageHeader title="Staff Account" subtitle="Kelola akun staff dengan PIN untuk akses kasir">
+        <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+      </PageHeader>
 
       {/* Add Button */}
       <div className="card" style={{ marginTop: 14 }}>

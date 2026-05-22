@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
+import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { db } from "@/lib/firebase";
@@ -262,15 +263,11 @@ export default function ReportsPage() {
 
 
       {/* HEADER */}
+      <PageHeader title="Laporan Keuangan" subtitle={`Periode: ${formatDate(dateRange.start)} — ${formatDate(dateRange.end)}`}>
+        <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+      </PageHeader>
+
       <div className="card">
-        <div className="row">
-          <div>
-            <div className="h1">Laporan Keuangan</div>
-            <div className="small">Periode: {formatDate(dateRange.start)} — {formatDate(dateRange.end)}</div>
-          </div>
-          <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-        </div>
 
         {/* RANGE SELECTOR */}
         <div className="row" style={{ marginTop: 14, flexWrap: "wrap", gap: 8 }}>

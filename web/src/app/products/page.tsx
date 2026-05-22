@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import TerraPage from "@/components/TerraPage";
+import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import {
@@ -343,18 +344,12 @@ export default function ProductsPage() {
 
 
       {/* Header */}
-      <div className="prod-header">
-        <div className="prod-header-left">
-          <div className="h1" style={{fontSize:22}}>Products</div>
-          <div className="small">{stats.total} produk &middot; {stats.categories} kategori</div>
-        </div>
-        <div className="prod-header-actions">
-          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-          <button className="btn btn-primary" onClick={() => setShowAddForm(true)}>
-            <IconPlus /> Tambah
-          </button>
-        </div>
-      </div>
+      <PageHeader title="Products" subtitle={`${stats.total} produk \u00B7 ${stats.categories} kategori`}>
+        <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+        <button className="btn btn-primary" onClick={() => setShowAddForm(true)}>
+          <IconPlus /> Tambah
+        </button>
+      </PageHeader>
 
       {/* Stats Cards */}
       <div className="prod-stats">

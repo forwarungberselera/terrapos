@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
+import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { auth, db } from "@/lib/firebase";
@@ -406,16 +407,12 @@ export default function ShiftsPage() {
         .toggle-row label{ font-size:13px; font-weight:700; cursor:pointer; user-select:none; }
       `}</style>
 
+      <PageHeader title="Shift Kasir" subtitle="Kelola buka shift, tutup shift, dan rekap kas per sesi kasir">
+        <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+        <button className="btn" onClick={() => r.push("/pos")}>POS</button>
+      </PageHeader>
+
       <div className="card">
-        <div className="row">
-          <div>
-            <div className="h1">Shift Kasir</div>
-            <div className="small">Kelola buka shift, tutup shift, dan rekap kas per sesi kasir.</div>
-          </div>
-          <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-          <button className="btn" onClick={() => r.push("/pos")}>POS</button>
-        </div>
         {shiftAccessBlocked && (
           <div style={{ marginTop: 12, color: "var(--warning)", fontWeight: 800 }}>
             Fitur shift belum bisa dipakai karena akses Firestore untuk koleksi shift belum diizinkan di project Firebase ini.

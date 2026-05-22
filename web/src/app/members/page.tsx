@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import TerraPage from "@/components/TerraPage";
+import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { useLevel } from "@/hooks/useLevel";
@@ -110,17 +111,9 @@ export default function MembersPage() {
 
   return (
     <TerraPage>
-      <div className="card">
-        <div className="row">
-          <div>
-            <div className="h1">Members</div>
-            <div className="small">Tenant: {tenantId}</div>
-            <div className="small">User: {email} | Role: <b>{role}</b></div>
-          </div>
-          <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-        </div>
-      </div>
+      <PageHeader title="Members">
+        <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+      </PageHeader>
 
       <div className="grid2" style={{ marginTop: 14 }}>
         <div className="card">

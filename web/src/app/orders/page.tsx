@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
+import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { auth, db } from "@/lib/firebase";
@@ -1017,25 +1018,13 @@ export default function OrdersPage() {
         }
       `}</style>
 
+      <PageHeader title="Orders">
+        <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+        <button className="btn" onClick={() => r.push("/pos")}>POS</button>
+      </PageHeader>
+
       <div className="card">
-        <div className="row">
-          <div>
-            <div className="h1">Orders</div>
-            <div className="small">Tenant: {tenantId}</div>
-            <div className="small">
-              User: {email || "-"} | Role: <b>{role || "-"}</b>
-            </div>
-          </div>
-
-          <div className="spacer" />
-
-          <div className="topnav">
-            <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-            <button className="btn" onClick={() => r.push("/pos")}>POS</button>
-          </div>
-        </div>
-
-        <div className="row2" style={{ marginTop: 12 }}>
+        <div className="row2">
           <button className={"btn " + (tab === "OPEN" ? "btn-primary" : "")} onClick={() => setTab("OPEN")}>
             OPEN
           </button>

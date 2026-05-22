@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
+import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { useLevel } from "@/hooks/useLevel";
@@ -263,16 +264,9 @@ export default function PromosPage() {
         .day-btn.active{ background:var(--brand); color:white; border-color:var(--brand); }
       `}</style>
 
-      <div className="card">
-        <div className="row">
-          <div>
-            <div className="h1">Diskon Otomatis / Promo</div>
-            <div className="small">Atur promo yang otomatis berlaku di POS berdasarkan jadwal</div>
-          </div>
-          <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-        </div>
-      </div>
+      <PageHeader title="Diskon & Promo" subtitle="Atur promo yang otomatis berlaku di POS berdasarkan jadwal">
+        <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+      </PageHeader>
 
       <div className="grid2" style={{ marginTop: 14 }}>
         {/* FORM */}

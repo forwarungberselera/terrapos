@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
+import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { useLevel } from "@/hooks/useLevel";
@@ -177,17 +178,12 @@ export default function AuditPage() {
         .audit-meta{ font-size:11px; color:var(--muted); margin-top:2px; }
       `}</style>
 
-      <div className="card">
-        <div className="row">
-          <div>
-            <div className="h1">Audit Log</div>
-            <div className="small">Riwayat semua aktivitas di tenant ini</div>
-          </div>
-          <div className="spacer" />
-          <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
-        </div>
+      <PageHeader title="Audit Log" subtitle="Riwayat semua aktivitas di tenant ini">
+        <button className="btn" onClick={() => r.push("/dashboard")}>Dashboard</button>
+      </PageHeader>
 
-        <div className="row" style={{ marginTop: 14 }}>
+      <div className="card">
+        <div className="row" style={{ marginTop: 0 }}>
           <select
             className="input"
             style={{ width: 200 }}
