@@ -23,8 +23,6 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
-  query,
-  orderBy,
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -93,16 +91,15 @@ export function subscribeStaffAccounts(
   tenantId: string,
   callback: (staff: StaffAccount[]) => void
 ): () => void {
-  const q = query(
-    collection(db, getStaffCollectionPath(tenantId)),
-    orderBy("name", "asc")
-  );
+  const colRef = collection(db, getStaffCollectionPath(tenantId));
 
-  return onSnapshot(q, (snap) => {
+  return onSnapshot(colRef, (snap) => {
     const arr: StaffAccount[] = snap.docs.map((d) => ({
       id: d.id,
       ...(d.data() as Omit<StaffAccount, "id">),
     }));
+    // Sort client-side instead of using orderBy (avoids index requirement)
+    arr.sort((a, b) => (a.name || "").localeCompare(b.name || "", "id-ID"));
     callback(arr);
   }, () => {
     callback([]);
@@ -113,15 +110,14 @@ export function subscribeStaffAccounts(
  * Fetch staff accounts sekali (non-realtime)
  */
 export async function fetchStaffAccounts(tenantId: string): Promise<StaffAccount[]> {
-  const q = query(
-    collection(db, getStaffCollectionPath(tenantId)),
-    orderBy("name", "asc")
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({
+  const colRef = collection(db, getStaffCollectionPath(tenantId));
+  const snap = await getDocs(colRef);
+  const arr = snap.docs.map((d) => ({
     id: d.id,
     ...(d.data() as Omit<StaffAccount, "id">),
   }));
+  arr.sort((a, b) => (a.name || "").localeCompare(b.name || "", "id-ID"));
+  return arr;
 }
 
 /**
