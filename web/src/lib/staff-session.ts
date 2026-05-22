@@ -5,13 +5,16 @@
  * - Owner tetap login via Firebase Auth (persistent)
  * - Staff (kasir, barista, dll) login dengan PIN 4-6 digit
  * - Staff data disimpan di Firestore: tenants/{tenantId}/staffAccounts/{id}
- * - Active staff disimpan di localStorage supaya persist setelah refresh
+ * - Active staff disimpan di sessionStorage (hilang saat tab/app ditutup)
+ *   → Staff HARUS login PIN lagi setiap kali buka app / tab baru
+ * - Owner tetap persistent via Firebase Auth (tidak terpengaruh)
  * 
  * Flow:
  * 1. Owner login Firebase (persistent, tidak logout saat app kill)
  * 2. Staff pilih nama mereka → masukkan PIN → aktif
  * 3. Saat ganti shift / keluar, staff "lock" (kembali ke PIN screen)
- * 4. Owner account TIDAK pernah logout dari Firebase
+ * 4. Saat tab/app ditutup, staff session otomatis hilang (sessionStorage)
+ * 5. Owner account TIDAK pernah logout dari Firebase
  */
 
 import {
@@ -199,22 +202,27 @@ export async function verifyStaffPin(
   return staff;
 }
 
-// ============ LOCAL SESSION (localStorage) ============
+// ============ LOCAL SESSION (sessionStorage) ============
+// Staff session pakai sessionStorage → hilang saat tab/app ditutup
+// Ini memaksa staff login PIN lagi setiap buka app/tab baru
+// Owner tetap persistent karena pakai Firebase Auth (bukan di sini)
 
 /**
  * Set active staff session (setelah PIN verified)
+ * Disimpan di sessionStorage agar tidak persist lintas tab/app restart
  */
 export function setActiveStaffSession(session: ActiveStaffSession): void {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(ACTIVE_STAFF_KEY, JSON.stringify(session));
+  if (typeof sessionStorage === "undefined") return;
+  sessionStorage.setItem(ACTIVE_STAFF_KEY, JSON.stringify(session));
 }
 
 /**
- * Get active staff session dari localStorage
+ * Get active staff session dari sessionStorage
+ * Return null jika tab baru / app baru dibuka (staff harus login PIN lagi)
  */
 export function getActiveStaffSession(): ActiveStaffSession | null {
-  if (typeof localStorage === "undefined") return null;
-  const raw = localStorage.getItem(ACTIVE_STAFF_KEY);
+  if (typeof sessionStorage === "undefined") return null;
+  const raw = sessionStorage.getItem(ACTIVE_STAFF_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as ActiveStaffSession;
@@ -227,8 +235,12 @@ export function getActiveStaffSession(): ActiveStaffSession | null {
  * Clear active staff session (lock screen / logout staff)
  */
 export function clearActiveStaffSession(): void {
-  if (typeof localStorage === "undefined") return;
-  localStorage.removeItem(ACTIVE_STAFF_KEY);
+  if (typeof sessionStorage === "undefined") return;
+  sessionStorage.removeItem(ACTIVE_STAFF_KEY);
+  // Bersihkan juga dari localStorage (migrasi dari versi lama)
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(ACTIVE_STAFF_KEY);
+  }
 }
 
 /**
@@ -236,4 +248,14 @@ export function clearActiveStaffSession(): void {
  */
 export function hasActiveStaff(): boolean {
   return getActiveStaffSession() !== null;
+}
+
+/**
+ * Migrasi: hapus staff session dari localStorage (versi lama)
+ * Panggil saat app init untuk bersihkan data lama
+ */
+export function migrateStaffSessionStorage(): void {
+  if (typeof localStorage === "undefined") return;
+  // Hapus dari localStorage supaya tidak ada sisa dari versi sebelumnya
+  localStorage.removeItem(ACTIVE_STAFF_KEY);
 }
