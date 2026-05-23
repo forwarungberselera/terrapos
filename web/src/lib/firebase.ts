@@ -67,7 +67,7 @@ if (typeof window !== "undefined") {
     setPersistence(auth, fallbackPersistence).catch(() => {});
   });
 
-  // Simpan info user ke localStorage sebagai backup
+  // Monitor auth state — jika hilang, auto re-login dari saved credentials
   auth.onAuthStateChanged((user) => {
     if (user) {
       localStorage.setItem("terrapos_uid", user.uid);
@@ -77,22 +77,27 @@ if (typeof window !== "undefined") {
       autoReLogin();
     }
   });
+
+  // Tambahan: auto re-login langsung saat app boot jika tidak ada currentUser
+  // Ini menangani kasus di Android dimana onAuthStateChanged bisa delay
+  setTimeout(() => {
+    if (!auth.currentUser) autoReLogin();
+  }, 1500);
 }
 
 /**
  * Auto re-login dari saved credentials.
- * Dipanggil saat auth state null tapi credentials tersimpan (app di-kill lalu dibuka lagi).
- * Ini menjamin owner TIDAK pernah logout meskipun app di-force-close.
+ * Dipanggil saat auth state null tapi credentials tersimpan.
+ * Credentials SELALU disimpan setelah login berhasil (force save).
+ * Ini menjamin user TIDAK pernah logout meskipun app di-force-close / kill.
  */
 async function autoReLogin() {
   if (typeof localStorage === "undefined") return;
 
-  // Cek apakah ada saved credentials (fitur "Ingat Saya")
-  const remember = localStorage.getItem("terrapos_remember_me");
   const savedEmail = localStorage.getItem("terrapos_saved_email");
   const savedPass = localStorage.getItem("terrapos_saved_pass");
 
-  if (remember !== "1" || !savedEmail || !savedPass) return;
+  if (!savedEmail || !savedPass) return;
 
   // Jangan re-login kalau sudah ada user (race condition guard)
   if (auth.currentUser) return;

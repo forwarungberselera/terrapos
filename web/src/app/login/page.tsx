@@ -13,7 +13,6 @@ import { auth, db } from "@/lib/firebase";
 import {
   isRememberMeEnabled,
   saveCredentials,
-  clearCredentials,
   loadCredentials,
 } from "@/lib/saved-credentials";
 
@@ -24,8 +23,6 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
@@ -35,9 +32,6 @@ export default function LoginPage() {
     if (saved) {
       setEmail(saved.email);
       setPassword(saved.password);
-      setRememberMe(true);
-    } else {
-      setRememberMe(isRememberMeEnabled());
     }
   }, []);
 
@@ -65,12 +59,8 @@ export default function LoginPage() {
 
       await signInWithEmailAndPassword(auth, email.trim(), password);
 
-      // Simpan atau hapus credentials berdasarkan checkbox "Ingat Saya"
-      if (rememberMe) {
-        saveCredentials(email.trim(), password);
-      } else {
-        clearCredentials();
-      }
+      // Selalu simpan credentials agar tetap login walaupun app di-kill
+      saveCredentials(email.trim(), password);
 
       // Developer langsung ke /dev, user biasa cek tenant membership
       const { checkIsDeveloper } = await import("@/lib/developer");
@@ -271,22 +261,6 @@ export default function LoginPage() {
               autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
           </div>
-
-          {mode === "login" && (
-            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => {
-                  setRememberMe(e.target.checked);
-                  if (!e.target.checked) clearCredentials();
-                }}
-                style={{ width: 18, height: 18, accentColor: "var(--brand)", cursor: "pointer" }}
-              />
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Ingat Saya</span>
-              <span style={{ fontSize: 11, color: "var(--muted)" }}>(simpan email & password)</span>
-            </label>
-          )}
 
           {err && (
             <div style={{ marginTop: 12, color: "var(--danger)", fontWeight: 800 }}>
