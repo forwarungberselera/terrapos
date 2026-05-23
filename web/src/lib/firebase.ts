@@ -55,10 +55,16 @@ export const app = getApps().length ? getApps()[0] : initializeApp(safeConfig);
 
 export const auth = getAuth(app);
 
+/**
+ * Promise yang resolve ketika auth state benar-benar ready.
+ * Di Android Capacitor, ini bisa butuh 1-3 detik setelah app di-kill.
+ * Semua halaman HARUS await ini sebelum memutuskan redirect ke /login.
+ */
+export let authReadyPromise: Promise<void> = Promise.resolve();
+
 // Paksa auth persist di IndexedDB/localStorage supaya tidak logout saat keluar app
 if (typeof window !== "undefined") {
   // Untuk Capacitor WebView: browserLocalPersistence (localStorage) lebih stabil
-  // daripada indexedDB yang bisa di-clear saat app di-kill di beberapa device
   const isCapacitor = typeof (window as any).Capacitor !== "undefined";
   const primaryPersistence = isCapacitor ? browserLocalPersistence : indexedDBLocalPersistence;
   const fallbackPersistence = isCapacitor ? indexedDBLocalPersistence : browserLocalPersistence;
@@ -67,23 +73,30 @@ if (typeof window !== "undefined") {
     setPersistence(auth, fallbackPersistence).catch(() => {});
   });
 
-  // Monitor auth state — jika hilang, auto re-login dari saved credentials
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      localStorage.setItem("terrapos_uid", user.uid);
-      localStorage.setItem("terrapos_email", user.email || "");
-    }
-    // Tidak langsung auto re-login di sini - sudah ditangani oleh eager boot di bawah
-  });
+  // authReadyPromise: resolve saat auth punya user ATAU autoReLogin selesai
+  authReadyPromise = new Promise<void>((resolve) => {
+    let resolved = false;
+    const done = () => { if (!resolved) { resolved = true; resolve(); } };
 
-  // EAGER auto re-login: jalankan SEGERA saat module load
-  // Ini memastikan autoReLogin berjalan SEBELUM halaman sempat redirect ke /login
-  autoReLogin();
-  
-  // Fallback: coba lagi setelah 1.5 detik (untuk kasus IndexedDB lambat)
-  setTimeout(() => {
-    if (!auth.currentUser) autoReLogin();
-  }, 1500);
+    // 1) Jika onAuthStateChanged langsung kasih user → done
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user) {
+        localStorage.setItem("terrapos_uid", user.uid);
+        localStorage.setItem("terrapos_email", user.email || "");
+        done();
+        unsub();
+      }
+    });
+
+    // 2) Jalankan autoReLogin segera
+    autoReLogin().then(() => {
+      // Setelah autoReLogin selesai (berhasil atau gagal), tunggu 500ms lalu resolve
+      setTimeout(done, 500);
+    });
+
+    // 3) Maximum wait: 4 detik (jika network sangat lambat / offline)
+    setTimeout(done, 4000);
+  });
 }
 
 /**

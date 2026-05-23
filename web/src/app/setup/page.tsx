@@ -12,7 +12,7 @@ import {
   query,
 } from "firebase/firestore";
 import TerraPage from "@/components/TerraPage";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, authReadyPromise } from "@/lib/firebase";
 import { setActiveTenantId } from "@/lib/tenant";
 
 type TenantRow = {
@@ -35,15 +35,8 @@ export default function SetupPage() {
     const unsub = onAuthStateChanged(auth, async (user) => {
       try {
         if (!user) {
-          // Di Android Capacitor, auth bisa null sementara saat app boot
-          // Tunggu dulu kalau ada saved credentials (autoReLogin sedang jalan)
-          const { hasSavedCredentials } = await import("@/lib/auth-guard");
-          if (hasSavedCredentials()) {
-            // Tunggu 3 detik, kalau masih null baru redirect
-            setTimeout(() => { if (!auth.currentUser) r.push("/login"); }, 3000);
-            return;
-          }
-          r.push("/login");
+          await authReadyPromise;
+          if (!auth.currentUser) { r.push("/login"); return; }
           return;
         }
 

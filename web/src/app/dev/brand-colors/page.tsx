@@ -30,7 +30,7 @@ export default function DevBrandColorsPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { r.push("/login"); return; }
+      if (!user) { await authReadyPromise; if (!auth.currentUser) { r.push("/login"); return; } return; }
       setEmail(user.email || "");
       const dev = await checkIsDeveloper(user.uid, user.email || "");
       if (!dev) { r.push("/dev"); return; }

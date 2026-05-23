@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, authReadyPromise } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { checkIsDeveloper } from "@/lib/developer";
@@ -26,7 +26,7 @@ export default function DevTenantsPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { r.push("/login"); return; }
+      if (!user) { await authReadyPromise; if (!auth.currentUser) { r.push("/login"); return; } return; }
       setEmail(user.email || "");
       setUid(user.uid);
       const dev = await checkIsDeveloper(user.uid, user.email || "");

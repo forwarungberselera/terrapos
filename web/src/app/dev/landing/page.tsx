@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import TerraPage from "@/components/TerraPage";
-import { auth } from "@/lib/firebase";
+import { auth, authReadyPromise } from "@/lib/firebase";
 import { checkIsDeveloper } from "@/lib/developer";
 import { useToast } from "@/components/Toast";
 import {
@@ -31,7 +31,7 @@ export default function DevLandingPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { r.push("/login"); return; }
+      if (!user) { await authReadyPromise; if (!auth.currentUser) { r.push("/login"); return; } return; }
       const dev = await checkIsDeveloper(user.uid, user.email || "");
       if (!dev) { r.push("/dashboard"); return; }
       setIsDev(true);

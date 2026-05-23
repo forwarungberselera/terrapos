@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, onSnapshot, collection, getDocs } from "firebase/firestore";
 import TerraPage from "@/components/TerraPage";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, authReadyPromise } from "@/lib/firebase";
 import { checkIsDeveloper } from "@/lib/developer";
 
 export default function WaitingPage() {
@@ -16,13 +16,8 @@ export default function WaitingPage() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        // Di Android Capacitor, auth bisa null sementara saat app boot
-        const { hasSavedCredentials } = await import("@/lib/auth-guard");
-        if (hasSavedCredentials()) {
-          setTimeout(() => { if (!auth.currentUser) r.push("/login"); }, 3000);
-          return;
-        }
-        r.push("/login");
+        await authReadyPromise;
+        if (!auth.currentUser) { r.push("/login"); return; }
         return;
       }
 
