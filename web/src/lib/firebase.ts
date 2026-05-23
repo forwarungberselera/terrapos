@@ -72,14 +72,15 @@ if (typeof window !== "undefined") {
     if (user) {
       localStorage.setItem("terrapos_uid", user.uid);
       localStorage.setItem("terrapos_email", user.email || "");
-    } else {
-      // Auth state hilang (app di-kill / cache cleared) → auto re-login dari saved credentials
-      autoReLogin();
     }
+    // Tidak langsung auto re-login di sini - sudah ditangani oleh eager boot di bawah
   });
 
-  // Tambahan: auto re-login langsung saat app boot jika tidak ada currentUser
-  // Ini menangani kasus di Android dimana onAuthStateChanged bisa delay
+  // EAGER auto re-login: jalankan SEGERA saat module load
+  // Ini memastikan autoReLogin berjalan SEBELUM halaman sempat redirect ke /login
+  autoReLogin();
+  
+  // Fallback: coba lagi setelah 1.5 detik (untuk kasus IndexedDB lambat)
   setTimeout(() => {
     if (!auth.currentUser) autoReLogin();
   }, 1500);

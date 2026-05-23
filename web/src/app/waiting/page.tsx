@@ -16,6 +16,12 @@ export default function WaitingPage() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
+        // Di Android Capacitor, auth bisa null sementara saat app boot
+        const { hasSavedCredentials } = await import("@/lib/auth-guard");
+        if (hasSavedCredentials()) {
+          setTimeout(() => { if (!auth.currentUser) r.push("/login"); }, 3000);
+          return;
+        }
         r.push("/login");
         return;
       }

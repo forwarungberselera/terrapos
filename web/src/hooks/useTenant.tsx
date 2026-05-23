@@ -9,6 +9,7 @@ import {
   getStoredTenantId,
   setActiveTenantId,
 } from "@/lib/tenant";
+import { hasSavedCredentials } from "@/lib/auth-guard";
 
 export function useTenant() {
   const r = useRouter();
@@ -18,12 +19,30 @@ export function useTenant() {
   const [email, setEmail] = useState<string>("");
 
   useEffect(() => {
+    let redirectTimeout: NodeJS.Timeout | null = null;
+
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
+        // Jangan langsung redirect - tunggu autoReLogin jika ada credentials
+        if (hasSavedCredentials()) {
+          // Tunggu 3 detik untuk autoReLogin di firebase.ts
+          if (!redirectTimeout) {
+            redirectTimeout = setTimeout(() => {
+              if (!auth.currentUser) {
+                setLoading(false);
+                r.push("/login");
+              }
+            }, 3000);
+          }
+          return;
+        }
         setLoading(false);
         r.push("/login");
         return;
       }
+
+      // User berhasil login / restore - cancel pending redirect
+      if (redirectTimeout) { clearTimeout(redirectTimeout); redirectTimeout = null; }
 
       setEmail(u.email ?? "");
 
@@ -59,7 +78,10 @@ export function useTenant() {
       }
     });
 
-    return () => unsub();
+    return () => {
+      unsub();
+      if (redirectTimeout) clearTimeout(redirectTimeout);
+    };
   }, [r]);
 
   return { tenantId, loading, email };
