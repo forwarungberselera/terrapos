@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
-import { auth } from "@/lib/firebase";
+import { auth, authReadyPromise } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { checkIsDeveloper } from "@/lib/developer";
 import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
