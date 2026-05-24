@@ -20,7 +20,8 @@ type MenuItem = {
 const MENU_ITEMS: MenuItem[] = [
   { title: "System Info", description: "Version, environment, build marker", icon: "🖥️", href: "/dev/system", color: "#6366f1" },
   { title: "Maintenance", description: "Toggle maintenance mode", icon: "🔧", href: "/dev/maintenance", color: "#ef4444" },
-  { title: "Brand Colors", description: "Tema warna & force reload", icon: "🎨", href: "/dev/brand-colors", color: "#f59e0b" },
+  { title: "Brand Colors", description: "Tema warna global & force reload", icon: "🎨", href: "/dev/brand-colors", color: "#f59e0b" },
+  { title: "Tenant Branding", description: "Warna per tenant / semua tenant", icon: "🖌️", href: "/dev/tenant-branding", color: "#d946ef" },
   { title: "Tenants", description: "Browse, switch, hapus tenant", icon: "🏪", href: "/dev/tenants", color: "#10b981" },
   { title: "Users", description: "Akun, level, assign tenant", icon: "👥", href: "/dev/users", color: "#8b5cf6" },
   { title: "Landing Page", description: "Hero, fitur, pricing, footer", icon: "🌐", href: "/dev/landing", color: "#0ea5e9" },

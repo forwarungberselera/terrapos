@@ -6,16 +6,20 @@ import {
   getCachedBrandColors,
   DEFAULT_BRAND_COLORS,
   subscribeBrandColors,
+  subscribeTenantBrandColors,
   subscribeForceReload,
 } from "@/lib/brand-colors";
+import { getStoredTenantId } from "@/lib/tenant";
 
 /**
  * BrandColorProvider
  *
- * - Saat mount: langsung apply cached colors (instant, no flash)
- * - Subscribe ke Firestore system/brandColors (realtime sync)
- * - Subscribe ke Firestore system/forceReload (auto reload semua client)
- * - Re-apply saat theme berubah (dark/light toggle)
+ * Priority order untuk warna:
+ * 1. Per-tenant colors (tenants/{id}/settings/brandColors) — jika ada
+ * 2. Global colors (system/brandColors) — fallback
+ * 3. DEFAULT_BRAND_COLORS — ultimate fallback
+ *
+ * Landing page TIDAK pakai provider ini (langsung pakai default).
  */
 export default function BrandColorProvider() {
   const lastReloadTimestamp = useRef<number>(0);
@@ -30,52 +34,64 @@ export default function BrandColorProvider() {
       const cached = getCachedBrandColors();
       applyBrandColorsToCSS(cached || DEFAULT_BRAND_COLORS);
     } catch {
-      // Fallback: apply defaults jika localStorage error
       applyBrandColorsToCSS(DEFAULT_BRAND_COLORS);
     }
 
-    // 2. Subscribe ke Firestore untuk realtime color updates
-    const unsubColors = subscribeBrandColors((colors) => {
-      applyBrandColorsToCSS(colors);
+    // 2. Subscribe ke tenant-specific colors DULU, lalu fallback ke global
+    const tenantId = getStoredTenantId() || "";
+    let unsubTenant: (() => void) | null = null;
+    let unsubGlobal: (() => void) | null = null;
+    let usingTenantColors = false;
+
+    if (tenantId) {
+      // Subscribe per-tenant colors
+      unsubTenant = subscribeTenantBrandColors(tenantId, (tenantColors) => {
+        if (tenantColors) {
+          // Tenant punya custom branding → pakai itu
+          usingTenantColors = true;
+          applyBrandColorsToCSS(tenantColors);
+        } else {
+          // Tenant tidak punya custom → fallback ke global
+          usingTenantColors = false;
+        }
+      });
+    }
+
+    // Subscribe global colors (sebagai fallback)
+    unsubGlobal = subscribeBrandColors((colors) => {
+      // Hanya apply global kalau tenant tidak punya custom
+      if (!usingTenantColors) {
+        applyBrandColorsToCSS(colors);
+      }
     });
 
     // 3. Subscribe ke force reload signal
     const unsubReload = subscribeForceReload((timestamp) => {
-      // Skip initial load (hanya react ke perubahan baru)
       if (!initializedRef.current) {
         lastReloadTimestamp.current = timestamp;
         initializedRef.current = true;
         return;
       }
 
-      // Jika timestamp berubah dari sebelumnya, reload
       if (timestamp > lastReloadTimestamp.current) {
         lastReloadTimestamp.current = timestamp;
 
-        // Prevent reload loop: don't reload if page just loaded (within 5 seconds)
         const timeSinceMount = Date.now() - mountTimeRef.current;
-        if (timeSinceMount < 5000) {
-          return;
-        }
+        if (timeSinceMount < 5000) return;
 
-        // Also use sessionStorage to prevent rapid reloads
         const RELOAD_KEY = "terrapos_force_reload";
         const lastForceReload = sessionStorage.getItem(RELOAD_KEY);
         const now = Date.now();
-        if (lastForceReload && now - Number(lastForceReload) < 15000) {
-          return; // Already reloaded within 15 seconds
-        }
+        if (lastForceReload && now - Number(lastForceReload) < 15000) return;
         sessionStorage.setItem(RELOAD_KEY, String(now));
 
-        // Delay sedikit supaya Firestore color update sudah ter-cache
-        setTimeout(() => {
-          window.location.reload();
-        }, 800);
+        setTimeout(() => { window.location.reload(); }, 800);
       }
     });
 
     return () => {
-      unsubColors();
+      if (unsubTenant) unsubTenant();
+      if (unsubGlobal) unsubGlobal();
       unsubReload();
     };
   }, []);

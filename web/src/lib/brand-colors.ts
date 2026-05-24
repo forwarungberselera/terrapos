@@ -436,6 +436,95 @@ export function applyBrandColorsToCSS(colors: BrandColorConfig) {
   root.style.setProperty("--input-bg", colors.inputBgLight);
 }
 
+// ============ PER-TENANT BRAND COLORS ============
+
+/**
+ * Subscribe ke brand colors KHUSUS tenant tertentu.
+ * Stored di: tenants/{tenantId}/settings/brandColors
+ * Jika tidak ada, return null (fallback ke global).
+ */
+export function subscribeTenantBrandColors(
+  tenantId: string,
+  callback: (colors: BrandColorConfig | null) => void
+): () => void {
+  if (!tenantId) { callback(null); return () => {}; }
+  return onSnapshot(
+    doc(db, `tenants/${tenantId}/settings/brandColors`),
+    (snap) => {
+      if (!snap.exists()) { callback(null); return; }
+      const data = snap.data() as any;
+      const merged: BrandColorConfig = { ...DEFAULT_BRAND_COLORS };
+      for (const key of Object.keys(DEFAULT_BRAND_COLORS) as (keyof BrandColorConfig)[]) {
+        if (data[key] && typeof data[key] === "string") {
+          (merged as any)[key] = data[key];
+        }
+      }
+      callback(merged);
+    },
+    () => { callback(null); }
+  );
+}
+
+/**
+ * Get brand colors untuk tenant tertentu (non-realtime)
+ */
+export async function getTenantBrandColors(tenantId: string): Promise<BrandColorConfig | null> {
+  if (!tenantId) return null;
+  try {
+    const snap = await getDoc(doc(db, `tenants/${tenantId}/settings/brandColors`));
+    if (!snap.exists()) return null;
+    const data = snap.data() as any;
+    const merged: BrandColorConfig = { ...DEFAULT_BRAND_COLORS };
+    for (const key of Object.keys(DEFAULT_BRAND_COLORS) as (keyof BrandColorConfig)[]) {
+      if (data[key] && typeof data[key] === "string") {
+        (merged as any)[key] = data[key];
+      }
+    }
+    return merged;
+  } catch { return null; }
+}
+
+/**
+ * Save brand colors untuk tenant tertentu (developer only)
+ */
+export async function saveTenantBrandColors(tenantId: string, colors: Partial<BrandColorConfig>, email: string): Promise<void> {
+  if (!tenantId) throw new Error("Tenant ID required");
+  const payload: any = {};
+  for (const [key, value] of Object.entries(colors)) {
+    if (value && typeof value === "string" && value.startsWith("#")) {
+      payload[key] = value;
+    }
+  }
+  payload.updatedAt = serverTimestamp();
+  payload.updatedBy = email;
+  await setDoc(doc(db, `tenants/${tenantId}/settings/brandColors`), payload, { merge: true });
+}
+
+/**
+ * Reset (hapus) brand colors tenant → fallback ke global
+ */
+export async function resetTenantBrandColors(tenantId: string): Promise<void> {
+  if (!tenantId) return;
+  const { deleteDoc: delDoc } = await import("firebase/firestore");
+  await delDoc(doc(db, `tenants/${tenantId}/settings/brandColors`));
+}
+
+/**
+ * Apply brand colors ke semua tenant sekaligus (batch)
+ */
+export async function saveBrandColorsToAllTenants(colors: Partial<BrandColorConfig>, email: string): Promise<number> {
+  const { collection: colFn, getDocs: getDocsFn } = await import("firebase/firestore");
+  const snap = await getDocsFn(colFn(db, "tenants"));
+  let count = 0;
+  for (const tenantDoc of snap.docs) {
+    try {
+      await saveTenantBrandColors(tenantDoc.id, colors, email);
+      count++;
+    } catch {}
+  }
+  return count;
+}
+
 // ============ FORCE RELOAD ============
 
 const RELOAD_DOC = "system/forceReload";
