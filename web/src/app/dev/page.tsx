@@ -22,7 +22,7 @@ const MENU_ITEMS: MenuItem[] = [
   { title: "Maintenance", description: "Toggle maintenance mode", icon: "🔧", href: "/dev/maintenance", color: "#ef4444" },
   { title: "Brand Colors", description: "Tema warna global & force reload", icon: "🎨", href: "/dev/brand-colors", color: "#f59e0b" },
   { title: "Tenant Branding", description: "Warna per tenant / semua tenant", icon: "🖌️", href: "/dev/tenant-branding", color: "#d946ef" },
-  { title: "Tenants", description: "Browse, switch, hapus tenant", icon: "🏪", href: "/dev/tenants", color: "#10b981" },
+  { title: "Tenants", description: "Browse, switch, buat, hapus tenant", icon: "🏪", href: "/dev/tenants", color: "#10b981" },
   { title: "Users", description: "Akun, level, assign tenant", icon: "👥", href: "/dev/users", color: "#8b5cf6" },
   { title: "Landing Page", description: "Hero, fitur, pricing, footer", icon: "🌐", href: "/dev/landing", color: "#0ea5e9" },
   { title: "Notifikasi", description: "Broadcast in-app ke user", icon: "🔔", href: "/dev/notifications", color: "#ec4899" },

@@ -95,15 +95,21 @@ export default function DevTenantsPage() {
         .tn-row{padding:14px;border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;gap:12px;background:var(--panel);transition:all 0.15s;}
         .tn-row:hover{border-color:var(--brand);background:var(--brandSoft);}
         .tn-actions{display:flex;gap:6px;flex-shrink:0;}
+        @media(max-width:640px){
+          .tn-row{flex-direction:column;align-items:stretch;gap:10px;}
+          .tn-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+          .tn-actions button{width:100%;text-align:center;}
+        }
       `}</style>
 
       <div className="card">
-        <div className="row">
+        <div className="row" style={{ flexWrap: "wrap", gap: 10 }}>
           <div>
             <div className="h1">Tenant Management</div>
             <div className="small">{tenants.length} tenant terdaftar</div>
           </div>
           <div className="spacer" />
+          <button className="btn btn-primary" onClick={() => r.push("/dev/create-tenant")}>+ Buat Tenant</button>
           <button className="btn" onClick={() => r.push("/dev")}>← Dev Console</button>
         </div>
       </div>
