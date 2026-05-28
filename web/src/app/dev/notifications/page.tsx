@@ -18,6 +18,9 @@ import {
   getNotifTypeColor,
   getNotifTypeIcon,
   formatTimeAgo,
+  getPriorityColor,
+  getPriorityLabel,
+  getDisplayLabel,
 } from "@/lib/notifications";
 
 type TenantItem = { id: string; name: string };
@@ -36,6 +39,14 @@ export default function DevNotificationsPage() {
   const [notifType, setNotifType] = useState<NotificationType>("info");
   const [notifTarget, setNotifTarget] = useState("all");
   const [notifExpiry, setNotifExpiry] = useState("0");
+  const [notifPriority, setNotifPriority] = useState<"low" | "normal" | "high">("normal");
+  const [notifDisplay, setNotifDisplay] = useState<"bell" | "toast" | "banner" | "popup">("bell");
+  const [notifIcon, setNotifIcon] = useState("");
+  const [notifActionType, setNotifActionType] = useState<"none" | "link" | "external" | "dismiss">("none");
+  const [notifActionUrl, setNotifActionUrl] = useState("");
+  const [notifActionLabel, setNotifActionLabel] = useState("");
+  const [notifPinned, setNotifPinned] = useState(false);
+  const [notifUserTarget, setNotifUserTarget] = useState("");
   const [sendingNotif, setSendingNotif] = useState(false);
 
   // Data
@@ -86,13 +97,34 @@ export default function DevNotificationsPage() {
 
     setSendingNotif(true);
     try {
+      // Determine target
+      let target = notifTarget;
+      if (notifTarget === "user" && notifUserTarget.trim()) {
+        target = `user:${notifUserTarget.trim()}`;
+      }
+
+      // Build action
+      let action = null;
+      if (notifActionType !== "none") {
+        action = {
+          type: notifActionType,
+          url: notifActionUrl.trim() || undefined,
+          label: notifActionLabel.trim() || undefined,
+        };
+      }
+
       await sendNotification({
         title: notifTitle,
         message: notifMessage,
         type: notifType,
-        target: notifTarget,
+        priority: notifPriority,
+        display: notifDisplay,
+        target,
+        action,
+        icon: notifIcon.trim() || null,
         expiresInHours: parseInt(notifExpiry) || 0,
         createdBy: email,
+        pinned: notifPinned,
       });
       toast.success("Notifikasi berhasil dikirim!");
       setNotifTitle("");
@@ -100,6 +132,14 @@ export default function DevNotificationsPage() {
       setNotifType("info");
       setNotifTarget("all");
       setNotifExpiry("0");
+      setNotifPriority("normal");
+      setNotifDisplay("bell");
+      setNotifIcon("");
+      setNotifActionType("none");
+      setNotifActionUrl("");
+      setNotifActionLabel("");
+      setNotifPinned(false);
+      setNotifUserTarget("");
     } catch (e: any) {
       toast.error("Gagal: " + (e?.message || ""));
     } finally {
@@ -276,22 +316,53 @@ export default function DevNotificationsPage() {
             <div className="notif-field">
               <label>Tipe</label>
               <select className="input" value={notifType} onChange={(e) => setNotifType(e.target.value as NotificationType)}>
-                <option value="info">Info</option>
-                <option value="warning">Peringatan</option>
-                <option value="success">Sukses</option>
-                <option value="promo">Promo</option>
+                <option value="info">ℹ️ Info</option>
+                <option value="warning">⚠️ Peringatan</option>
+                <option value="success">✅ Sukses</option>
+                <option value="promo">🎉 Promo</option>
+                <option value="update">🚀 Update</option>
+                <option value="system">⚙️ Sistem</option>
               </select>
             </div>
 
             <div className="notif-field">
+              <label>Prioritas</label>
+              <select className="input" value={notifPriority} onChange={(e) => setNotifPriority(e.target.value as any)}>
+                <option value="low">Rendah</option>
+                <option value="normal">Normal</option>
+                <option value="high">🔴 Tinggi (+ sound)</option>
+              </select>
+            </div>
+
+            <div className="notif-field">
+              <label>Tampilan</label>
+              <select className="input" value={notifDisplay} onChange={(e) => setNotifDisplay(e.target.value as any)}>
+                <option value="bell">🔔 Bell Only</option>
+                <option value="toast">💬 Toast Popup</option>
+                <option value="banner">📢 Banner Atas</option>
+                <option value="popup">🪟 Popup Dialog</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="notif-form-row">
+            <div className="notif-field">
               <label>Target</label>
               <select className="input" value={notifTarget} onChange={(e) => setNotifTarget(e.target.value)}>
-                <option value="all">Semua User</option>
+                <option value="all">🌐 Semua User</option>
+                <option value="user">👤 User Spesifik (UID)</option>
                 {tenants.map((t) => (
-                  <option key={t.id} value={`tenant:${t.id}`}>{t.name}</option>
+                  <option key={t.id} value={`tenant:${t.id}`}>🏪 {t.name}</option>
                 ))}
               </select>
             </div>
+
+            {notifTarget === "user" && (
+              <div className="notif-field">
+                <label>User UID</label>
+                <input className="input" value={notifUserTarget} onChange={(e) => setNotifUserTarget(e.target.value)} placeholder="Paste UID user" />
+              </div>
+            )}
 
             <div className="notif-field">
               <label>Kadaluarsa</label>
@@ -303,7 +374,50 @@ export default function DevNotificationsPage() {
                 <option value="24">1 hari</option>
                 <option value="72">3 hari</option>
                 <option value="168">7 hari</option>
+                <option value="720">30 hari</option>
               </select>
+            </div>
+          </div>
+
+          {/* Action / CTA */}
+          <div className="notif-form-row">
+            <div className="notif-field">
+              <label>Action (CTA)</label>
+              <select className="input" value={notifActionType} onChange={(e) => setNotifActionType(e.target.value as any)}>
+                <option value="none">Tidak ada</option>
+                <option value="link">🔗 Link Internal</option>
+                <option value="external">🌍 Link Eksternal</option>
+                <option value="dismiss">❌ Dismiss Only</option>
+              </select>
+            </div>
+
+            {(notifActionType === "link" || notifActionType === "external") && (
+              <div className="notif-field">
+                <label>URL</label>
+                <input className="input" value={notifActionUrl} onChange={(e) => setNotifActionUrl(e.target.value)} placeholder={notifActionType === "link" ? "/dashboard" : "https://..."} />
+              </div>
+            )}
+
+            {notifActionType !== "none" && (
+              <div className="notif-field">
+                <label>Label Tombol</label>
+                <input className="input" value={notifActionLabel} onChange={(e) => setNotifActionLabel(e.target.value)} placeholder="Contoh: Lihat Detail" />
+              </div>
+            )}
+          </div>
+
+          {/* Extra options */}
+          <div className="notif-form-row">
+            <div className="notif-field">
+              <label>Icon Kustom (emoji)</label>
+              <input className="input" value={notifIcon} onChange={(e) => setNotifIcon(e.target.value)} placeholder="Kosongkan = default dari tipe" maxLength={4} />
+            </div>
+
+            <div className="notif-field" style={{ display: "flex", alignItems: "flex-end", gap: 8, paddingBottom: 2 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+                <input type="checkbox" checked={notifPinned} onChange={(e) => setNotifPinned(e.target.checked)} style={{ width: 18, height: 18 }} />
+                📌 Pin di atas
+              </label>
             </div>
           </div>
 
@@ -365,8 +479,12 @@ export default function DevNotificationsPage() {
                 </div>
                 <div className="notif-item-body">{n.message}</div>
                 <div className="notif-item-meta">
-                  <span className="tag">{n.target === "all" ? "Semua User" : n.target.replace("tenant:", "")}</span>
+                  <span className="tag">{n.target === "all" ? "Semua User" : n.target.replace("tenant:", "").replace("user:", "👤 ")}</span>
                   <span className="tag">{n.type}</span>
+                  <span className="tag" style={{ color: getPriorityColor(n.priority) }}>{getPriorityLabel(n.priority)}</span>
+                  <span className="tag">{getDisplayLabel(n.display)}</span>
+                  {n.pinned && <span className="tag">📌 Pinned</span>}
+                  {n.action && <span className="tag">🔗 {n.action.type}</span>}
                   <span>{formatTimeAgo(n.createdAt)}</span>
                   <span>oleh {n.createdBy}</span>
                   {n.expiresAt && <span>Expire: {n.expiresAt.toLocaleDateString("id-ID")}</span>}
