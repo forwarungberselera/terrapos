@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
-import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
 import { db } from "@/lib/firebase";

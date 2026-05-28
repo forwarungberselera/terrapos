@@ -132,7 +132,9 @@ service cloud.firestore {
       }
 
       match /orders/{orderId} {
-        allow read: if isTenantAdmin(tenantId);
+        // Admin full read; public can read own QR orders (for tracking page)
+        allow read: if isTenantAdmin(tenantId) ||
+          (resource.data.source == "customer_qr");
         // Allow public create for customer QR orders (source: "customer_qr")
         allow create: if isTenantAdmin(tenantId) ||
           (request.resource.data.source == "customer_qr" && request.resource.data.status == "OPEN");
@@ -140,7 +142,8 @@ service cloud.firestore {
       }
 
       match /tables/{tableId} {
-        allow read: if isTenantMember(tenantId);
+        // Public read needed for customer QR flow (query by table number)
+        allow read: if true;
         allow create, delete: if isTenantAdmin(tenantId);
         // Allow admin full update; allow public to set status to "occupied" only
         allow update: if isTenantAdmin(tenantId) ||
