@@ -8,6 +8,7 @@ import {
   addDoc, serverTimestamp, doc, getDoc, getDocs, updateDoc,
 } from "firebase/firestore";
 import { CustomerOrderItem } from "@/lib/tables";
+import { canSubmitOrder } from "@/lib/rate-limit";
 
 
 type Product = {
@@ -140,6 +141,14 @@ export default function CustomerMenuPage() {
   // Submit order
   const submitOrder = async () => {
     if (cart.length === 0) return;
+
+    // Rate limit check
+    const rl = canSubmitOrder();
+    if (!rl.allowed) {
+      setError(`Terlalu sering mengirim pesanan. Tunggu ${rl.waitSeconds} detik.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Create order in the same orders collection used by POS

@@ -450,6 +450,10 @@ export default function HomePage() {
 
         {/* FOOTER */}
         <footer className="lp-footer">
+          <div style={{ marginBottom: 8 }}>
+            <a href="/terms" style={{ color: "#888", textDecoration: "underline", marginRight: 16 }}>Syarat & Ketentuan</a>
+            <a href="/privacy" style={{ color: "#888", textDecoration: "underline" }}>Kebijakan Privasi</a>
+          </div>
           &copy; {new Date().getFullYear()} {footerText}
         </footer>
       </div>
