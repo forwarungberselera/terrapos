@@ -94,6 +94,11 @@ service cloud.firestore {
         );
         allow delete: if isSignedIn() && (request.auth.uid == userId || isDeveloper());
       }
+
+      // Notification read/dismiss status (per-user, per-notification)
+      match /notifStatus/{notifId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     // ============ TENANTS ============
