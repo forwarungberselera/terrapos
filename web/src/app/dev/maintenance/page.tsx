@@ -34,11 +34,14 @@ export default function DevMaintenancePage() {
 
   useEffect(() => {
     if (!isDev) return;
+    let unsub: (() => void) | null = null;
     const timer = setTimeout(() => {
-      const unsub = subscribeMaintenanceStatus((status) => { setMaintenance(status); setMaintenanceMsg(status.message); });
-      return () => unsub();
+      unsub = subscribeMaintenanceStatus((status) => { setMaintenance(status); setMaintenanceMsg(status.message); });
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (unsub) unsub();
+    };
   }, [isDev]);
 
   async function toggleMaintenance() {

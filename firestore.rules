@@ -63,8 +63,9 @@ service cloud.firestore {
 
     // ============ SYSTEM COLLECTION ============
     match /system/{docId} {
-      // landingPage & brandColors readable by anyone (public - no auth required)
-      allow read: if docId == "landingPage" || docId == "brandColors" || isSignedIn();
+      // landingPage, brandColors, maintenance readable by anyone (public - no auth required)
+      // maintenance harus public agar MaintenanceGuard bisa block sebelum login
+      allow read: if docId == "landingPage" || docId == "brandColors" || docId == "maintenance" || isSignedIn();
       allow create, update: if isDeveloper();
       allow delete: if false;
     }
@@ -114,8 +115,10 @@ service cloud.firestore {
       }
 
       match /settings/{docId} {
-        // settings/main readable by public (customer menu needs storeName)
-        allow read: if docId == "main" || isTenantMember(tenantId);
+        // settings/main & brandColors readable by public
+        // main: customer menu needs storeName
+        // brandColors: BrandColorProvider needs tenant colors for theming
+        allow read: if docId == "main" || docId == "brandColors" || isTenantMember(tenantId);
         allow create, update: if isTenantAdmin(tenantId);
         allow delete: if false;
       }
