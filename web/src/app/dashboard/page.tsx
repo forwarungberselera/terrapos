@@ -937,8 +937,7 @@ export default function DashboardPage() {
               <div className="sidecategory-inner">
                 <button className="sidebtn" onClick={() => r.push("/orders")}>Orders</button>
                 <button className="sidebtn" onClick={() => r.push("/shifts")}>Shift</button>
-                {canAccess("qr") && <button className="sidebtn" onClick={() => r.push("/qr")}>QR Meja</button>}
-                {canAccess("qr") && <button className="sidebtn" onClick={() => r.push("/tables")}>Kelola Meja</button>}
+                {canAccess("qr") && <button className="sidebtn" onClick={() => r.push("/tables")}>QR Meja</button>}
               </div>
             </div>
 
