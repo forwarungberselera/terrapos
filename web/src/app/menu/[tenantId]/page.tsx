@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { db } from "@/lib/firebase";
 import {
   collection, onSnapshot, query, where, orderBy,
-  addDoc, serverTimestamp, doc, getDoc,
+  addDoc, serverTimestamp, doc, getDoc, getDocs, updateDoc,
 } from "firebase/firestore";
 import { CustomerOrderItem } from "@/lib/tables";
 
@@ -167,6 +167,23 @@ export default function CustomerMenuPage() {
         updatedAt: serverTimestamp(),
       };
       await addDoc(collection(db, `tenants/${tenantId}/orders`), orderData);
+
+      // Auto-update table status to "occupied" if table exists
+      if (tableNumber) {
+        try {
+          const tablesRef = collection(db, `tenants/${tenantId}/tables`);
+          const tq = query(tablesRef, where("number", "==", tableNumber));
+          const tSnap = await getDocs(tq);
+          if (!tSnap.empty) {
+            const tableDoc = tSnap.docs[0];
+            await updateDoc(doc(db, `tenants/${tenantId}/tables`, tableDoc.id), {
+              status: "occupied",
+              updatedAt: serverTimestamp(),
+            });
+          }
+        } catch {} // Silent fail - table update is non-critical
+      }
+
       setOrderSuccess(orderNo);
       setCart([]);
       setCartOpen(false);
@@ -209,9 +226,27 @@ export default function CustomerMenuPage() {
           <p style={{ color: "var(--muted)", marginTop: 12, fontSize: 13 }}>
             Pesanan Anda akan segera diproses. Mohon tunggu.
           </p>
+          <a
+            href={`/menu/${tenantId}/track?order=${encodeURIComponent(orderSuccess)}&table=${encodeURIComponent(tableNumber)}`}
+            style={{
+              display: "block",
+              marginTop: 16,
+              width: "100%",
+              padding: "14px",
+              background: "var(--brand, #d59567)",
+              color: "white",
+              borderRadius: 14,
+              textAlign: "center",
+              fontSize: 15,
+              fontWeight: 800,
+              textDecoration: "none",
+            }}
+          >
+            📋 Lacak Pesanan
+          </a>
           <button
             className="btn btn-primary"
-            style={{ marginTop: 20, width: "100%" }}
+            style={{ marginTop: 10, width: "100%", background: "var(--panel, #fff)", color: "var(--text, #111)", border: "1px solid var(--border)" }}
             onClick={() => setOrderSuccess(null)}
           >
             Pesan Lagi

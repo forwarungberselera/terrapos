@@ -141,7 +141,11 @@ service cloud.firestore {
 
       match /tables/{tableId} {
         allow read: if isTenantMember(tenantId);
-        allow create, update, delete: if isTenantAdmin(tenantId);
+        allow create, delete: if isTenantAdmin(tenantId);
+        // Allow admin full update; allow public to set status to "occupied" only
+        allow update: if isTenantAdmin(tenantId) ||
+          (request.resource.data.status == "occupied" &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"]));
       }
 
       match /refunds/{refundId} {

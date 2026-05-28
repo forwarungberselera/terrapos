@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerraPage from "@/components/TerraPage";
 import PageHeader from "@/components/PageHeader";
@@ -28,6 +28,7 @@ import { PageSkeleton, SkeletonStyles } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
 import { logAudit } from "@/lib/audit";
+import { playOrderNotificationRepeat } from "@/lib/order-notification";
 
 type Order = {
   id: string;
@@ -44,6 +45,9 @@ type Order = {
   createdAt?: any;
   updatedAt?: any;
   paidAt?: any;
+  source?: string | null;
+  customerName?: string | null;
+  customerNote?: string | null;
 };
 
 type RefundLog = {
@@ -150,6 +154,11 @@ export default function OrdersPage() {
   const [paidAmount, setPaidAmount] = useState<number>(0);
   const [shiftPromptOpen, setShiftPromptOpen] = useState(false);
   const [shiftAccessBlocked, setShiftAccessBlocked] = useState(false);
+  const [filterQR, setFilterQR] = useState(false);
+
+  // Sound notification for new QR orders
+  const prevQrOrderIdsRef = useRef<Set<string>>(new Set());
+  const isFirstLoadRef = useRef(true);
 
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundOrder, setRefundOrder] = useState<Order | null>(null);
@@ -217,6 +226,9 @@ export default function OrdersPage() {
             createdAt: x.createdAt,
             updatedAt: x.updatedAt,
             paidAt: x.paidAt,
+            source: x.source ?? null,
+            customerName: x.customerName ?? null,
+            customerNote: x.customerNote ?? null,
           } as Order;
         });
         setOrders(arr);
@@ -274,8 +286,49 @@ export default function OrdersPage() {
 
   const list = useMemo(() => {
     if (tab === "REFUND") return [];
-    return orders.filter((o) => o.status === tab);
-  }, [orders, tab]);
+    let result = orders.filter((o) => o.status === tab);
+    if (filterQR) {
+      result = result.filter((o) => o.source === "customer_qr");
+    }
+    return result;
+  }, [orders, tab, filterQR]);
+
+  // Count QR orders (for badge)
+  const qrOpenCount = useMemo(() => {
+    return orders.filter((o) => o.status === "OPEN" && o.source === "customer_qr").length;
+  }, [orders]);
+
+  // Sound notification for new QR orders
+  useEffect(() => {
+    const currentQrOrders = orders.filter((o) => o.status === "OPEN" && o.source === "customer_qr");
+    const currentIds = new Set(currentQrOrders.map((o) => o.id));
+
+    // Skip first load (don't ring for existing orders)
+    if (isFirstLoadRef.current) {
+      prevQrOrderIdsRef.current = currentIds;
+      isFirstLoadRef.current = false;
+      return;
+    }
+
+    // Check for new orders that weren't in the previous set
+    let hasNew = false;
+    for (const id of currentIds) {
+      if (!prevQrOrderIdsRef.current.has(id)) {
+        hasNew = true;
+        break;
+      }
+    }
+
+    if (hasNew) {
+      // Play notification sound
+      playOrderNotificationRepeat(2);
+
+      // Also show toast notification
+      toast.success(`🔔 Pesanan QR baru masuk!`);
+    }
+
+    prevQrOrderIdsRef.current = currentIds;
+  }, [orders]);
 
   const grouped = useMemo(() => {
     const map = new Map<
@@ -1039,6 +1092,32 @@ export default function OrdersPage() {
           </button>
           {err && <span style={{ color: "var(--danger)", fontWeight: 900 }}>{err}</span>}
         </div>
+        {/* QR Order filter */}
+        <div className="row" style={{ marginTop: 10 }}>
+          <button
+            className={"btn " + (filterQR ? "btn-primary" : "")}
+            style={{ fontSize: 12, padding: "6px 12px", gap: 4 }}
+            onClick={() => setFilterQR(!filterQR)}
+          >
+            &#128722; QR Order
+            {qrOpenCount > 0 && (
+              <span style={{
+                background: filterQR ? "rgba(255,255,255,0.3)" : "var(--danger)",
+                color: "white",
+                padding: "1px 6px",
+                borderRadius: 10,
+                fontSize: 11,
+                fontWeight: 900,
+                marginLeft: 4,
+              }}>
+                {qrOpenCount}
+              </span>
+            )}
+          </button>
+          {filterQR && (
+            <span className="small" style={{ marginLeft: 6 }}>Menampilkan hanya pesanan dari QR Customer</span>
+          )}
+        </div>
       </div>
 
       {tab !== "REFUND" ? (
@@ -1061,12 +1140,42 @@ export default function OrdersPage() {
                   <div key={o.id} className="order-card">
                     <div className="row">
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 900, fontSize: 17 }}>{o.orderNo}</div>
+                        <div style={{ fontWeight: 900, fontSize: 17 }}>
+                          {o.orderNo}
+                          {o.source === "customer_qr" && (
+                            <span style={{
+                              display: "inline-block",
+                              marginLeft: 8,
+                              padding: "2px 8px",
+                              background: "#fef3c7",
+                              border: "1px solid #f59e0b",
+                              borderRadius: 8,
+                              fontSize: 10,
+                              fontWeight: 800,
+                              color: "#92400e",
+                              verticalAlign: "middle",
+                            }}>
+                              &#128722; QR
+                            </span>
+                          )}
+                        </div>
 
                         <div className="meta">
                           <div className="small">
                             Status: <b>{o.status}</b> • Mode: <b>{o.mode || "-"}</b> • Meja: <b>{o.tableNo || "-"}</b>
                           </div>
+
+                          {o.source === "customer_qr" && o.customerName && (
+                            <div className="small">
+                              Customer: <b>{o.customerName}</b>
+                            </div>
+                          )}
+
+                          {o.source === "customer_qr" && o.customerNote && (
+                            <div className="small" style={{ color: "var(--warning)" }}>
+                              Catatan: <b>{o.customerNote}</b>
+                            </div>
+                          )}
 
                           <div className="small">
                             Tanggal: <b>{formatDateTime(shownDate)}</b>
