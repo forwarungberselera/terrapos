@@ -33,10 +33,17 @@ export default function QRPage() {
     setOrigin(window.location.origin);
   }, []);
 
+  // Link untuk kasir (POS internal)
   const link = useMemo(() => {
     if (!origin) return "";
     return `${origin}/pos?table=${encodeURIComponent(table)}`;
   }, [origin, table]);
+
+  // Link untuk customer (menu publik)
+  const customerLink = useMemo(() => {
+    if (!origin || !tenantId) return "";
+    return `${origin}/menu/${tenantId}?table=${encodeURIComponent(table)}`;
+  }, [origin, tenantId, table]);
 
   if (loading || loadingRole) {
     return (
@@ -95,6 +102,9 @@ export default function QRPage() {
 
           <div className="spacer" />
 
+          <button className="btn" onClick={() => router.push("/tables")} style={{ marginRight: 6 }}>
+            Kelola Meja
+          </button>
           <button className="btn" onClick={() => router.push("/dashboard")}>Dashboard</button>
         </div>
       </div>
@@ -108,36 +118,69 @@ export default function QRPage() {
           placeholder="contoh: 1"
         />
 
-        <div className="qrbox">
-          {/* kalau origin belum siap, tetap render QR dengan value placeholder agar tidak error */}
-          <QRCodeCanvas value={link || "loading"} size={240} />
+        {/* QR untuk Customer (Menu Publik) */}
+        <div style={{ marginTop: 16 }}>
+          <div className="small" style={{ fontWeight: 700, marginBottom: 6 }}>
+            &#128722; QR Customer (Self-Order)
+          </div>
+          <div className="qrbox">
+            <QRCodeCanvas value={customerLink || "loading"} size={240} />
+          </div>
+          <div className="small" style={{ marginTop: 10, wordBreak: "break-all" }}>
+            Link: <b>{customerLink || "memuat..."}</b>
+          </div>
+          <div className="row" style={{ marginTop: 10 }}>
+            <button
+              className="btn btn-primary"
+              style={{ width: "100%" }}
+              disabled={!customerLink}
+              onClick={() => {
+                navigator.clipboard.writeText(customerLink);
+                toast.success("Link customer disalin.");
+              }}
+            >
+              Copy Link Customer
+            </button>
+            <button
+              className="btn"
+              style={{ width: "100%" }}
+              disabled={!customerLink}
+              onClick={() => window.open(customerLink, "_blank")}
+            >
+              Test Menu Customer
+            </button>
+          </div>
         </div>
 
-        <div className="small" style={{ marginTop: 10, wordBreak: "break-all" }}>
-          Link: <b>{link || "memuat..."}</b>
-        </div>
-
-        <div className="row" style={{ marginTop: 12 }}>
-          <button
-            className="btn btn-primary"
-            style={{ width: "100%" }}
-            disabled={!link}
-            onClick={() => {
-              navigator.clipboard.writeText(link);
-              toast.success("Link disalin.");
-            }}
-          >
-            Copy Link
-          </button>
-
-          <button
-            className="btn"
-            style={{ width: "100%" }}
-            disabled={!link}
-            onClick={() => window.open(link, "_blank")}
-          >
-            Test POS
-          </button>
+        {/* QR untuk Kasir (POS Internal) */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+          <div className="small" style={{ fontWeight: 700, marginBottom: 6 }}>
+            &#128179; QR Kasir (POS Internal)
+          </div>
+          <div className="small" style={{ wordBreak: "break-all" }}>
+            Link: <b>{link || "memuat..."}</b>
+          </div>
+          <div className="row" style={{ marginTop: 10 }}>
+            <button
+              className="btn"
+              style={{ width: "100%" }}
+              disabled={!link}
+              onClick={() => {
+                navigator.clipboard.writeText(link);
+                toast.success("Link POS disalin.");
+              }}
+            >
+              Copy Link POS
+            </button>
+            <button
+              className="btn"
+              style={{ width: "100%" }}
+              disabled={!link}
+              onClick={() => window.open(link, "_blank")}
+            >
+              Test POS
+            </button>
+          </div>
         </div>
       </div>
     </TerraPage>
