@@ -33,7 +33,7 @@ import { useLevel } from "@/hooks/useLevel";
 import { useStaff } from "@/hooks/useStaff";
 import StaffPinLock from "@/components/StaffPinLock";
 
-type Product = { id: string; name: string; category: string; price: number; isActive?: boolean };
+type Product = { id: string; name: string; category: string; price: number; isActive?: boolean; imageUrl?: string };
 type CartItem = {
   id: string;
   name: string;
@@ -228,6 +228,7 @@ export default function POSPage() {
             category: data.category || "Lainnya",
             price: Number(data.price || 0),
             isActive: data.isActive ?? true,
+            imageUrl: data.imageUrl || "",
           };
         });
         setProducts(arr.filter((p) => p.isActive));
@@ -1179,10 +1180,15 @@ export default function POSPage() {
 
           <div className="product-grid">
             {filtered.map((p) => (
-              <button key={p.id} className="product-btn" onClick={() => addToCart(p)}>
-                <div className="product-name">{p.name}</div>
-                <div className="product-meta">{p.category}</div>
-                <div className="product-price">Rp {rupiah(p.price)}</div>
+              <button key={p.id} className="product-btn" onClick={() => addToCart(p)} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {p.imageUrl && (
+                  <img src={p.imageUrl} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="product-name">{p.name}</div>
+                  <div className="product-meta">{p.category}</div>
+                  <div className="product-price">Rp {rupiah(p.price)}</div>
+                </div>
               </button>
             ))}
           </div>

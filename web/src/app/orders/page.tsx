@@ -161,6 +161,9 @@ export default function OrdersPage() {
   const prevQrOrderIdsRef = useRef<Set<string>>(new Set());
   const isFirstLoadRef = useRef(true);
 
+  // WA notification settings
+  const [waSettings, setWaSettings] = useState<{ number: string; enabled: boolean; apiUrl: string; apiToken: string; mode: string }>({ number: "", enabled: false, apiUrl: "", apiToken: "", mode: "manual" });
+
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundOrder, setRefundOrder] = useState<Order | null>(null);
   const [refundPinInput, setRefundPinInput] = useState("");
@@ -197,6 +200,14 @@ export default function OrdersPage() {
             qrText: d.receiptQrText || "",
             showLogo: d.receiptShowLogo ?? false,
             showQR: d.receiptShowQR ?? false,
+          });
+          // Load WA settings
+          setWaSettings({
+            number: d.waNotifyNumber || "",
+            enabled: d.waNotifyEnabled ?? false,
+            apiUrl: d.waApiUrl || "",
+            apiToken: d.waApiToken || "",
+            mode: d.waMode || "manual",
           });
         }
       } catch {}
@@ -326,6 +337,35 @@ export default function OrdersPage() {
 
       // Also show toast notification
       toast.success(`🔔 Pesanan QR baru masuk!`);
+
+      // Send WhatsApp notification
+      if (waSettings.enabled && waSettings.number) {
+        const newOrders = currentQrOrders.filter((o) => !prevQrOrderIdsRef.current.has(o.id));
+        for (const order of newOrders) {
+          const msg = formatWAOrderMessage(
+            {
+              orderNo: order.orderNo,
+              tableNo: order.tableNo || null,
+              customerName: order.customerName || null,
+              items: order.items,
+              total: order.total,
+              source: order.source || "",
+            },
+            receiptSettings.storeName || "TerraPOS"
+          );
+
+          if (waSettings.mode === "auto" && waSettings.apiUrl && waSettings.apiToken) {
+            // Auto-send via API (no user interaction needed)
+            sendWAWebhook(waSettings.number, msg, waSettings.apiUrl, waSettings.apiToken).catch(() => {});
+          } else {
+            // Manual: open wa.me link
+            let phone = waSettings.number.replace(/[^0-9]/g, "");
+            if (phone.startsWith("0")) phone = "62" + phone.slice(1);
+            if (!phone.startsWith("62")) phone = "62" + phone;
+            window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`, "_blank");
+          }
+        }
+      }
     }
 
     prevQrOrderIdsRef.current = currentIds;
