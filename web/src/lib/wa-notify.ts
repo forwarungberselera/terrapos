@@ -75,36 +75,43 @@ export function sendWANotification(phoneNumber: string, message: string): void {
 }
 
 /**
- * Auto-send via webhook (Fonnte API compatible)
- * This is the automated version - no user interaction needed.
- * Requires: FONNTE_TOKEN or similar API key stored in settings.
- * 
- * For MVP: just use the wa.me link approach (manual click).
- * For production: set up Fonnte/Wablas webhook.
+ * Auto-send via webhook (supports multiple providers)
+ * - Open-WA: self-hosted, gratis (open-wa.org)
+ * - Fonnte: berbayar (fonnte.id)
+ * - Wablas: berbayar (wablas.com)
  */
 export async function sendWAWebhook(
   phoneNumber: string,
   message: string,
   apiUrl?: string,
-  apiToken?: string
+  apiToken?: string,
+  mode?: string
 ): Promise<boolean> {
   if (!apiUrl || !apiToken) return false;
   
   let phone = phoneNumber.replace(/[^0-9]/g, "");
   if (phone.startsWith("0")) phone = "62" + phone.slice(1);
+  if (!phone.startsWith("62")) phone = "62" + phone;
   
   try {
-    const res = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": apiToken,
-      },
-      body: JSON.stringify({
-        target: phone,
-        message: message,
-      }),
-    });
+    let headers: any = { "Content-Type": "application/json" };
+    let body: string;
+
+    if (mode === "openwa") {
+      // Open-WA format: chatId = "628xxx@c.us"
+      headers["X-API-Key"] = apiToken;
+      body = JSON.stringify({ chatId: `${phone}@c.us`, text: message });
+    } else if (mode === "wablas") {
+      // Wablas format
+      headers["Authorization"] = apiToken;
+      body = JSON.stringify({ phone, message });
+    } else {
+      // Fonnte format (default)
+      headers["Authorization"] = apiToken;
+      body = JSON.stringify({ target: phone, message });
+    }
+
+    const res = await fetch(apiUrl, { method: "POST", headers, body });
     return res.ok;
   } catch {
     return false;

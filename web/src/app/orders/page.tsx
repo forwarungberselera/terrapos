@@ -354,9 +354,9 @@ export default function OrdersPage() {
             receiptSettings.storeName || "TerraPOS"
           );
 
-          if (waSettings.mode === "auto" && waSettings.apiUrl && waSettings.apiToken) {
+          if (waSettings.mode !== "manual" && waSettings.apiUrl && waSettings.apiToken) {
             // Auto-send via API (no user interaction needed)
-            sendWAWebhook(waSettings.number, msg, waSettings.apiUrl, waSettings.apiToken).catch(() => {});
+            sendWAWebhook(waSettings.number, msg, waSettings.apiUrl, waSettings.apiToken, waSettings.mode).catch(() => {});
           } else {
             // Manual: open wa.me link
             let phone = waSettings.number.replace(/[^0-9]/g, "");

@@ -30,7 +30,7 @@ export default function SettingsPage() {
   const [waEnabled, setWaEnabled] = useState(false);
   const [waApiUrl, setWaApiUrl] = useState("");
   const [waApiToken, setWaApiToken] = useState("");
-  const [waMode, setWaMode] = useState<"manual" | "auto">("manual");
+  const [waMode, setWaMode] = useState<"manual" | "openwa" | "fonnte" | "wablas">("manual");
 
   // Tax
   const [taxEnabled, setTaxEnabled] = useState(false);
@@ -102,23 +102,31 @@ export default function SettingsPage() {
     if (!waNumber.trim()) { toast.error("Isi nomor WA dulu"); return; }
     setTestingWA(true);
     try {
-      if (waMode === "auto" && waApiUrl.trim() && waApiToken.trim()) {
-        // Test via API webhook
-        let phone = waNumber.replace(/[^0-9]/g, "");
-        if (phone.startsWith("0")) phone = "62" + phone.slice(1);
-        if (!phone.startsWith("62")) phone = "62" + phone;
+      let phone = waNumber.replace(/[^0-9]/g, "");
+      if (phone.startsWith("0")) phone = "62" + phone.slice(1);
+      if (!phone.startsWith("62")) phone = "62" + phone;
 
-        const res = await fetch(waApiUrl.trim(), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": waApiToken.trim(),
-          },
-          body: JSON.stringify({
-            target: phone,
-            message: `✅ Test notifikasi TerraPOS berhasil!\n\nNomor: ${phone}\nToko: ${storeName}\nWaktu: ${new Date().toLocaleString("id-ID")}`,
-          }),
-        });
+      const testMsg = `✅ Test notifikasi TerraPOS berhasil!\n\nNomor: ${phone}\nToko: ${storeName}\nWaktu: ${new Date().toLocaleString("id-ID")}`;
+
+      if (waMode !== "manual" && waApiUrl.trim() && waApiToken.trim()) {
+        let body: any;
+        let headers: any = { "Content-Type": "application/json" };
+
+        if (waMode === "openwa") {
+          // Open-WA format
+          headers["X-API-Key"] = waApiToken.trim();
+          body = JSON.stringify({ chatId: `${phone}@c.us`, text: testMsg });
+        } else if (waMode === "fonnte") {
+          // Fonnte format
+          headers["Authorization"] = waApiToken.trim();
+          body = JSON.stringify({ target: phone, message: testMsg });
+        } else {
+          // Wablas format
+          headers["Authorization"] = waApiToken.trim();
+          body = JSON.stringify({ phone: phone, message: testMsg });
+        }
+
+        const res = await fetch(waApiUrl.trim(), { method: "POST", headers, body });
         if (res.ok) {
           toast.success("✅ Pesan test terkirim ke WhatsApp!");
         } else {
@@ -126,10 +134,7 @@ export default function SettingsPage() {
           toast.error("Gagal kirim: " + (text || res.statusText));
         }
       } else {
-        // Manual mode - open wa.me link
-        let phone = waNumber.replace(/[^0-9]/g, "");
-        if (phone.startsWith("0")) phone = "62" + phone.slice(1);
-        if (!phone.startsWith("62")) phone = "62" + phone;
+        // Manual mode
         const msg = `✅ Test notifikasi TerraPOS\n\nToko: ${storeName}\nWaktu: ${new Date().toLocaleString("id-ID")}`;
         window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`, "_blank");
         toast.success("Link WA dibuka di tab baru");
@@ -291,25 +296,31 @@ export default function SettingsPage() {
           <label className="settings-label">Mode Pengiriman</label>
           <select className="input" value={waMode} onChange={(e) => setWaMode(e.target.value as any)}>
             <option value="manual">Manual (buka link wa.me)</option>
-            <option value="auto">Otomatis (via API Fonnte/Wablas)</option>
+            <option value="openwa">Otomatis - Open-WA (self-hosted, gratis)</option>
+            <option value="fonnte">Otomatis - Fonnte.id</option>
+            <option value="wablas">Otomatis - Wablas.com</option>
           </select>
           <div className="small" style={{ marginTop: 4 }}>
-            {waMode === "manual"
-              ? "Saat order masuk, browser membuka WhatsApp dengan pesan ter-isi otomatis."
-              : "Pesan dikirim otomatis tanpa perlu buka browser. Butuh API key dari Fonnte.id atau Wablas.com"
-            }
+            {waMode === "manual" && "Saat order masuk, browser membuka WhatsApp dengan pesan ter-isi otomatis."}
+            {waMode === "openwa" && "Gratis! Install Open-WA di VPS kamu. Docs: open-wa.org"}
+            {waMode === "fonnte" && "Layanan berbayar dari Fonnte.id, stabil dan mudah."}
+            {waMode === "wablas" && "Layanan berbayar dari Wablas.com."}
           </div>
         </div>
 
-        {waMode === "auto" && (
+        {waMode !== "manual" && (
           <div className="settings-row">
             <div className="settings-field">
               <label className="settings-label">API URL</label>
-              <input className="input" value={waApiUrl} onChange={(e) => setWaApiUrl(e.target.value)} placeholder="https://api.fonnte.com/send" />
+              <input className="input" value={waApiUrl} onChange={(e) => setWaApiUrl(e.target.value)} placeholder={
+                waMode === "openwa" ? "http://localhost:2785/api/sessions/default/messages/send-text"
+                : waMode === "fonnte" ? "https://api.fonnte.com/send"
+                : "https://api.wablas.com/api/send-message"
+              } />
             </div>
             <div className="settings-field">
-              <label className="settings-label">API Token</label>
-              <input className="input" type="password" value={waApiToken} onChange={(e) => setWaApiToken(e.target.value)} placeholder="Token dari provider" />
+              <label className="settings-label">{waMode === "openwa" ? "X-API-Key" : "API Token"}</label>
+              <input className="input" type="password" value={waApiToken} onChange={(e) => setWaApiToken(e.target.value)} placeholder={waMode === "openwa" ? "API key dari Open-WA config" : "Token dari provider"} />
             </div>
           </div>
         )}
