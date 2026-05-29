@@ -309,6 +309,13 @@ export default function ProductsPage() {
               <label className="prod-label">Harga (Rp)</label>
               <input className="input" type="number" value={editPrice} onChange={(e) => setEditPrice(Number(e.target.value || 0))} />
             </div>
+            <div className="prod-form-group">
+              <label className="prod-label">URL Foto Produk (opsional)</label>
+              <input className="input" value={editImageUrl} onChange={(e) => setEditImageUrl(e.target.value)} placeholder="https://example.com/foto.jpg" />
+              {editImageUrl.trim() && (
+                <img src={editImageUrl.trim()} alt="Preview" style={{ marginTop: 8, width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              )}
+            </div>
             {editErr && <div className="prod-error">{editErr}</div>}
             <div className="row" style={{marginTop:20,gap:10}}>
               <button className="btn btn-primary" style={{flex:1}} disabled={editBusy} onClick={saveEdit}>
@@ -340,6 +347,13 @@ export default function ProductsPage() {
             <div className="prod-form-group">
               <label className="prod-label">Harga (Rp)</label>
               <input className="input" type="number" value={price} onChange={(e) => setPrice(Number(e.target.value || 0))} placeholder="0" />
+            </div>
+            <div className="prod-form-group">
+              <label className="prod-label">URL Foto Produk (opsional)</label>
+              <input className="input" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/foto.jpg" />
+              {imageUrl.trim() && (
+                <img src={imageUrl.trim()} alt="Preview" style={{ marginTop: 8, width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              )}
             </div>
             {err && <div className="prod-error">{err}</div>}
             <button className="btn btn-primary" style={{width:"100%",marginTop:16}} disabled={busy} onClick={addProduct}>
