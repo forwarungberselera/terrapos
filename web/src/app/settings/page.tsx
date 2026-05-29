@@ -21,6 +21,8 @@ export default function SettingsPage() {
   const [storeName, setStoreName] = useState("TerraPOS");
   const [address, setAddress] = useState("");
   const [footer, setFooter] = useState("Terima kasih.");
+  const [waNumber, setWaNumber] = useState("");
+  const [waEnabled, setWaEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -34,6 +36,8 @@ export default function SettingsPage() {
           setStoreName(d.storeName || "TerraPOS");
           setAddress(d.address || "");
           setFooter(d.footer || "Terima kasih.");
+          setWaNumber(d.waNotifyNumber || "");
+          setWaEnabled(d.waNotifyEnabled ?? false);
         }
       } catch (e: any) {
         setErr(e?.message || "Gagal load settings");
@@ -49,6 +53,8 @@ export default function SettingsPage() {
         storeName: storeName.trim(),
         address: address.trim(),
         footer: footer.trim(),
+        waNotifyNumber: waNumber.trim(),
+        waNotifyEnabled: waEnabled,
         updatedAt: serverTimestamp(),
       }, { merge: true });
       toast.success("Settings tersimpan!");
@@ -93,6 +99,20 @@ export default function SettingsPage() {
 
         <div className="small" style={{ marginTop: 10 }}>Footer Struk</div>
         <input className="input" value={footer} onChange={(e) => setFooter(e.target.value)} />
+
+        {/* WhatsApp Notification */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+          <div className="h1" style={{ fontSize: 16, marginBottom: 8 }}>WhatsApp Notifikasi</div>
+          <div className="small" style={{ marginBottom: 10 }}>Terima notifikasi WA saat ada pesanan QR masuk.</div>
+
+          <div className="small" style={{ marginTop: 8 }}>Nomor WhatsApp (format: 08xxx atau 628xxx)</div>
+          <input className="input" value={waNumber} onChange={(e) => setWaNumber(e.target.value)} placeholder="08123456789" />
+
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+            <input type="checkbox" checked={waEnabled} onChange={(e) => setWaEnabled(e.target.checked)} style={{ width: 18, height: 18 }} />
+            Aktifkan notifikasi WhatsApp
+          </label>
+        </div>
 
         {err && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 800 }}>{err}</div>}
 

@@ -18,6 +18,7 @@ type Product = {
   category: string;
   price: number;
   isActive: boolean;
+  imageUrl?: string;
 };
 
 function rupiah(n: number) {
@@ -68,6 +69,7 @@ export default function ProductsPage() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Minuman");
   const [price, setPrice] = useState<number>(0);
+  const [imageUrl, setImageUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -76,6 +78,7 @@ export default function ProductsPage() {
   const [editName, setEditName] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editPrice, setEditPrice] = useState<number>(0);
+  const [editImageUrl, setEditImageUrl] = useState("");
   const [editBusy, setEditBusy] = useState(false);
   const [editErr, setEditErr] = useState<string | null>(null);
 
@@ -97,6 +100,7 @@ export default function ProductsPage() {
           category: data.category || "Lainnya",
           price: Number(data.price || 0),
           isActive: data.isActive ?? true,
+          imageUrl: data.imageUrl || "",
         };
       });
       setProducts(arr);
@@ -164,10 +168,11 @@ export default function ProductsPage() {
         name: n,
         category: category.trim() || "Lainnya",
         price: Number(price),
+        imageUrl: imageUrl.trim() || "",
         isActive: true,
         createdAt: serverTimestamp(),
       });
-      setName(""); setPrice(0); setShowAddForm(false);
+      setName(""); setPrice(0); setImageUrl(""); setShowAddForm(false);
     } catch (e: any) {
       setErr(e?.message || "Gagal tambah produk");
     } finally {
@@ -180,6 +185,7 @@ export default function ProductsPage() {
     setEditName(p.name);
     setEditCategory(p.category);
     setEditPrice(p.price);
+    setEditImageUrl(p.imageUrl || "");
     setEditErr(null);
   }
 
@@ -201,6 +207,7 @@ export default function ProductsPage() {
         name: n,
         category: editCategory.trim() || "Lainnya",
         price: Number(editPrice),
+        imageUrl: editImageUrl.trim() || "",
         updatedAt: serverTimestamp(),
       });
       closeEdit();

@@ -15,6 +15,7 @@ import {
   TableData, TableStatus, generateTableQrUrl,
   getStatusColor, getStatusLabel,
 } from "@/lib/tables";
+import { printQRBatchHTML } from "@/lib/qr-pdf";
 import dynamic from "next/dynamic";
 
 const QRCodeCanvas = dynamic(
@@ -193,6 +194,14 @@ export default function TablesPage() {
           </button>
           <button className="btn" onClick={() => handleBulkAdd(10)}>
             + Bulk 10 Meja
+          </button>
+          <button className="btn" disabled={tables.length === 0} onClick={() => {
+            printQRBatchHTML(
+              tables.map((t) => ({ tableNumber: t.number, tableName: t.name })),
+              tenantId, origin, "TerraPOS"
+            );
+          }}>
+            🖨️ Print Semua QR
           </button>
         </div>
       </div>

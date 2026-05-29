@@ -29,6 +29,7 @@ import { useToast } from "@/components/Toast";
 import { usePrinting } from "@/components/PrintingOverlay";
 import { logAudit } from "@/lib/audit";
 import { playOrderNotificationRepeat } from "@/lib/order-notification";
+import { formatWAOrderMessage, sendWAWebhook } from "@/lib/wa-notify";
 
 type Order = {
   id: string;
