@@ -936,6 +936,7 @@ export default function DashboardPage() {
             <div className={`sidecategory ${!sideOpen.operasional ? "collapsed" : ""}`}>
               <div className="sidecategory-inner">
                 <button className="sidebtn" onClick={() => r.push("/orders")}>Orders</button>
+                <button className="sidebtn" onClick={() => r.push("/kitchen")}>Kitchen Display</button>
                 <button className="sidebtn" onClick={() => r.push("/shifts")}>Shift</button>
                 {canAccess("qr") && <button className="sidebtn" onClick={() => r.push("/tables")}>QR Meja</button>}
               </div>
@@ -948,6 +949,7 @@ export default function DashboardPage() {
             <div className={`sidecategory ${!sideOpen.management ? "collapsed" : ""}`}>
               <div className="sidecategory-inner">
                 <button className="sidebtn" onClick={() => r.push("/products")}>Products</button>
+                <button className="sidebtn" onClick={() => r.push("/category-order")}>Urutan Kategori</button>
                 {canAccess("staff") && <button className="sidebtn" onClick={() => r.push("/staff-accounts")}>Staff Account (PIN)</button>}
                 {canAccess("promos") && <button className="sidebtn" onClick={() => r.push("/promos")}>Promo</button>}
                 {canAccess("members") && <button className="sidebtn" onClick={() => r.push("/members")}>Members</button>}

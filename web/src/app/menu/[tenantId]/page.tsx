@@ -17,6 +17,7 @@ type Product = {
   category: string;
   price: number;
   isActive?: boolean;
+  imageUrl?: string;
 };
 
 type StoreInfo = {
@@ -46,6 +47,7 @@ export default function CustomerMenuPage() {
   const [customerNote, setCustomerNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
 
 
   // Load store info
@@ -60,6 +62,9 @@ export default function CustomerMenuPage() {
             storeName: d.storeName || "Restoran",
             address: d.address || "",
           });
+          if (Array.isArray(d.categoryOrder)) {
+            setCategoryOrder(d.categoryOrder);
+          }
         }
       } catch {}
     })();
@@ -77,6 +82,7 @@ export default function CustomerMenuPage() {
         category: d.data().category || "Lainnya",
         price: Number(d.data().price || 0),
         isActive: d.data().isActive ?? true,
+        imageUrl: d.data().imageUrl || "",
       }));
       setProducts(arr.filter((p) => p.isActive !== false));
       setLoading(false);
@@ -91,8 +97,15 @@ export default function CustomerMenuPage() {
   // Categories
   const categories = useMemo(() => {
     const cats = new Set(products.map((p) => p.category));
-    return ["Semua", ...Array.from(cats).sort()];
-  }, [products]);
+    const allCats = Array.from(cats);
+    // Apply saved category order
+    if (categoryOrder.length > 0) {
+      const ordered = categoryOrder.filter((c) => allCats.includes(c));
+      allCats.forEach((c) => { if (!ordered.includes(c)) ordered.push(c); });
+      return ["Semua", ...ordered];
+    }
+    return ["Semua", ...allCats.sort()];
+  }, [products, categoryOrder]);
 
   // Filtered products
   const filtered = useMemo(() => {
@@ -328,6 +341,12 @@ export default function CustomerMenuPage() {
             const inCart = cart.find((c) => c.productId === p.id);
             return (
               <div key={p.id} className="cust-product-card">
+                {p.imageUrl && (
+                  <img src={p.imageUrl} alt={p.name} style={{
+                    width: 56, height: 56, borderRadius: 10, objectFit: "cover",
+                    flexShrink: 0, marginRight: 12, background: "var(--input-bg, #f9fafb)",
+                  }} />
+                )}
                 <div className="cust-product-info">
                   <div className="cust-product-name">{p.name}</div>
                   <div className="cust-product-cat">{p.category}</div>
