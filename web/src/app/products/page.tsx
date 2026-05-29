@@ -7,6 +7,7 @@ import TerraPage from "@/components/TerraPage";
 import PageHeader from "@/components/PageHeader";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
+import { useLevel } from "@/hooks/useLevel";
 import {
   addDoc, collection, deleteDoc, doc, onSnapshot,
   orderBy, query, serverTimestamp, updateDoc, writeBatch
@@ -57,6 +58,7 @@ export default function ProductsPage() {
   const r = useRouter();
   const { tenantId, loading, email } = useTenant();
   const { role, loadingRole } = useRole();
+  const { canAccess: canAccessLevel } = useLevel();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -311,9 +313,17 @@ export default function ProductsPage() {
             </div>
             <div className="prod-form-group">
               <label className="prod-label">URL Foto Produk (opsional)</label>
-              <input className="input" value={editImageUrl} onChange={(e) => setEditImageUrl(e.target.value)} placeholder="https://example.com/foto.jpg" />
-              {editImageUrl.trim() && (
-                <img src={editImageUrl.trim()} alt="Preview" style={{ marginTop: 8, width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              {canAccessLevel("product-images") ? (
+                <>
+                  <input className="input" value={editImageUrl} onChange={(e) => setEditImageUrl(e.target.value)} placeholder="https://example.com/foto.jpg" />
+                  {editImageUrl.trim() && (
+                    <img src={editImageUrl.trim()} alt="Preview" style={{ marginTop: 8, width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  )}
+                </>
+              ) : (
+                <div style={{ padding: 10, background: "var(--input-bg)", borderRadius: 8, fontSize: 12, color: "var(--muted)" }}>
+                  🔒 Fitur foto produk tersedia untuk paket <b>Orbit</b>.
+                </div>
               )}
             </div>
             {editErr && <div className="prod-error">{editErr}</div>}
@@ -350,9 +360,17 @@ export default function ProductsPage() {
             </div>
             <div className="prod-form-group">
               <label className="prod-label">URL Foto Produk (opsional)</label>
-              <input className="input" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/foto.jpg" />
-              {imageUrl.trim() && (
-                <img src={imageUrl.trim()} alt="Preview" style={{ marginTop: 8, width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              {canAccessLevel("product-images") ? (
+                <>
+                  <input className="input" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/foto.jpg" />
+                  {imageUrl.trim() && (
+                    <img src={imageUrl.trim()} alt="Preview" style={{ marginTop: 8, width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  )}
+                </>
+              ) : (
+                <div style={{ padding: 10, background: "var(--input-bg)", borderRadius: 8, fontSize: 12, color: "var(--muted)" }}>
+                  🔒 Fitur foto produk tersedia untuk paket <b>Orbit</b>.
+                </div>
               )}
             </div>
             {err && <div className="prod-error">{err}</div>}

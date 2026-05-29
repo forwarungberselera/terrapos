@@ -11,7 +11,7 @@ const LEVEL_FEATURES: Record<UserLevel, string[]> = {
   free: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin"],
   seed: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin", "staff"],
   core: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin", "qr", "staff", "promos", "audit"],
-  orbit: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin", "qr", "staff", "promos", "audit", "members"],
+  orbit: ["pos", "orders", "shifts", "products", "reports", "settings/receipt", "printer", "refund-pin", "qr", "staff", "promos", "audit", "members", "kitchen", "product-images"],
 };
 
 /**

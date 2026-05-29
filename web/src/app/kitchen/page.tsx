@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { useTenant } from "@/hooks/useTenant";
 import { useRole } from "@/hooks/useRole";
+import { useLevel } from "@/hooks/useLevel";
 import TerraPage from "@/components/TerraPage";
 import {
   collection, onSnapshot, query, orderBy, limit, where, updateDoc, doc, serverTimestamp,
@@ -36,6 +37,7 @@ export default function KitchenPage() {
   const router = useRouter();
   const { tenantId, loading } = useTenant();
   const { role, loadingRole } = useRole();
+  const { canAccess: canAccessLevel } = useLevel();
   const toast = useToast();
 
   const canView = ["owner", "admin", "developer"].includes((role || "").toString().toLowerCase());
@@ -101,6 +103,23 @@ export default function KitchenPage() {
   }
 
   if (loading || loadingRole) return <TerraPage><div className="card">Loading...</div></TerraPage>;
+  if (!canAccessLevel("kitchen")) {
+    return (
+      <TerraPage>
+        <div className="card" style={{ textAlign: "center", padding: 32 }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>&#128274;</div>
+          <div className="h1">Fitur Premium</div>
+          <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+            Kitchen Display tersedia untuk paket <b>Orbit</b>.<br />
+            Upgrade paket Anda untuk mengakses fitur ini.
+          </div>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => router.push("/dashboard")}>
+            Kembali ke Dashboard
+          </button>
+        </div>
+      </TerraPage>
+    );
+  }
   if (!canView) {
     return <TerraPage><div className="card"><div className="h1">Akses ditolak</div></div></TerraPage>;
   }

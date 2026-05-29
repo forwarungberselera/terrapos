@@ -936,7 +936,7 @@ export default function DashboardPage() {
             <div className={`sidecategory ${!sideOpen.operasional ? "collapsed" : ""}`}>
               <div className="sidecategory-inner">
                 <button className="sidebtn" onClick={() => r.push("/orders")}>Orders</button>
-                <button className="sidebtn" onClick={() => r.push("/kitchen")}>Kitchen Display</button>
+                {canAccess("kitchen") && <button className="sidebtn" onClick={() => r.push("/kitchen")}>Kitchen Display</button>}
                 <button className="sidebtn" onClick={() => r.push("/shifts")}>Shift</button>
                 {canAccess("qr") && <button className="sidebtn" onClick={() => r.push("/tables")}>QR Meja</button>}
               </div>
