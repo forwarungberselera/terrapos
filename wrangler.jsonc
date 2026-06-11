@@ -8,7 +8,7 @@
     "global_fetch_strictly_public"
   ],
   "build": {
-    "command": "npm --prefix web ci && npm --prefix web run build:workers"
+    "command": "npm --prefix web ci && npm --prefix web install --no-save --package-lock=false @opennextjs/cloudflare@latest && cd web && npx -y @opennextjs/cloudflare@latest build"
   },
   "assets": {
     "directory": "web/.open-next/assets",
