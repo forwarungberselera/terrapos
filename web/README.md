@@ -13,7 +13,8 @@ Repo ini juga disiapkan agar bisa dijalankan di Cloudflare Workers melalui adapt
 
 ### File konfigurasi
 
-- `wrangler.jsonc` menunjuk entry Worker hasil build OpenNext di `.open-next/worker.js`, static assets di `.open-next/assets`, mengaktifkan `nodejs_compat`, dan memakai nama Worker `terrapos-web`.
+- `../wrangler.jsonc` dipakai saat Cloudflare menjalankan deploy dari root repo dengan default deploy command `npx wrangler deploy`. File ini otomatis menjalankan `npm --prefix web ci && npm --prefix web run build:workers`, lalu deploy output OpenNext dari `web/.open-next`.
+- `wrangler.jsonc` di folder `web` dipakai saat menjalankan command dari folder `web` secara lokal/CI. File ini menunjuk entry Worker hasil build OpenNext di `.open-next/worker.js`, static assets di `.open-next/assets`, mengaktifkan `nodejs_compat`, dan memakai nama Worker `terrapos-web`.
 - `open-next.config.ts` memakai konfigurasi default `@opennextjs/cloudflare`.
 - `public/_headers` menambahkan cache immutable untuk aset Next.js.
 - `.dev.vars.example` dapat disalin menjadi `.dev.vars` untuk preview lokal Workers.
@@ -49,19 +50,26 @@ Login Wrangler terlebih dahulu jika belum:
 npx -y wrangler@latest login
 ```
 
-Deploy:
+Deploy dari root repo, sama seperti default deploy command Cloudflare Workers Builds:
 
 ```bash
+npx wrangler deploy
+```
+
+Alternatif deploy dari folder `web`:
+
+```bash
+cd web
 npm run deploy:workers
 ```
 
-Untuk CI/CD Cloudflare Workers Builds, gunakan direktori root `web` dan command:
+Untuk CI/CD Cloudflare Workers Builds, gunakan root directory repo dan biarkan deploy command default:
 
 ```bash
-npm run deploy:workers
+npx wrangler deploy
 ```
 
-Pastikan semua environment variable Firebase/Next.js yang diperlukan aplikasi sudah dibuat di Cloudflare Workers sebagai variables/secrets, khususnya variable `NEXT_PUBLIC_*` yang dibaca saat build.
+Konfigurasi root `wrangler.jsonc` akan meng-install dependency `web` dengan `npm ci`, menjalankan build OpenNext, lalu men-deploy Worker. Pastikan semua environment variable Firebase/Next.js yang diperlukan aplikasi sudah dibuat di Cloudflare Workers sebagai variables/secrets, khususnya variable `NEXT_PUBLIC_*` yang dibaca saat build.
 
 ### Type generation untuk binding Cloudflare
 
