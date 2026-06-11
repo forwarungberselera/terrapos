@@ -1,4 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TerraPOS Web
+
+Aplikasi web TerraPOS dibangun dengan Next.js. Konfigurasi bawaan tetap mendukung alur yang sudah ada:
+
+- `npm run dev` untuk development lokal Next.js.
+- `npm run build` dan `npm run start` untuk mode server Next.js.
+- `npm run build:apk` untuk export statis yang dipakai build APK/Capacitor.
+- `npm run deploy:pages` untuk deploy output statis `out/` ke Cloudflare Pages yang sudah ada.
+
+## Cloudflare Workers (opsional)
+
+Repo ini juga disiapkan agar bisa dijalankan di Cloudflare Workers melalui adapter OpenNext, tanpa mengganti konfigurasi Next.js/Firebase/APK yang sudah ada.
+
+### File konfigurasi
+
+- `wrangler.jsonc` menunjuk entry Worker hasil build OpenNext di `.open-next/worker.js`, static assets di `.open-next/assets`, mengaktifkan `nodejs_compat`, dan memakai nama Worker `terrapos-web`.
+- `open-next.config.ts` memakai konfigurasi default `@opennextjs/cloudflare`.
+- `public/_headers` menambahkan cache immutable untuk aset Next.js.
+- `.dev.vars.example` dapat disalin menjadi `.dev.vars` untuk preview lokal Workers.
+
+### Persiapan lokal
+
+```bash
+cd web
+npm install
+cp .dev.vars.example .dev.vars
+```
+
+> Catatan: script Cloudflare Workers memakai `npx -y ...@latest` supaya tidak mengubah lockfile/dependency existing. Jika ingin pin versi untuk CI, install paket berikut lalu ubah script agar memakai binary lokal:
+>
+> ```bash
+> npm install @opennextjs/cloudflare@latest
+> npm install --save-dev wrangler@latest
+> ```
+
+### Preview di runtime Workers
+
+```bash
+npm run preview:workers
+```
+
+Perintah ini membangun Next.js, mengubah output menjadi Worker via OpenNext, lalu menjalankannya dengan Wrangler di runtime `workerd` lokal.
+
+### Deploy ke Cloudflare Workers
+
+Login Wrangler terlebih dahulu jika belum:
+
+```bash
+npx -y wrangler@latest login
+```
+
+Deploy:
+
+```bash
+npm run deploy:workers
+```
+
+Untuk CI/CD Cloudflare Workers Builds, gunakan direktori root `web` dan command:
+
+```bash
+npm run deploy:workers
+```
+
+Pastikan semua environment variable Firebase/Next.js yang diperlukan aplikasi sudah dibuat di Cloudflare Workers sebagai variables/secrets, khususnya variable `NEXT_PUBLIC_*` yang dibaca saat build.
+
+### Type generation untuk binding Cloudflare
+
+```bash
+npm run cf-typegen
+```
+
+File `cloudflare-env.d.ts` sengaja diabaikan git karena bisa dibuat ulang dari konfigurasi Wrangler.
 
 ## Getting Started
 
