@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "build:apk": "NEXT_OUTPUT=export next build && npx cap sync android",
-    "deploy:pages": "wrangler pages deploy out --project-name terrapos-web --branch main"
+    "deploy:pages": "wrangler pages deploy out --project-name terrapos-web --branch main",
+    "build:workers": "npm run ensure:workers-deps && opennextjs-cloudflare build",
+    "preview:workers": "npm run build:workers && opennextjs-cloudflare preview",
+    "deploy:workers": "npm run build:workers && opennextjs-cloudflare deploy",
+    "upload:workers": "npm run build:workers && opennextjs-cloudflare upload",
+    "cf-typegen": "npm run ensure:workers-deps && wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "ensure:workers-deps": "node scripts/ensure-cloudflare-deps.mjs"
   },
   "dependencies": {
     "@capacitor/android": "6.2.0",

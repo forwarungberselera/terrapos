@@ -1,0 +1,2 @@
+# Copy this file to .dev.vars when previewing with Cloudflare Workers locally.
+NEXTJS_ENV=development
