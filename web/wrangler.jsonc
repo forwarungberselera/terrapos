@@ -19,5 +19,8 @@
   ],
   "observability": {
     "enabled": true
+  },
+  "build": {
+    "command": "npm ci && npm install --no-save --package-lock=false @opennextjs/cloudflare@latest && npx -y @opennextjs/cloudflare@latest build"
   }
 }
