@@ -70,13 +70,12 @@ export function useRole() {
           }
         }
 
-        // 2. cek staff admin
+        // 2. cek staff role
         const staffSnap = await getDoc(doc(db, `tenants/${tenantId}/staff/${user.uid}`));
         if (staffSnap.exists()) {
           const sd = staffSnap.data() as any;
           const r = (sd.role || "").toString().toLowerCase();
-
-          if (r === "admin" || r === "owner") {
+          if (r) {
             setRole(r);
             setLoadingRole(false);
             return;

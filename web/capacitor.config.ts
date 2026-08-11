@@ -5,11 +5,9 @@ const config: CapacitorConfig = {
   appName: "TerraPOS",
   webDir: "out",
   server: {
-    // Load dari server — APK selalu tampilkan versi terbaru tanpa rebuild
-    url: "https://npos.gtomodachi.fun",
+    // Load dari Vercel server — APK selalu menampilkan versi terbaru secara otomatis
+    url: process.env.CAPACITOR_SERVER_URL || process.env.NEXT_PUBLIC_APP_URL || "https://terrapos.web.id/",
     androidScheme: "https",
-    // Jika server unreachable, Capacitor akan tampilkan error page
-    // User bisa retry saat online kembali
     cleartext: false,
   },
   plugins: {

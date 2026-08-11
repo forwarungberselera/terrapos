@@ -47,8 +47,10 @@ export default function PrinterPage() {
     setPrintModeState(getPrintMode());
     setIsNative(NativePrinter.isNative());
     // Load printer enabled state
-    const stored = localStorage.getItem("terrapos_printer_enabled");
-    if (stored !== null) setPrinterEnabled(stored === "true");
+    try {
+      const stored = localStorage.getItem("terrapos_printer_enabled");
+      if (stored !== null) setPrinterEnabled(stored === "true");
+    } catch {}
   }, []);
 
   // Auto-reconnect & check status
@@ -59,9 +61,9 @@ export default function PrinterPage() {
         NativePrinter.isConnected().then((s) => {
           setBtConnected(s.connected);
           setBtPrinterName(s.name);
-        });
+        }).catch(() => {});
       }
-    });
+    }).catch(() => {});
   }, [isNative]);
 
   // Poll status
@@ -71,7 +73,7 @@ export default function PrinterPage() {
       NativePrinter.isConnected().then((s) => {
         setBtConnected(s.connected);
         setBtPrinterName(s.name);
-      });
+      }).catch(() => {});
     }, 3000);
     return () => clearInterval(interval);
   }, [isNative]);
@@ -80,8 +82,10 @@ export default function PrinterPage() {
   useEffect(() => {
     if (isNative || printMode !== "bluetooth") return;
     const interval = setInterval(() => {
-      setBtConnected(WebBluetooth.isPrinterConnected());
-      setBtPrinterName(WebBluetooth.getConnectedPrinterName());
+      try {
+        setBtConnected(WebBluetooth.isPrinterConnected());
+        setBtPrinterName(WebBluetooth.getConnectedPrinterName());
+      } catch {}
     }, 2000);
     return () => clearInterval(interval);
   }, [isNative, printMode]);
@@ -110,8 +114,14 @@ export default function PrinterPage() {
   }, [tenantId]);
 
   async function togglePrinterSystem(enabled: boolean) {
+    if (!canEdit) {
+      toast.warning("Hanya owner/admin yang dapat mengubah status sistem printer.");
+      return;
+    }
     setPrinterEnabled(enabled);
-    localStorage.setItem("terrapos_printer_enabled", String(enabled));
+    try {
+      localStorage.setItem("terrapos_printer_enabled", String(enabled));
+    } catch {}
     if (tenantId) {
       try {
         await setDoc(

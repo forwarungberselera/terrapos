@@ -61,7 +61,7 @@ cat > android/app/src/main/assets/capacitor.config.json << 'CAPEOF'
   "appName": "TerraPOS",
   "webDir": "out",
   "server": {
-    "url": "https://npos.gtomodachi.fun",
+    "url": "${CAPACITOR_SERVER_URL:-https://npos.gtomodachi.fun}",
     "androidScheme": "https",
     "cleartext": false
   },

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "build:apk": "NEXT_OUTPUT=export next build && npx cap sync android",
+    "cap:sync": "node node_modules/@capacitor/cli/bin/capacitor sync android",
     "deploy:pages": "wrangler pages deploy out --project-name terrapos-web --branch main",
     "build:workers": "npx -y @opennextjs/cloudflare@latest build",
     "preview:workers": "npm run build:workers && npx -y @opennextjs/cloudflare@latest preview",

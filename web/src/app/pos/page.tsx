@@ -1122,6 +1122,7 @@ export default function POSPage() {
           <div className="topnav">
             <button className="btn" onClick={() => r.push("/orders")}>Orders</button>
             <button className="btn hide-mobile" onClick={() => r.push("/shifts")}>Shift</button>
+            <button className="btn" onClick={() => r.push("/printer")}>Printer</button>
             {isOwner && (
               <button className="btn btn-primary" onClick={() => r.push("/dashboard")}>
                 Dashboard

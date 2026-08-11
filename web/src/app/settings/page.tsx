@@ -82,12 +82,12 @@ export default function SettingsPage() {
 
   if (loading || loadingRole) return <TerraPage><SkeletonStyles /><PageSkeleton cards={2} /></TerraPage>;
 
-  if (role !== "owner" && role !== "developer") {
+  if (role !== "owner" && role !== "admin" && role !== "developer") {
     return (
       <TerraPage>
         <div className="card">
           <div className="h1">Akses ditolak</div>
-          <div className="small">Halaman Settings hanya untuk owner.</div>
+          <div className="small">Halaman Settings hanya untuk owner & admin.</div>
           <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>Kembali</button>
         </div>
       </TerraPage>

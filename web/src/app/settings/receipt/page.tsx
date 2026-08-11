@@ -69,7 +69,7 @@ export default function ReceiptSettingsPage() {
   const { canDisableWatermark } = useLevel();
   const isFreeUser = !canDisableWatermark();
 
-  const canEdit = ["owner", "developer"].includes((role || "").toString().toLowerCase());
+  const canEdit = ["owner", "admin", "developer"].includes((role || "").toString().toLowerCase());
 
   useEffect(() => {
     if (!tenantId) return;
@@ -223,7 +223,7 @@ export default function ReceiptSettingsPage() {
       <TerraPage>
         <div className="card">
           <div className="h1">Akses ditolak</div>
-          <div className="small">Halaman ini hanya untuk owner.</div>
+          <div className="small">Halaman ini hanya untuk owner & admin.</div>
           <button className="btn" style={{ marginTop: 12 }} onClick={() => r.push("/dashboard")}>
             Dashboard
           </button>
