@@ -41,6 +41,12 @@ jobs:
             sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' "$f"
           done
 
+      - name: Build Next.js Static Export
+        run: |
+          cd web
+          NEXT_OUTPUT=export npx next build
+          mkdir -p android/app/src/main/assets
+
       - name: Sync Capacitor Android
         run: |
           cd web
