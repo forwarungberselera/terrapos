@@ -11,6 +11,10 @@ import { CustomerOrderItem } from "@/lib/tables";
 import { canSubmitOrder } from "@/lib/rate-limit";
 
 
+export function generateStaticParams() {
+  return [{ tenantId: "_" }];
+}
+
 type Product = {
   id: string;
   name: string;
