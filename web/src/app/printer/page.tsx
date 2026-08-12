@@ -142,10 +142,18 @@ export default function PrinterPage() {
     setMsg(null);
     try {
       if (isNative) {
-        const devices = await NativePrinter.listDevices();
-        setPairedDevices(devices);
-        setShowDevices(true);
-        if (devices.length === 0) setMsg("Tidak ada printer paired. Pair dulu di Settings Bluetooth HP.");
+        try {
+          const devices = await NativePrinter.listDevices();
+          setPairedDevices(devices);
+          setShowDevices(true);
+          if (devices.length === 0) setMsg("Tidak ada printer paired. Pair dulu di Settings Bluetooth HP.");
+        } catch (e: any) {
+          if (e?.message?.includes("not implemented")) {
+            setMsg("Plugin Bluetooth belum terinstall di versi APK ini. Silakan install APK terbaru yang sudah dicompile ulang.");
+          } else {
+            throw e;
+          }
+        }
       } else {
         const name = await WebBluetooth.connectPrinter();
         setBtConnected(true);
@@ -159,6 +167,7 @@ export default function PrinterPage() {
       setBtConnecting(false);
     }
   }
+
 
   async function handleConnectDevice(device: PairedDevice) {
     setBtLoading(true);

@@ -40,10 +40,9 @@ const CMD = {
  */
 export function isNative(): boolean {
   if (typeof window === "undefined") return false;
-  const isCapacitorNative = Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "web";
-  // Jika di APK (Native Platform), selalu return true jika Capacitor terdeteksi
-  return isCapacitorNative;
+  return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("BluetoothPrinter");
 }
+
 
 /**
  * Cek Bluetooth tersedia & enabled
