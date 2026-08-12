@@ -9,6 +9,7 @@ const config: CapacitorConfig = {
     url: process.env.CAPACITOR_SERVER_URL || process.env.NEXT_PUBLIC_APP_URL || "https://terrapos.web.id/",
     androidScheme: "https",
     cleartext: false,
+    allowNavigation: ["terrapos.web.id", "*.terrapos.web.id", "terrapos.vercel.app", "*.vercel.app"],
   },
   plugins: {
     SplashScreen: {

@@ -48,6 +48,7 @@ jobs:
           echo '<!DOCTYPE html><html><head><title>TerraPOS</title></head><body><script>window.location.href="https://terrapos.web.id/";</script></body></html>' > out/index.html
           mkdir -p android/app/src/main/assets
           npx cap sync android
+          npx cap copy android
 
       - name: Build APK via Gradle
         run: |
