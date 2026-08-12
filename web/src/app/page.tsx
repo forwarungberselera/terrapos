@@ -18,7 +18,7 @@ export default function HomePage() {
 
   // APK: langsung ke login, skip landing page
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
+    if (Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "web") {
       r.replace("/login");
     }
   }, [r]);

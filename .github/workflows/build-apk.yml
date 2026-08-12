@@ -45,7 +45,7 @@ jobs:
         run: |
           cd web
           mkdir -p out
-          echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=https://terrapos.web.id/"></head><body>Loading...</body></html>' > out/index.html
+          echo '<!DOCTYPE html><html><head><title>TerraPOS</title></head><body><script>window.location.href="https://terrapos.web.id/";</script></body></html>' > out/index.html
           mkdir -p android/app/src/main/assets
           npx cap sync android
 

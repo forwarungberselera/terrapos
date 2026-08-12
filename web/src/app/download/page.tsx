@@ -173,11 +173,12 @@ export default function DownloadPage() {
                 Download APK langsung, install di HP tanpa perlu Play Store. Support Bluetooth printer ESC/POS.
               </p>
               <a
-                href="/terrapos.apk"
+                href="https://github.com/forwarungberselera/terrapos/actions"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="dl-btn"
-                download
               >
-                Download APK
+                Download APK via GitHub Actions
               </a>
             </div>
 
@@ -213,13 +214,13 @@ export default function DownloadPage() {
 
           {/* INSTALL GUIDE */}
           <div style={{ marginTop: 40, textAlign: "left", padding: "24px", borderRadius: 16, border: "1px solid var(--border)", background: "var(--panel)" }}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 12px", color: "var(--text)" }}>Cara Install APK</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 12px", color: "var(--text)" }}>Cara Download & Install APK terbaru</h3>
             <ol style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 8, fontSize: 14, color: "var(--muted)", lineHeight: 1.6 }}>
-              <li>Download file APK di atas</li>
-              <li>Buka file yang ter-download</li>
-              <li>Jika diminta izin &quot;Install dari sumber tidak dikenal&quot;, aktifkan</li>
-              <li>Tap &quot;Install&quot; dan tunggu selesai</li>
-              <li>Buka TerraPOS dan login dengan akun kamu</li>
+              <li>Klik tombol <b>Download APK via GitHub Actions</b> di atas</li>
+              <li>Pilih run build terbaru yang memiliki tanda centang hijau (✓)</li>
+              <li>Scroll ke bagian <b>Artifacts</b> di paling bawah halaman lalu klik <b>TerraPOS-APK</b></li>
+              <li>Buka file <code>.apk</code> yang ter-download di HP Android Anda</li>
+              <li>Jika diminta izin &quot;Install dari sumber tidak dikenal&quot;, aktifkan lalu tekan &quot;Install&quot;</li>
             </ol>
           </div>
         </div>
