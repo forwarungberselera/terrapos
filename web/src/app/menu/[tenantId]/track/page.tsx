@@ -7,10 +7,6 @@ import {
   collection, onSnapshot, query, where, orderBy, limit,
 } from "firebase/firestore";
 
-export function generateStaticParams() {
-  return [{ tenantId: "_" }];
-}
-
 type OrderItem = { name: string; qty: number; price: number; notes?: string };
 
 type TrackedOrder = {
