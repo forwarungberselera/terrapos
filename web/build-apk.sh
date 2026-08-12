@@ -77,6 +77,17 @@ cat > android/app/src/main/assets/capacitor.config.json << 'CAPEOF'
 CAPEOF
 echo "Capacitor config written (server mode - auto update)."
 
+# 7.1 Write capacitor.plugins.json (agar Capacitor Android Bridge selalu mengenali Plugin BluetoothPrinter)
+cat > android/app/src/main/assets/capacitor.plugins.json << 'PLUGEOF'
+[
+  {
+    "pkg": "com.terrapos.app.plugins.bluetooth",
+    "classpath": "com.terrapos.app.plugins.bluetooth.BluetoothPrinterPlugin"
+  }
+]
+PLUGEOF
+echo "Capacitor plugins JSON written."
+
 # 8. Build APK
 echo ""
 echo "=== Building APK... ==="

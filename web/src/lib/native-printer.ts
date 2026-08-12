@@ -36,10 +36,13 @@ const CMD = {
 };
 
 /**
- * Cek apakah jalan di native (APK)
+ * Cek apakah jalan di native (APK) dan plugin BluetoothPrinter terdaftar
  */
 export function isNative(): boolean {
-  return Capacitor.isNativePlatform();
+  if (typeof window === "undefined") return false;
+  const isCapacitorNative = Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "web";
+  // Jika di APK (Native Platform), selalu return true jika Capacitor terdeteksi
+  return isCapacitorNative;
 }
 
 /**
@@ -47,8 +50,14 @@ export function isNative(): boolean {
  */
 export async function isAvailable(): Promise<{ available: boolean; enabled: boolean }> {
   if (!isNative()) return { available: false, enabled: false };
-  return BluetoothPrinter.isAvailable();
+  try {
+    return await BluetoothPrinter.isAvailable();
+  } catch (e) {
+    console.warn("BluetoothPrinter.isAvailable error or not implemented:", e);
+    return { available: false, enabled: false };
+  }
 }
+
 
 /**
  * List paired Bluetooth devices

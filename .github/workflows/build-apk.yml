@@ -47,8 +47,17 @@ jobs:
           mkdir -p out
           echo '<!DOCTYPE html><html><head><title>TerraPOS</title></head><body><script>window.location.href="https://terrapos.web.id/";</script></body></html>' > out/index.html
           mkdir -p android/app/src/main/assets
-          npx cap sync android
-          npx cap copy android
+          cat > android/app/src/main/assets/capacitor.plugins.json << 'PLUGEOF'
+          [
+            {
+              "pkg": "com.terrapos.app.plugins.bluetooth",
+              "classpath": "com.terrapos.app.plugins.bluetooth.BluetoothPrinterPlugin"
+            }
+          ]
+          PLUGEOF
+          npx cap sync android || true
+          npx cap copy android || true
+
 
       - name: Build APK via Gradle
         run: |
