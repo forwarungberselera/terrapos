@@ -45,12 +45,15 @@ export default function PrinterPage() {
 
   useEffect(() => {
     setPrintModeState(getPrintMode());
-    setIsNative(NativePrinter.isNative());
-    // Load printer enabled state
-    try {
-      const stored = localStorage.getItem("terrapos_printer_enabled");
-      if (stored !== null) setPrinterEnabled(stored === "true");
-    } catch {}
+    const check = () => setIsNative(NativePrinter.isNative());
+    check();
+    // Re-check after 500ms in case Capacitor bridge finishes async binding
+    const t = setTimeout(check, 500);
+    window.addEventListener("focus", check);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("focus", check);
+    };
   }, []);
 
   // Auto-reconnect & check status
@@ -141,12 +144,14 @@ export default function PrinterPage() {
     setBtConnecting(true);
     setMsg(null);
     try {
-      if (isNative) {
+      const checkNative = NativePrinter.isNative();
+      setIsNative(checkNative);
+      if (checkNative) {
         try {
           const devices = await NativePrinter.listDevices();
           setPairedDevices(devices);
           setShowDevices(true);
-          if (devices.length === 0) setMsg("Tidak ada printer paired. Pair dulu di Settings Bluetooth HP.");
+          if (devices.length === 0) setMsg("Tidak ada printer paired. Pasangkan (pair) dulu printer di Pengaturan Bluetooth HP Android Anda.");
         } catch (e: any) {
           if (e?.message?.includes("not implemented")) {
             setMsg("Plugin Bluetooth belum terinstall di versi APK ini. Silakan install APK terbaru yang sudah dicompile ulang.");
