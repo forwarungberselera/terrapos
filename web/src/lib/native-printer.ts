@@ -35,12 +35,10 @@ const CMD = {
   FEED: ESC + "d" + "\x01",
 };
 
-/**
- * Cek apakah jalan di native (APK) dan plugin BluetoothPrinter terdaftar
- */
 export function isNative(): boolean {
   if (typeof window === "undefined") return false;
-  return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("BluetoothPrinter");
+  const isCapNative = Capacitor.isNativePlatform() || Capacitor.getPlatform() === "android";
+  return isCapNative && Capacitor.isPluginAvailable("BluetoothPrinter");
 }
 
 

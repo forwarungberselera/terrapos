@@ -41,12 +41,24 @@ jobs:
             sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' "$f"
           done
 
-      - name: Prepare Capacitor Web Assets & Sync
+      - name: Prepare Capacitor Config & Sync
         run: |
           cd web
           mkdir -p out
           echo '<!DOCTYPE html><html><head><title>TerraPOS</title></head><body><script>window.location.href="https://terrapos.web.id/";</script></body></html>' > out/index.html
           mkdir -p android/app/src/main/assets
+          cat > android/app/src/main/assets/capacitor.config.json << 'CAPEOF'
+          {
+            "appId": "com.terrapos.app",
+            "appName": "TerraPOS",
+            "webDir": "out",
+            "server": {
+              "url": "https://terrapos.web.id/",
+              "androidScheme": "https",
+              "cleartext": false
+            }
+          }
+          CAPEOF
           cat > android/app/src/main/assets/capacitor.plugins.json << 'PLUGEOF'
           [
             {
@@ -55,8 +67,7 @@ jobs:
             }
           ]
           PLUGEOF
-          npx cap sync android || true
-          npx cap copy android || true
+          npx cap sync android
 
 
       - name: Build APK via Gradle

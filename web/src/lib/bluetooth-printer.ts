@@ -55,7 +55,10 @@ export function getConnectedPrinterName(): string {
  */
 export async function connectPrinter(): Promise<string> {
   if (!isBluetoothAvailable()) {
-    throw new Error("Bluetooth tidak tersedia di browser ini. Gunakan Chrome di Android.");
+    if (Capacitor.isNativePlatform() || Capacitor.getPlatform() === "android") {
+      throw new Error("Plugin Bluetooth belum terpasang sempurna di APK. Silakan jalankan ulang build APK terbaru via GitHub Actions.");
+    }
+    throw new Error("Bluetooth Web tidak didukung di browser ini. Silakan gunakan Google Chrome di Android atau gunakan aplikasi APK TerraPOS.");
   }
 
   try {
