@@ -37,8 +37,11 @@ const CMD = {
 
 export function isNative(): boolean {
   if (typeof window === "undefined") return false;
-  const isCapNative = Capacitor.isNativePlatform() || Capacitor.getPlatform() === "android";
-  return isCapNative && Capacitor.isPluginAvailable("BluetoothPrinter");
+  // Check Capacitor global or native platform or android userAgent
+  const cap = (window as any).Capacitor || Capacitor;
+  const isCap = cap?.isNativePlatform?.() || cap?.getPlatform?.() === "android" || /Capacitor/i.test(navigator.userAgent);
+  const pluginAvailable = cap?.isPluginAvailable?.("BluetoothPrinter") ?? true;
+  return Boolean(isCap && pluginAvailable);
 }
 
 
