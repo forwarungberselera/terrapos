@@ -41,32 +41,16 @@ jobs:
             sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' "$f"
           done
 
-      - name: Build Web Static Export & Prepare Assets
+      - name: Build Web Static Export & Sync Capacitor
         run: |
           cd web
-          NEXT_OUTPUT=export npm run build || true
-          mkdir -p out
-          if [ ! -f out/index.html ]; then
-            echo '<!DOCTYPE html><html><head><title>TerraPOS</title></head><body><script>window.location.href="https://terrapos.web.id/";</script></body></html>' > out/index.html
-          fi
+          NEXT_OUTPUT=export npm run build
           npx cap sync android
 
-      - name: Write Native Plugins Configuration
+      - name: Ensure Native Plugins & Config in Assets
         run: |
           cd web
           mkdir -p android/app/src/main/assets
-          cat > android/app/src/main/assets/capacitor.config.json << 'CAPEOF'
-          {
-            "appId": "com.terrapos.app",
-            "appName": "TerraPOS",
-            "webDir": "out",
-            "server": {
-              "url": "https://terrapos.web.id/",
-              "androidScheme": "https",
-              "cleartext": false
-            }
-          }
-          CAPEOF
           cat > android/app/src/main/assets/capacitor.plugins.json << 'PLUGEOF'
           [
             {

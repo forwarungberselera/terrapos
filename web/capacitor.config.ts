@@ -4,13 +4,6 @@ const config: CapacitorConfig = {
   appId: "com.terrapos.app",
   appName: "TerraPOS",
   webDir: "out",
-  server: {
-    // Load dari Vercel server — APK selalu menampilkan versi terbaru secara otomatis
-    url: process.env.CAPACITOR_SERVER_URL || process.env.NEXT_PUBLIC_APP_URL || "https://terrapos.web.id/",
-    androidScheme: "https",
-    cleartext: false,
-    allowNavigation: ["terrapos.web.id", "*.terrapos.web.id", "terrapos.vercel.app", "*.vercel.app"],
-  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1500,
